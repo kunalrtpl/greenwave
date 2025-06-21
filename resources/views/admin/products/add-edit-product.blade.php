@@ -132,12 +132,14 @@
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label class="col-md-3 control-label">Additional Packing Type</label>
+                                    <label class="col-md-3 control-label">Additional Packing Type (if any)</label>
                                     <div class="col-md-4">
                                         <select class="form-control select2" name="additional_packing_type_id">
                                             <option value="">Please Select</option>
                                             @foreach($packing_types as $typeInfo)
+                                                @if($typeInfo['additional_packing'] == 1)
                                                 <option value="{{$typeInfo['id']}}" {{(!empty($productdata) && $productdata['additional_packing_type_id'] == $typeInfo['id'])?'selected': '' }}>{{$typeInfo['name']}}</option>
+                                                @endif
                                             @endforeach
                                         </select>
                                         <h4 class="text-center text-danger pt-3" style="display: none;" id="Product-additional_packing_type_id"></h4>

@@ -921,8 +921,12 @@ class ProductsController extends Controller
                     $packingtype->tare_weight = $data['tare_weight'];
                     $packingtype->price = $data['price'];
                     $packingtype->lab_sample = 0;
+                    $packingtype->additional_packing = 0;
                     if(isset($data['lab_sample'])){
                         $packingtype->lab_sample = 1;
+                    }
+                    if(isset($data['additional_packing'])){
+                        $packingtype->additional_packing = 1;
                     }
                     $packingtype->status = 1;
                     $packingtype->save();

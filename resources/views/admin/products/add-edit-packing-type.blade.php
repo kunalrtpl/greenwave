@@ -54,7 +54,13 @@
                                     <div class="col-md-4">
                                         <input style="margin-top: 12px;" type="checkbox" name="lab_sample" value="1" @if(isset($packingtypedata['lab_sample']) && $packingtypedata['lab_sample'] ==1) checked @endif>
                                     </div>
-                                </div>       
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-md-3 control-label">Use for Additional Packing</label>
+                                    <div class="col-md-4">
+                                        <input style="margin-top: 12px;" type="checkbox" name="additional_packing" value="1" @if(isset($packingtypedata['additional_packing']) && $packingtypedata['additional_packing'] ==1) checked @endif>
+                                    </div>
+                                </div>         
                             </div>
                             <div class="form-actions right1 text-center">
                                 <button class="btn green" type="submit">Submit</button>

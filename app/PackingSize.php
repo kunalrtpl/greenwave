@@ -20,7 +20,7 @@ class PackingSize extends Model
     }
 
      public static function order_sizes(){
-        $sizes = DB::table('packing_sizes')->where('status',1)->get();
+        $sizes = DB::table('packing_sizes')->where('status',1)->orderby('size','ASC')->get();
         $sizes = json_decode(json_encode($sizes),true);
         return $sizes;
     }
