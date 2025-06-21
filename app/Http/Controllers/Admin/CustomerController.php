@@ -288,6 +288,9 @@ class CustomerController extends Controller
                         $customer->custom_mtod_to = $data['custom_mtod_to'];
                         $customer->custom_mtod_discount = $data['custom_mtod_discount'];
                     }*/
+                    if(isset($data['customer_register_request_id'])){
+                        $customer->customer_register_request_id = $data['customer_register_request_id'];
+                    }
                     $customer->save();
                     DB::table('customer_discounts')->where('customer_id', $customer->id)->delete();
 

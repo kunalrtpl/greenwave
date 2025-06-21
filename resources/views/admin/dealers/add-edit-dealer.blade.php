@@ -56,7 +56,7 @@
                                     </div>
                                 </div> 
                                 <div class="form-group">
-                                    <label class="col-md-3 control-label">Address</label>
+                                    <label class="col-md-3 control-label">Address <span class="asteric">*</span></label>
                                     <div class="col-md-4">
                                         <input  type="text" placeholder="Address" name="address" style="color:gray" class="form-control" value="{{(!empty($dealerdata['address']))?$dealerdata['address']: '' }}"/>
                                         <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-address"></h4>
@@ -260,7 +260,7 @@
                                 </div>
                                 @if(!empty($linkedCustomers))
                                 <div class="form-group">
-                                    <label class="col-md-3 control-label">Linked Customers <b class="red">({{count($linkedCustomers)}})</b> <span class="asteric">*</span></label>
+                                    <label class="col-md-3 control-label">Linked Customers <b class="red">({{count($linkedCustomers)}})</b> </label>
                                     <div class="col-md-6">
                                         <div class="panel-group" id="accordion-customer-module">
                                             <div class="panel panel-default">

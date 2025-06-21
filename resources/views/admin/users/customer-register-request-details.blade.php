@@ -123,7 +123,7 @@
                         @csrf
                         <input type="hidden" name="customer_register_request_id" value="{{$request->id}}">
                         <input type="checkbox" id="verifyCheckbox" required> Verify this request<br><br>
-                        <textarea name="verify_remarks" id="verifyRemarks" class="form-control" placeholder="Enter remarks" required></textarea>
+                        <textarea name="verify_remarks" id="verifyRemarks" class="form-control" placeholder="Enter remarks"></textarea>
                         <br>
                         <button type="submit" class="btn btn-success">Submit</button>
                     </form>

@@ -2033,10 +2033,11 @@ class ExecutiveController extends Controller
         $resp = $this->resp;
         if($resp['status'] && isset($resp['user'])){
             $reporting_resp = User::getReportingUsers($resp['user']['id']);
-            //$userids = \DB::table('user_departments')->where('department_id',2)->pluck('user_id')->toArray();
-            $userIds = \App\UserDepartmentRegion::wherein('sub_region_id',$reporting_resp['sub_region_ids'])->pluck('user_id')->toArray();
-            $users  = \DB::table('users')->wherein('id',$userIds)->get();
-            $dealers =  DB::table('dealers')->select('id','business_name','owner_name')->whereNULL('parent_id')->wherein('city',$reporting_resp['cities'])->where('status',1)->get();
+            $userids = \DB::table('user_departments')->where('department_id',2)->pluck('user_id')->toArray();
+            //$userIds = \App\UserDepartmentRegion::wherein('sub_region_id',$reporting_resp['sub_region_ids'])->pluck('user_id')->toArray();
+           // $users  = \DB::table('users')->wherein('id',$userIds)->get();
+            $users  = \DB::table('users')->whereNotin('id',[16,17])->wherein('id',$userids)->where('status',1)->get();
+            $dealers =  \DB::table('dealers')->select('id','business_name','owner_name')->whereNotin('id',[1,5,7])->whereNULL('parent_id')/*->wherein('city',$reporting_resp['cities'])*/->where('status',1)->get();
             $message = "Fetched successfully";
             $result['users'] =  $users;
             $result['dealers'] =  $dealers;

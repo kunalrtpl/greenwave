@@ -142,6 +142,7 @@ class DealerController extends Controller
                         'name'   =>  'bail|required',
                         'short_name'   =>  'bail|required',
                         'city'   =>  'bail|required',
+                        'address'   =>  'bail|required',
                         'email'   => 'bail|email|'.$emailunique,
                         //'password' => $pwdValidation,
                         /*'owner_name'   =>  'bail|required',*/
