@@ -45,9 +45,10 @@
 {{-- Primary User Details --}}
 <div class="section-block">
     <div class="section-title">Primary User Details</div>
-    <div class="row">
-        {{-- Left Column: User Details --}}
-        <div class="col-md-8">
+
+    {{-- Full Width Table --}}
+    <div class="row mb-3">
+        <div class="col-md-12">
             <table class="table table-bordered section-table">
                 <tr><th>Name</th><td>{{ $request->contact_person_name }}</td></tr>
                 <tr><th>Designation</th><td>{{ $request->designation ?? 'N/A' }}</td></tr>
@@ -55,22 +56,24 @@
                 <tr><th>Email</th><td>{{ $request->email }}</td></tr>
             </table>
         </div>
+    </div>
 
-        {{-- Right Column: Business Card --}}
-        <div class="col-md-4 text-center" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;">
-            {{-- Business Card One --}}
+    {{-- Business Cards Section Below --}}
+    <div class="row">
+        <div class="col-md-6 text-center mb-3">
             @if($request->business_card_url)
                 <a href="{{ asset($request->business_card_url) }}" target="_blank">
-                    <img src="{{ asset($request->business_card_url) }}" alt="Business Card 1" style="max-height: 160px; border: 1px solid #ccc; padding: 4px;">
+                    <img src="{{ asset($request->business_card_url) }}" alt="Business Card 1" style="max-height: 200px; border: 1px solid #ccc; padding: 4px;">
                 </a>
             @else
                 <div class="text-muted" style="font-style: italic;">Business card not uploaded yet.</div>
             @endif
+        </div>
 
-            {{-- Business Card Two --}}
+        <div class="col-md-6 text-center mb-3">
             @if($request->business_card_two)
                 <a href="{{ asset($request->business_card_two) }}" target="_blank">
-                    <img src="{{ asset($request->business_card_two) }}" alt="Business Card 2" style="max-height: 160px; border: 1px solid #ccc; padding: 4px;">
+                    <img src="{{ asset($request->business_card_two) }}" alt="Business Card 2" style="max-height: 200px; border: 1px solid #ccc; padding: 4px;">
                 </a>
             @else
                 <div class="text-muted" style="font-style: italic;">Second business card not uploaded.</div>
@@ -78,6 +81,7 @@
         </div>
     </div>
 </div>
+
 
 
 
