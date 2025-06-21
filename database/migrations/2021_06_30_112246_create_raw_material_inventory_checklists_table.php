@@ -1,0 +1,40 @@
+<?php
+
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+class CreateRawMaterialInventoryChecklistsTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('raw_material_inventory_checklists', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->mediumInteger('sample_no');
+            $table->unsignedbigInteger('raw_material_id')->index()->nullable();
+            $table->foreign('raw_material_id')->references('id')->on('raw_materials')->onDelete('cascade');
+            $table->bigInteger('raw_material_inventory_id');
+            $table->unsignedbigInteger('checklist_id')->index()->nullable();
+            $table->foreign('checklist_id')->references('id')->on('checklists')->onDelete('cascade');
+            $table->string('raw_material_range');
+            $table->string('range');
+            $table->text('remarks');
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::dropIfExists('raw_material_inventory_checklists');
+    }
+}
