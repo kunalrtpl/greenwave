@@ -739,7 +739,7 @@ switch ($regis_req['status']) {
         }
 
         $request->validate([
-            'verify_remarks' => 'required|string|max:255',
+            //'verify_remarks' => 'required|string|max:255',
         ]);
 
         $customerRequest->is_verify = 1;

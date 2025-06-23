@@ -93,7 +93,13 @@
                                             </select>
                                         </td>
                                         <td>
-                                            <input type="text" class="form-control form-filter input-sm" name="linked_executive" placeholder="Linked Exceutive">
+                                            <!-- <input type="text" class="form-control form-filter input-sm" name="linked_executive" placeholder="Linked Exceutive"> -->
+                                            <select class="form-control form-filter input-sm" name="linked_executive">
+                                            <option value="All">All</option>
+                                            @foreach($executives as $executive)
+                                                <option value="{{$executive->name}}">{{$executive->name}}</option>
+                                            @endforeach
+                                            </select>
                                         </td>
                                         <td>
                                             

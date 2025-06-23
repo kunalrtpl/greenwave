@@ -93,6 +93,9 @@ jQuery(document).ready(function() {
     $(document).on('change','[name=business_linking]',function(e) {
         $('.filter-submit').trigger('click');
     });
+    $(document).on('change','[name=linked_executive]',function(e) {
+        $('.filter-submit').trigger('click');
+    });
 </script>
 <script type="text/javascript">
     $(document).on('keypress',function(e) {

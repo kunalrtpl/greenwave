@@ -56,7 +56,7 @@ class CustomerController extends Controller
                 }
             }
 
-            if (!empty($data['linked_executive'])) {
+            if (!empty($data['linked_executive']) && $data['linked_executive'] !="All") {
                 $querys->whereHas('user_customer_shares.user', function ($q) use ($data) {
                     $q->where('name', 'like', '%' . $data['linked_executive'] . '%');
                 });
@@ -127,7 +127,8 @@ class CustomerController extends Controller
         }
         $title = "Customers";
         $linkedDealers = \App\Dealer::where('status',1)->where('parent_id',NULL)->select('id','business_name')->get();
-        return View::make('admin.customers.customers')->with(compact('title','linkedDealers'));
+        $executives = \App\User::where('status',1)->where('type','!=','admin')->get(); 
+        return View::make('admin.customers.customers')->with(compact('title','linkedDealers','executives'));
     }
 
     public function addEditCustomer(Request $request,$customerid=NULL){
