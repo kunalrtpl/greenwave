@@ -7,6 +7,25 @@ use Illuminate\Database\Eloquent\Model;
 class Customer extends Model
 {
     //
+
+    protected $appends = ['business_card_url','business_card_two_url'];
+
+    public function getBusinessCardUrlAttribute()
+    {
+        if ($this->business_card) {
+            return asset($this->business_card);
+        }
+        return null; // or default image url if you want
+    }
+
+    public function getBusinessCardTwoUrlAttribute()
+    {
+        if ($this->business_card_two) {
+            return asset($this->business_card_two);
+        }
+        return null; // or default image url if you want
+    }
+
     public function cities(){
     	return $this->hasMany('App\CustomerCity');
     }
@@ -37,5 +56,14 @@ class Customer extends Model
 
     public function link_dealer(){
         return $this->belongsto('App\Dealer','dealer_id','id');
+    }
+
+    public function customer_register_request(){
+        return $this->belongsto('App\CustomerRegisterRequest','customer_register_request_id','id')->with('creator');
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 }

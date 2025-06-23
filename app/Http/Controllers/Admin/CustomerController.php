@@ -138,10 +138,12 @@ class CustomerController extends Controller
         $selCities = array();
         $customerDiscounts = array();
         $existingNetProducts = array();
+        $requestReceivedFrom = "";
+        $customerCreatedBy ="";
     	if(!empty($customerid)){
     		$customerdata = Customer::with(['cities','discounts','employees'=>function($query){
                 $query->where('is_delete',0);
-            },'user_customer_shares'])->where('id',$customerid)->first();
+            },'user_customer_shares','customer_register_request','creator'])->where('id',$customerid)->first();
             $customerdata = json_decode(json_encode($customerdata),true);
             $selCities = array_column($customerdata['cities'], 'city_name');
             $customerDiscounts = CustomerDiscount::where('customer_id',$customerid)->where('discount_type','discounts')->get();
@@ -150,7 +152,9 @@ class CustomerController extends Controller
             ->join('products', 'products.id', '=', 'customer_discounts.product_id') // Assuming the relationship is via product_id
             ->select('customer_discounts.*', 'products.product_name', 'products.is_trader_product as product_type')
             ->get();
-            //echo "<pre>"; print_r(json_decode(json_encode($customerDiscounts),true)); die;
+            $requestReceivedFrom = $customerdata['customer_register_request']['creator']['name'] ?? '';
+            $customerCreatedBy = $customerdata['creator']['name'] ?? '';
+            //echo "<pre>"; print_r(json_decode(json_encode($customerdata),true)); die;
     		$title ="Edit Customer";
     	}else{
     		$title ="Add Customer";
@@ -162,7 +166,7 @@ class CustomerController extends Controller
             $selCities = array(strtoupper($customerdata['city']));
         }
         if(isset($_GET['empref'])){
-            $registerRequestData = CustomerRegisterRequest::where('id',$_GET['empref'])->first();
+            $registerRequestData = CustomerRegisterRequest::with('creator')->where('id',$_GET['empref'])->first();
             $registerRequestData = json_decode(json_encode($registerRequestData),true);
             $customerdata['name'] = $registerRequestData['name'];
             $customerdata['address'] = $registerRequestData['address'];
@@ -175,11 +179,14 @@ class CustomerController extends Controller
             $customerdata['customer_product_type'] = $registerRequestData['customer_product_type'];
             $customerdata['dealer_id'] = $registerRequestData['dealer_id'];
             $customerdata['linked_executive'] = $registerRequestData['linked_executive'];
+            $customerdata['business_card_url'] = $registerRequestData['business_card_url'];
+            $customerdata['business_card_two_url'] = $registerRequestData['business_card_two_url'];
             $customerdata['created_at'] = date('Y-m-d',strtotime($registerRequestData['created_at']));
             $selCities = array(strtoupper($registerRequestData['cities']));
+            $requestReceivedFrom = $registerRequestData['creator']['name'] ?? '';
         }
 
-    	return view('admin.customers.add-edit-customer')->with(compact('title','customerdata','selCities','users','customerDiscounts','existingNetProducts'));
+    	return view('admin.customers.add-edit-customer')->with(compact('title','customerdata','selCities','users','customerDiscounts','existingNetProducts','requestReceivedFrom','customerCreatedBy'));
     }
 
     public function saveCustomer(Request $request){
@@ -240,7 +247,8 @@ class CustomerController extends Controller
                     unset($data['_token']);
                     DB::beginTransaction();
                     if($type =="add"){
-                        $customer = new Customer; 
+                        $customer = new Customer;
+                        $customer->created_by = auth()->user()->id; 
                     }else{
                         $customer = Customer::find($data['customerid']); 
                     }
@@ -289,8 +297,36 @@ class CustomerController extends Controller
                         $customer->custom_mtod_to = $data['custom_mtod_to'];
                         $customer->custom_mtod_discount = $data['custom_mtod_discount'];
                     }*/
+                    $registerRequestInfo = null;
                     if(isset($data['customer_register_request_id'])){
+                       $registerRequestInfo = CustomerRegisterRequest::where('id',$data['customer_register_request_id'])->first();
                         $customer->customer_register_request_id = $data['customer_register_request_id'];
+                    }
+
+                     if ($request->hasFile('business_card')) {
+                        $file = $request->file('business_card');
+                        $filename = time() . '_' . $file->getClientOriginalName();
+                        $path = 'business_cards/' . $filename;
+
+                        $file->move(public_path('business_cards'), $filename);
+                        $customer->business_card = $path;
+                    }else{
+
+                        if(is_object($registerRequestInfo)){
+                            $customer->business_card = $registerRequestInfo->business_card;
+                        }
+                    }
+                    if ($request->hasFile('business_card_two')) {
+                        $file = $request->file('business_card_two');
+                        $filename = time() . '2_' . $file->getClientOriginalName();
+                        $path = 'business_cards/' . $filename;
+
+                        $file->move(public_path('business_cards'), $filename);
+                        $customer->business_card_two = $path;
+                    }else{
+                        if(is_object($registerRequestInfo)){
+                            $customer->business_card_two = $registerRequestInfo->business_card_two;
+                        }
                     }
                     $customer->save();
                     DB::table('customer_discounts')->where('customer_id', $customer->id)->delete();

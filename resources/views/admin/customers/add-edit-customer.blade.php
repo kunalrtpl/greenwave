@@ -263,6 +263,57 @@
                                 <h4 class="text-center text-danger pt-3" style="display: none;" id="Customer-linking_error"></h4>
                                
                                 <hr class="bold-hr">
+                                <p><b>Business Card Upload</b></p>
+
+                                {{-- Business Card (1) --}}
+                                <div class="form-group">
+                                    <label class="col-md-3 control-label">Business Card (1)</label>
+                                    <div class="col-md-4">
+                                        <input type="file" name="business_card" class="form-control">
+                                        <h4 class="text-center text-danger pt-3" style="display: none;" id="Customer-business_card"></h4>
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        @if(isset($customerdata['business_card_url']) && $customerdata['business_card_url'])
+                                            <a href="{{ asset($customerdata['business_card_url']) }}" target="_blank">
+                                                <img src="{{ asset($customerdata['business_card_url']) }}" alt="Business Card Front"
+                                                     style="max-height: 150px; width:80%; border: 1px solid #ccc; padding: 4px;">
+                                            </a>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                {{-- Business Card (2) --}}
+                                <div class="form-group">
+                                    <label class="col-md-3 control-label">Business Card (2)</label>
+                                    <div class="col-md-4">
+                                        <input type="file" name="business_card_two" class="form-control">
+                                        <h4 class="text-center text-danger pt-3" style="display: none;" id="Customer-business_card_two"></h4>
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        @if(isset($customerdata['business_card_two_url']) &&  $customerdata['business_card_two_url'])
+                                            <a href="{{ asset($customerdata['business_card_two_url']) }}" target="_blank">
+                                                <img src="{{ asset($customerdata['business_card_two_url']) }}" alt="Business Card Back"
+                                                     style="max-height: 150px; width:80%; border: 1px solid #ccc; padding: 4px;">
+                                            </a>
+                                        @endif
+                                    </div>
+                                </div>
+                                @if(!empty($requestReceivedFrom))
+                                    <div class="form-group">
+                                        <label class="col-md-3 control-label">Request Received from </label>
+                                        <div class="col-md-4">
+                                            <p class="form-control">{{$requestReceivedFrom}}</p>
+                                        </div>
+                                    </div>
+                                @endif
+                                @if(!empty($customerCreatedBy))
+                                    <div class="form-group">
+                                        <label class="col-md-3 control-label">Customer Created by </label>
+                                        <div class="col-md-4">
+                                            <p class="form-control">{{$customerCreatedBy}}</p>
+                                        </div>
+                                    </div>
+                                @endif
                                 <div class="form-group">
                                     <label class="col-md-3 control-label">Status <span class="asteric">*</span></label>
                                     <div class="col-md-4" style="margin-top:8px;">
