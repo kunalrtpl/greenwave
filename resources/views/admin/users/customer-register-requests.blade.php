@@ -61,13 +61,27 @@
                                             
                                         </td>
                                         <td>
-                                            
+                                            <select class="form-control form-filter input-sm" name="linked_executive">
+                                            <option value="All">All</option>
+                                            @foreach($executives as $executive)
+                                                <option value="{{$executive->id}}">{{$executive->name}}</option>
+                                            @endforeach
+                                            </select>
                                         </td>
                                         <td>
                                             <input type="text" class="form-control form-filter input-sm" name="name" placeholder="Name">
                                         </td>
-                                        <td></td>
-                                        <td></td>
+                                        <td>
+                                            <input type="text" class="form-control form-filter input-sm" name="city" placeholder="City">
+                                        </td>
+                                        <td>
+                                            <select class="form-control form-filter input-sm" name="status">
+                                            <option value="All">All</option>
+                                            <option value="Added">Added</option>
+                                            <option value="Pending">Pending</option>
+                                            <option value="Closed">Closed</option>
+                                            </select>
+                                        </td>
                                         <td>
                                             <div class="margin-bottom-5">
                                                 <button class="btn btn-sm yellow filter-submit margin-bottom"><i title="Search" class="fa fa-search"></i></button>

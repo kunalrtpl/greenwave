@@ -211,6 +211,7 @@ class ProductsController extends Controller
                             'product_code' => 'bail|required|'.$productcodeUniq,
                             'product_name' => 'bail|required|'.$productNameUniq,
                             'product_detail_id' => 'bail|required',
+                            'lab_recipe_number' => 'bail|required',
                             'short_description' => 'bail|required',
                             'suggested_dosage' => 'bail|required',
                             'packing_type_id' => 'bail|required',

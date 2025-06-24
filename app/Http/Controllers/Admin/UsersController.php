@@ -633,6 +633,15 @@ class UsersController extends Controller
             if(!empty($data['name'])){
                 $querys = $querys->where('name','like','%'.$data['name'].'%');
             }
+            if(!empty($data['city'])){
+                $querys = $querys->where('cities','like','%'.$data['city'].'%');
+            }
+            if(!empty($data['linked_executive']) && $data['linked_executive'] !="All"){
+                $querys = $querys->where('created_by',$data['linked_executive']);
+            }
+            if(!empty($data['status']) && $data['status'] !="All"){
+                $querys = $querys->where('status','like','%'.$data['status'].'%');
+            }
             $iDisplayLength = intval($_REQUEST['length']);
             $iDisplayStart = intval($_REQUEST['start']);
             $iDisplayLength = $iDisplayLength < 0 ? $iTotalRecords : $iDisplayLength; 
@@ -706,7 +715,8 @@ switch ($regis_req['status']) {
             return response()->json($records);
         }
         $title = "Customer Register Requests";
-        return View::make('admin.users.customer-register-requests')->with(compact('title'));
+        $executives = \App\User::where('status',1)->where('type','!=','admin')->get();
+        return View::make('admin.users.customer-register-requests')->with(compact('title','executives'));
     }
 
     public function closeCustomerRegisterRequest(Request $request, $id)

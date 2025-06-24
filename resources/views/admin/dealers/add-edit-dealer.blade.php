@@ -121,41 +121,54 @@
                                     </div>
                                 </div> -->
                                 <hr class="bold-hr">
-                                <div class="form-group">
-                                    <label class="col-md-3 control-label">Payment Term (in days) </label>
-                                    <div class="col-md-4">
-                                        <input  type="text" placeholder="Payment Term" name="payment_term" style="color:gray" class="form-control" value="{{(!empty($dealerdata['payment_term']))?$dealerdata['payment_term']: '' }}"/>
-                                        <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-payment_term"></h4>
+                                <div id="dealer-type-fields">
+                                    <div class="form-group">
+                                        <label class="col-md-3 control-label">Payment Term (in days) </label>
+                                        <div class="col-md-4">
+                                            <input type="text" placeholder="Payment Term" name="payment_term" style="color:gray" class="form-control" value="{{(!empty($dealerdata['payment_term']))?$dealerdata['payment_term']: '' }}"/>
+                                            <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-payment_term"></h4>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-md-3 control-label">Security Amount (in Rs.) </label>
+                                        <div class="col-md-4">
+                                            <input type="text" placeholder="Security Amount" name="security_amount" style="color:gray" class="form-control" value="{{(!empty($dealerdata['security_amount']))?$dealerdata['security_amount']: '' }}"/>
+                                            <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-security_amount"></h4>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-md-3 control-label">Interest Rate on Security (in %.) </label>
+                                        <div class="col-md-4">
+                                            <input type="text" placeholder="Interest Rate on Security" name="interest_rate_on_security" style="color:gray" class="form-control" value="{{(!empty($dealerdata['interest_rate_on_security']))?$dealerdata['interest_rate_on_security']: '' }}"/>
+                                            <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-interest_rate_on_security"></h4>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-md-3 control-label">Credit Multiple </label>
+                                        <div class="col-md-4">
+                                            <input type="text" placeholder="Credit Multiple" name="credit_multiple" style="color:gray" class="form-control" value="{{(!empty($dealerdata['credit_multiple']))?$dealerdata['credit_multiple']: '' }}"/>
+                                            <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-credit_multiple"></h4>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-md-3 control-label">Credit Allowed (in Rs.) </label>
+                                        <div class="col-md-4">
+                                            <input type="text" placeholder="Credit Allowed" name="credit_allowed" style="color:gray" class="form-control" value="{{(!empty($dealerdata['credit_allowed']))?$dealerdata['credit_allowed']: '' }}"/>
+                                            <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-credit_allowed"></h4>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-md-3 control-label">Linked Products <b class="red">({{count($selLinkedProids)}})</b></label>
+                                        <div class="col-md-9">
+                                            <select class="form-control select2" name="linked_products[]" multiple="">
+                                                @foreach(products() as $product)
+                                                    <option value="{{$product['id']}}" @if(in_array($product['id'],$selLinkedProids)) selected @endif>{{$product['product_name']}}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="form-group">
-                                    <label class="col-md-3 control-label">Security Amount (in Rs.) </label>
-                                    <div class="col-md-4">
-                                        <input  type="text" placeholder="Security Amount" name="security_amount" style="color:gray" class="form-control" value="{{(!empty($dealerdata['security_amount']))?$dealerdata['security_amount']: '' }}"/>
-                                        <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-security_amount"></h4>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-3 control-label">Interest Rate on Security (in %.) </label>
-                                    <div class="col-md-4">
-                                        <input  type="text" placeholder="Interest Rate on Security" name="interest_rate_on_security" style="color:gray" class="form-control" value="{{(!empty($dealerdata['interest_rate_on_security']))?$dealerdata['interest_rate_on_security']: '' }}"/>
-                                        <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-interest_rate_on_security"></h4>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-3 control-label">Credit Multiple </label>
-                                    <div class="col-md-4">
-                                        <input  type="text" placeholder="Credit Multiple" name="credit_multiple" style="color:gray" class="form-control" value="{{(!empty($dealerdata['credit_multiple']))?$dealerdata['credit_multiple']: '' }}"/>
-                                        <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-credit_multiple"></h4>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-3 control-label">Credit Allowed (in Rs.) </label>
-                                    <div class="col-md-4">
-                                        <input  type="text" placeholder="Credit Allowed" name="credit_allowed" style="color:gray" class="form-control" value="{{(!empty($dealerdata['credit_allowed']))?$dealerdata['credit_allowed']: '' }}"/>
-                                        <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-credit_allowed"></h4>
-                                    </div>
-                                </div>
+
                                 <!-- <div class="form-group">
                                     <label class="col-md-3 control-label">Freight to be compansated <span class="asteric">*</span></label>
                                     <div class="col-md-4">
@@ -248,16 +261,6 @@
                                         </select>
                                     </div>
                                 </div>
-                                <div class="form-group">
-                                    <label class="col-md-3 control-label">Linked Products <b class="red">({{count($selLinkedProids)}})</b></label>
-                                    <div class="col-md-9">
-                                        <select class="form-control select2" name="linked_products[]" multiple="">
-                                            @foreach(products() as $product)
-                                                <option value="{{$product['id']}}" @if(in_array($product['id'],$selLinkedProids)) selected @endif>{{$product['product_name']}}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
                                 @if(!empty($linkedCustomers))
                                 <div class="form-group">
                                     <label class="col-md-3 control-label">Linked Customers <b class="red">({{count($linkedCustomers)}})</b> </label>
@@ -312,17 +315,21 @@
                                                                 <th>Role</th>
                                                                 <th>Actions</th>
                                                             </tr>
-                                                            @foreach(app_roles('dealer') as $pkey=> $role)
-                                                                <tr>
-                                                                    <td>{{++$pkey}}</td>
-                                                                   <td>
-                                                                       {{$role['name_admin']}}
-                                                                   </td> 
-                                                                   <td>
-                                                                       <input type="checkbox" name="app_roles[]" value="{{$role['key']}}" @if(in_array($role['key'],$selAppRoles)) checked @endif>
-                                                                   </td>
-                                                                </tr>
+                                                            @foreach(app_roles('dealer') as $pkey => $role)
+                                                                @php
+                                                                    $hideRole51 = $role['id'] == 51 && (empty($dealerdata['id']) || $dealerdata['id'] != 3);
+                                                                @endphp
+                                                                @if(!$hideRole51)
+                                                                    <tr id="role-row-{{ $role['id'] }}">
+                                                                        <td>{{ ++$pkey }}</td>
+                                                                        <td>{{ $role['name_admin'] }}</td> 
+                                                                        <td>
+                                                                            <input type="checkbox" name="app_roles[]" value="{{ $role['key'] }}" @if(in_array($role['key'], $selAppRoles)) checked @endif>
+                                                                        </td>
+                                                                    </tr>
+                                                                @endif
                                                             @endforeach
+
                                                         </table>
                                                     </div>
                                                 </div>
@@ -496,4 +503,47 @@
 }
 
 </style>
+<script>
+    function toggleDealerFields() {
+        const selectedType = document.querySelector('input[name="dealer_type"]:checked')?.value;
+        const fieldsDiv = document.getElementById('dealer-type-fields');
+
+        // Show/hide dealer-specific financial fields
+        if (selectedType === 'sub dealer') {
+            fieldsDiv.style.display = 'none';
+        } else {
+            fieldsDiv.style.display = 'block';
+        }
+
+        // List of role IDs to hide/uncheck for sub dealer
+        const restrictedRoleIds = [28, 32, 33, 34, 35, 40, 50, 52];
+
+        restrictedRoleIds.forEach(function(id) {
+            const row = document.getElementById('role-row-' + id);
+            if (row) {
+                const checkbox = row.querySelector('input[type="checkbox"]');
+
+                if (selectedType === 'sub dealer') {
+                    // Hide row and uncheck checkbox
+                    row.style.display = 'none';
+                    if (checkbox) checkbox.checked = false;
+                } else {
+                    // Show row
+                    row.style.display = 'table-row';
+                }
+            }
+        });
+    }
+
+    // Run on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleDealerFields();
+        document.querySelectorAll('input[name="dealer_type"]').forEach(function(el) {
+            el.addEventListener('change', toggleDealerFields);
+        });
+    });
+</script>
+
+
+
 @endsection

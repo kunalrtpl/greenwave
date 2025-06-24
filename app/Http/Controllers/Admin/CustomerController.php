@@ -115,6 +115,19 @@ class CustomerController extends Controller
                     $cities,
                     $dealer_name,
                     implode(', ', $linkedExecutives),
+                    '<div style="text-align:center; font-size: 20px;">' . 
+                        ($customer['email'] != '' 
+                            ? '<span style="color:green;">&#10004;</span>' 
+                            : '<span style="color:red;">&#10006;</span>') . 
+                    '</div>',
+                    '<div style="text-align:center; font-size: 20px;">' . 
+                        (
+                            !empty($customer['business_card']) || !empty($customer['business_card_two']) 
+                                ? '<span style="color:green;">&#10004;</span>' 
+                                : '<span style="color:red;">&#10006;</span>'
+                        ) . 
+                    '</div>',
+
                     '<div  id="'.$customer['id'].'" rel="customers" class="bootstrap-switch  bootstrap-switch-'.$checked.'  bootstrap-switch-wrapper bootstrap-switch-animate toogle_switch">
                     <div class="bootstrap-switch-container" ><span class="bootstrap-switch-handle-on bootstrap-switch-primary">&nbsp;Active&nbsp;&nbsp;</span><label class="bootstrap-switch-label">&nbsp;</label><span class="bootstrap-switch-handle-off bootstrap-switch-default">&nbsp;Inactive&nbsp;</span></div></div>',   
                     $actionValues

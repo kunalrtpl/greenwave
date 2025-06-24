@@ -64,6 +64,8 @@
                                         <th>
                                             Linked Executive
                                         </th>
+                                        <th>Email</th>
+                                        <th class="text-center">B. Card</th>
                                         <th>
                                             Status
                                         </th>
@@ -104,6 +106,8 @@
                                         <td>
                                             
                                         </td>
+                                        <td></td>
+                                        <td></td>
                                         <td>
                                             <div class="margin-bottom-5">
                                                 <button class="btn btn-sm yellow filter-submit margin-bottom"><i title="Search" class="fa fa-search"></i></button>
