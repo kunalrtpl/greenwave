@@ -81,6 +81,13 @@
                                         <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-office_phone"></h4>
                                     </div>
                                 </div>
+                                <div class="form-group">
+                                    <label class="col-md-3 control-label">GST (No.) </label>
+                                    <div class="col-md-4">
+                                        <input  type="text" placeholder="GST (No.)" name="gst_no" style="color:gray" class="form-control" value="{{(!empty($dealerdata['gst_no']))?$dealerdata['gst_no']: '' }}"/>
+                                        <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-gst_no"></h4>
+                                    </div>
+                                </div>
                                 <hr class="bold-hr">
                                 <!-- <div class="form-group">
                                     <label class="col-md-3 control-label">Owner Name <span class="asteric">*</span></label>

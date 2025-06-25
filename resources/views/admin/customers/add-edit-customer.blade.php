@@ -298,6 +298,7 @@
                                         @endif
                                     </div>
                                 </div>
+                                <hr class="bold-hr">
                                 @if(!empty($requestReceivedFrom))
                                     <div class="form-group">
                                         <label class="col-md-3 control-label">Request Received from </label>
