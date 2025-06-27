@@ -95,6 +95,7 @@
                                                     <option value="Active">Active</option>
                                                     <option value="Inactive">Inactive</option>
                                                 </select>
+                                            </div>
                                         </td>
                                         <td>
                                             <div class="margin-bottom-5">

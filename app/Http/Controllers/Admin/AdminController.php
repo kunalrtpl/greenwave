@@ -26,7 +26,7 @@ use App\Dealership;
 use App\Store;
 use App\State;
 use App\WebSetting;
-use App\Cart;
+use App\User;
 use App\DealershipRequest;
 use App\UserRole;
 class AdminController extends Controller
@@ -45,7 +45,7 @@ class AdminController extends Controller
         }
     }
 
-    public function login(Request $request){
+    public function emaillogin(Request $request){
     	if(Auth::check()){
     		return redirect('admin/dashboard');
     	}
@@ -72,6 +72,77 @@ class AdminController extends Controller
     	}
     	return view('admin.admin_login');
     }
+
+    public function login(Request $request)
+    {
+        if (Auth::check()) {
+            return redirect('admin/dashboard');
+        }
+
+        if ($request->isMethod('post')) {
+            $request->validate([
+                'mobile' => 'required|digits:10',
+                'otp'    => 'required|digits:6',
+            ]);
+
+            $user = User::where('mobile', $request->mobile)->first();
+            if (!$user) {
+                return redirect()->back()->with('flash_message_error', 'Mobile number not registered.');
+            }
+
+            $sessionOtp = Session::get('otp_' . $request->mobile);
+            $expiresAt = Session::get('otp_expire_' . $request->mobile);
+
+            if (!$sessionOtp || now()->gt($expiresAt)) {
+                Session::forget('otp_' . $request->mobile);
+                Session::forget('otp_expire_' . $request->mobile);
+                return redirect()->back()->with('flash_message_error', 'OTP expired. Please try again.');
+            }
+
+            if ($sessionOtp != $request->otp) {
+                return redirect()->back()->with('flash_message_error', 'Invalid OTP.');
+            }
+
+            Auth::login($user);
+            Session::forget('otp_' . $request->mobile);
+            Session::forget('otp_expire_' . $request->mobile);
+
+            return redirect('admin/dashboard')->with('flash_message_success', 'Logged in successfully.');
+        }
+
+        return view('admin.admin_login_otp');
+    }
+
+
+    public function sendOtp(Request $request)
+    {
+        $request->validate([
+            'mobile' => 'required|digits:10',
+        ]);
+
+        $user = User::where('mobile', $request->mobile)->first();
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'Mobile number not registered.']);
+        }
+
+        if($user->web_access =="No"){
+            return response()->json(['status' => false, 'message' => 'Web Access Restricted.']);
+        }
+
+        $otp = rand(100000, 999999);
+        $params['mobile'] = $request->mobile;
+        $params['message'] = "Your OTP for Login is ".$otp.". -GREENWAVE GLOBAL LTD";
+            sendSms($params);
+
+        Session::put('otp_' . $request->mobile, $otp);
+        Session::put('otp_expire_' . $request->mobile, now()->addMinutes(5));
+
+        \Log::info("OTP for {$request->mobile} is $otp");
+
+        return response()->json(['status' => true, 'message' => 'OTP sent successfully.']);
+    }
+
+
 
     public function checkAdminEmail(Request $request) {
         $data = $request->all();
@@ -127,7 +198,7 @@ class AdminController extends Controller
 
     public function logout(){
         Auth::logout();
-        return redirect()->action('Admin\AdminController@login')->with('flash_message_success', 'Logged out successfully.');
+        return redirect::to('/admin')->with('flash_message_success', 'Logged out successfully.');
        
     }
 

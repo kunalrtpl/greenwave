@@ -47,6 +47,14 @@ class CustomerController extends Controller
                 $querys = $querys->where('mobile',$data['mobile']);
             }
 
+            if(!empty($data['status'])){
+                if($data['status'] =="Active"){
+                    $querys = $querys->where('customers.status',1);
+                }else if($data['status'] == "Inactive"){
+                    $querys = $querys->where('customers.status',0);
+                }
+            }
+
             if(!empty($data['business_linking'])){
 
                 if($data['business_linking'] == "Open" || $data['business_linking'] == "Direct Customer"){
@@ -61,7 +69,7 @@ class CustomerController extends Controller
                     $q->where('name', 'like', '%' . $data['linked_executive'] . '%');
                 });
             }
-
+            
             $iDisplayLength = intval($_REQUEST['length']);
             $iDisplayStart = intval($_REQUEST['start']);
             $iDisplayLength = $iDisplayLength < 0 ? $iTotalRecords : $iDisplayLength; 

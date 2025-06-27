@@ -104,10 +104,32 @@
                                             </select>
                                         </td>
                                         <td>
-                                            
+                                            <div class="form-group">
+                                                <select class="form-control form-filter input-sm" name="email_status">
+                                                    <option value="All">All</option>
+                                                    <option value="tick">&#10004;</option>
+                                                    <option value="cross">&#10006;</option>
+                                                </select>
+                                            </div>
                                         </td>
-                                        <td></td>
-                                        <td></td>
+                                        <td>
+                                            <div class="form-group">
+                                                <select class="form-control form-filter input-sm" name="b_card_status">
+                                                    <option value="All">All</option>
+                                                    <option value="tick">&#10004;</option>
+                                                    <option value="cross">&#10006;</option>
+                                                </select>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="form-group">
+                                                <select class="form-control form-filter input-sm" name="status">
+                                                    <option value="All">All</option>
+                                                    <option value="Active">Active</option>
+                                                    <option value="Inactive">Inactive</option>
+                                                </select>
+                                            </div>
+                                        </td>
                                         <td>
                                             <div class="margin-bottom-5">
                                                 <button class="btn btn-sm yellow filter-submit margin-bottom"><i title="Search" class="fa fa-search"></i></button>

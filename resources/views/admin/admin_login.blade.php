@@ -1,7 +1,7 @@
 @extends('layouts.adminLayout.admin_login')
 @section('content')
 <div class="content">
-	<form id="admin-login-form" class="login-form" action="{{ action('Admin\AdminController@login')}}" method="post">
+	<form id="admin-login-form" class="login-form" action="{{ action('Admin\AdminController@emaillogin')}}" method="post">
 		@include('common.errors')
 		@if(Session::has('flash_message_error'))
 			<div role="alert" class="alert alert-danger alert-dismissible fade in"> <button aria-label="Close" data-dismiss="alert" style="text-indent: 0;" class="close" type="button"></button> <strong>Error!</strong> {!! session('flash_message_error') !!} </div>

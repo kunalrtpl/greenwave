@@ -30,7 +30,9 @@ Route::get('data-safety', function () {
 Auth::routes();
 Route::prefix('/admin')->namespace('Admin')->group(function(){
   //All the admin routes will be defined here...
-	Route::match(['get','post'],'/','AdminController@login');
+	Route::match(['get','post'],'/email','AdminController@emaillogin');
+	Route::match(['get', 'post'], '/', 'AdminController@login')->name('admin.login');
+	Route::post('/send-otp', 'AdminController@sendOtp')->name('admin.send.otp');
 	Route::get('logout','AdminController@logout');
 	Route::group(['middleware' => ['user']], function () {
 		Route::match(['get', 'post'], '/dashboard', 'AdminController@dashboard');
