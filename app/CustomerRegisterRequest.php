@@ -34,6 +34,18 @@ class CustomerRegisterRequest extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+     // Relationship: who created the request
+    public function verifyuser()
+    {
+        return $this->belongsTo(User::class, 'verified_by');
+    }
+
+     // Relationship: who created the request
+    public function closeduser()
+    {
+        return $this->belongsTo(User::class, 'closed_by');
+    }
+
     // Relationship: linked dealer
     public function dealer()
     {

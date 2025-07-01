@@ -117,6 +117,9 @@
                     @if($request->verify_remarks)
                         <br><small class="text-muted">Remarks: {{ $request->verify_remarks }}</small>
                     @endif
+                    @if(isset($request->verifyuser->name))
+                        <br><small class="text-muted">Verified by: {{ $request->verifyuser->name }}</small>
+                    @endif
                 </td>
             </tr>
         @elseif($request->is_verify == 0 && !in_array($request->status, ['Closed', 'Added']))
@@ -135,7 +138,15 @@
             </tr>
         @endif
         @if(!empty($request->close_remarks))
-            <tr><th>Close Remarks</th><td>{{ $request->close_remarks }}</td></tr>
+            <tr>
+                <th>Close Remarks</th>
+                <td>
+                    {{ $request->close_remarks }}
+                    @if(isset($request->closeduser->name))
+                        <br><small class="text-muted">Closed by: {{ $request->closeduser->name }}</small>
+                    @endif
+                </td>
+            </tr>
         @endif
     </table>
 </div>

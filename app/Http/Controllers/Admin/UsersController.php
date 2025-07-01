@@ -728,6 +728,7 @@ switch ($regis_req['status']) {
         $regisRequest = CustomerRegisterRequest::findOrFail($id);
         $regisRequest->status = 'Closed';
         $regisRequest->close_remarks = $request->close_remarks;
+        $regisRequest->closed_by = auth()->user()->id;
         $regisRequest->save();
 
         return response()->json(['message' => 'Request closed successfully']);
@@ -753,6 +754,7 @@ switch ($regis_req['status']) {
         ]);
 
         $customerRequest->is_verify = 1;
+        $customerRequest->verified_by = auth()->user()->id;
         $customerRequest->verify_remarks = $request->verify_remarks;
         $customerRequest->save();
 
