@@ -397,6 +397,74 @@ class ExecutiveController extends Controller
         }
     }
 
+
+    public function fetchCustomersGroupedByUsers(Request $request)
+    {
+        $resp = $this->resp;
+
+        if (!$resp['status']) {
+            $message = "Unable to fetch profile. Please try again after sometime.";
+            return response()->json(apiErrorResponse($message), 422);
+        }
+
+        $data = $request->all();
+
+        if (empty($data['user_ids'])) {
+            $message = "user_ids parameter is required.";
+            return response()->json(apiErrorResponse($message), 400);
+        }
+
+        // Convert comma-separated string to array
+        $userIds = explode(',', $data['user_ids']);
+
+        if (empty($userIds)) {
+            $message = "No valid user IDs provided.";
+            return response()->json(apiErrorResponse($message), 400);
+        }
+
+        // Fetch users with basic info
+        $users = \App\User::whereIn('id', $userIds)
+            ->select('id', 'name', 'email') // Add more columns if needed
+            ->get()
+            ->keyBy('id');
+
+        $resultUsers = [];
+
+        foreach ($userIds as $userId) {
+            $user = $users->get($userId);
+
+            if (!$user) {
+                continue; // skip if user not found
+            }
+
+            // Get customer IDs linked to this user
+            $customerIds = \App\UserCustomerShare::where('user_id', $userId)
+                ->pluck('customer_id')
+                ->toArray();
+
+            // Fetch customers
+            $customers = Customer::with(['corporate_discount', 'product_discounts', 'employees', 'link_dealer'])
+                ->whereIn('id', $customerIds)
+                ->get()
+                ->toArray();
+
+            // Build user object including customers
+            $resultUsers[] = [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'customers' => $customers
+            ];
+        }
+
+        $result = [
+            'users' => $resultUsers
+        ];
+
+        $message = "Fetched successfully.";
+        return response()->json(apiSuccessResponse($message, $result), 200);
+    }
+
     public function purchaseOrder(Request $request){
         if($request->isMethod('post')){
             $resp = $this->resp;

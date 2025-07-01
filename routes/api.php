@@ -148,6 +148,7 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::match(['get', 'post'], '/products','ExecutiveController@products'); 
 			Route::match(['get', 'post'], '/customers','ExecutiveController@customers'); 
 			Route::match(['get', 'post'], '/fetch-customers','ExecutiveController@fetchCustomers'); 
+			Route::match(['get', 'post'], '/fetch-customers-grouped-by-users','ExecutiveController@fetchCustomersGroupedByUsers'); 
 			Route::match(['get', 'post'], '/purchase-order','ExecutiveController@purchaseOrder'); 
 			Route::match(['get', 'post'], '/purchase-orders','ExecutiveController@purchaseorderListing');
 
