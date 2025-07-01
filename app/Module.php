@@ -35,14 +35,14 @@ class Module extends Model
     }
 
 
-    public static function getPendingCounts($sesionValue){
+    /*public static function getPendingCounts($sesionValue){
         $count = 0;
         $getDirectCustomerPoids = PurchaseOrder::whereNUll('dealer_id')->wherein('action',['customer','customer_employee'])->pluck('id')->toArray();
         $getDealerPoids = PurchaseOrder::wherein('action',['dealer'])->pluck('id')->toArray();
         $poids = array_merge($getDirectCustomerPoids,$getDealerPoids);
         if($sesionValue=="customerRegisterRequests"){
             $count = \App\CustomerRegisterRequest::where('status','Pending')->count();
-        }if($sesionValue=="dealerOrders"){
+        }else if($sesionValue=="dealerOrders"){
             $count = \App\PurchaseOrder::where('po_status','pending')->wherein('purchase_orders.action',['dealer'])->count();
         }elseif($sesionValue=="directCustomerOrders"){
             $count = \App\PurchaseOrder::where('po_status','pending')->wherein('purchase_orders.action',['customer'])->whereNull('purchase_orders.dealer_id')->count();
@@ -58,5 +58,59 @@ class Module extends Model
             $count = SamplingItem::join('samplings','samplings.id','=','sampling_items.sampling_id')->where('samplings.sample_status','approved')->whereColumn('sampling_items.actual_qty','!=','sampling_items.dispatched_qty')->count();
         }
         return $count;
+    }*/
+
+    public static function getPendingCounts($sessionValue)
+    {
+        $counts = [];
+
+        $getDirectCustomerPoids = PurchaseOrder::whereNull('dealer_id')
+            ->whereIn('action', ['customer', 'customer_employee'])
+            ->pluck('id')
+            ->toArray();
+
+        $getDealerPoids = PurchaseOrder::whereIn('action', ['dealer'])
+            ->pluck('id')
+            ->toArray();
+
+        $poids = array_merge($getDirectCustomerPoids, $getDealerPoids);
+
+        if ($sessionValue == "customerRegisterRequests") {
+            $counts['pending'] = \App\CustomerRegisterRequest::where('status', 'Pending')->count();
+        } elseif ($sessionValue == "dealerOrders") {
+            $counts['pending'] = \App\PurchaseOrder::where('po_status', 'pending')
+                ->whereIn('purchase_orders.action', ['dealer'])
+                ->count();
+            $counts['approved'] = \App\PurchaseOrder::where('po_status', 'approved')
+                ->whereIn('purchase_orders.action', ['dealer'])
+                ->count();
+        } elseif ($sessionValue == "directCustomerOrders") {
+            $counts['pending'] = \App\PurchaseOrder::where('po_status', 'pending')
+                ->whereIn('purchase_orders.action', ['customer'])
+                ->whereNull('purchase_orders.dealer_id')
+                ->count();
+        } elseif ($sessionValue == "POdispatchPlanning") {
+            $counts['pending'] = PurchaseOrderItem::join('purchase_orders', 'purchase_orders.id', '=', 'purchase_order_items.purchase_order_id')
+                ->where('purchase_orders.po_status', 'approved')
+                ->whereColumn('purchase_order_items.actual_qty', '!=', 'purchase_order_items.dispatched_qty')
+                ->whereIn('purchase_order_items.purchase_order_id', $poids)
+                ->count();
+        } elseif ($sessionValue == "freeSampling") {
+            $counts['pending'] = Sampling::where('sample_type', 'free')
+                ->where('sample_status', 'pending')
+                ->count();
+        } elseif ($sessionValue == "paidSampling") {
+            $counts['pending'] = Sampling::where('sample_type', 'paid')
+                ->where('sample_status', 'pending')
+                ->count();
+        } elseif ($sessionValue == "samplingDispatchPlanning") {
+            $counts['pending'] = SamplingItem::join('samplings', 'samplings.id', '=', 'sampling_items.sampling_id')
+                ->where('samplings.sample_status', 'approved')
+                ->whereColumn('sampling_items.actual_qty', '!=', 'sampling_items.dispatched_qty')
+                ->count();
+        }
+
+        return $counts;
     }
+
 }

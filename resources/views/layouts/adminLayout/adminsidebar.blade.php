@@ -43,13 +43,22 @@ $getallModules =  Module::getModules(); ?>
 			            <?php }else{ ?> 
 			            <li>
 			            <?php } ?>
-			            	<?php $getcount = \App\Module::getPendingCounts($undermodule['session_value']);  ?>
+			            	<?php $counts = \App\Module::getPendingCounts($undermodule['session_value']);  ?>
 							<a href="{{ url($undermodule['view_route']) }}">
-								{{ $undermodule['name'] }}
-								@if(!empty($getcount))
-									<span class="badge badge-pill badge-primary">{{$getcount}}</span>
-								@endif
-							</a>
+						    {{ $undermodule['name'] }}
+						    @if(!empty($counts['approved']))
+						        <span class="badge badge-pill badge-info">
+						            {{ $counts['approved'] }}
+						        </span>
+						    @endif
+						    @if(!empty($counts['pending']))
+
+						        <span class="badge badge-pill badge-danger">
+						            {{ $counts['pending'] }}
+						        </span>
+						    @endif
+						</a>
+
 						</li>
 						@endforeach
 					</ul>
