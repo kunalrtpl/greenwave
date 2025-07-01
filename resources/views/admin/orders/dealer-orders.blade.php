@@ -71,7 +71,7 @@
                                         <td>
                                             <div class="form-group">
                                                 <select class="form-control form-filter input-sm" name="status">
-                                                    <option value="">Select</option>
+                                                    <option value="">All</option>
                                                     <option value="pending" selected>Pending Approval</option>
                                                     <option value="approved">Sales Pending</option>
                                                     <option value="completed">Completed/ Adjusted/ Cancelled</option>
