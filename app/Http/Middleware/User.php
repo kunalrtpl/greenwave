@@ -9,6 +9,7 @@ use Auth;
 use App\UserRole;
 use App\Module;
 use DB;
+use Redirect;
 class User
 {
     /**
@@ -47,6 +48,16 @@ class User
                         if(!empty($moduleDetail)){
                             return redirect('/admin/dashboard')->with('flash_message_error','You have no right to access this functionality');
                         }
+                }
+            }
+
+             if (Auth::check()) {
+                // Always fetch the fresh user record
+                $user = Auth::user()->fresh();
+
+                if ($user->web_access === 'No') {
+                    Auth::logout();
+                    return redirect::to('/admin')->with('flash_message_error', 'Your web access has been revoked.');
                 }
             }
         }

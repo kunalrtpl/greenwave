@@ -19,7 +19,7 @@
 			<label class="control-label">Mobile Number</label>
 			<div class="input-icon">
 				<i class="fa fa-mobile"></i>
-				<input type="text" class="form-control" name="mobile" id="mobile" placeholder="Enter mobile number" required>
+				<input type="text" class="form-control" name="mobile" id="mobile" placeholder="Enter mobile number" required  value="{{ old('mobile') }}" >
 			</div>
 			<button type="button" id="send-otp-btn" class="btn btn-sm btn-info" style="margin-top: 10px;">Send OTP</button>
 			<strong><div id="otp-message" class="text-success" style="margin-top: 5px; display: none; color: #FFA500;"></div></strong>

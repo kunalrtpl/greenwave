@@ -83,19 +83,10 @@ jQuery(document).ready(function() {
             $('.filter-submit').trigger('click');
         }
     });
-    $(document).on('change','[name=product_type]',function(e) {
-        $('.filter-submit').trigger('click');
-    });
-    $(document).on('change','[name=status]',function(e) {
-        $('.filter-submit').trigger('click');
-    });
+    $(document).on('change', '[name=product_type], [name=status], [name=business_linking], [name=linked_executive], [name=email_status] , [name=b_card_status]', function(e) {
+	    $('.filter-submit').trigger('click');
+	});
 
-    $(document).on('change','[name=business_linking]',function(e) {
-        $('.filter-submit').trigger('click');
-    });
-    $(document).on('change','[name=linked_executive]',function(e) {
-        $('.filter-submit').trigger('click');
-    });
 </script>
 <script type="text/javascript">
     $(document).on('keypress',function(e) {

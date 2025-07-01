@@ -40,6 +40,41 @@ class CustomerController extends Controller
             if(!empty($data['email'])){
                 $querys = $querys->where('email','like','%'.$data['email'].'%');
             }
+
+            if(!empty($data['email_status'])){
+                if($data['email_status'] =="tick"){
+                    $querys = $querys->where('email','!=','');
+                }else if($data['email_status'] =="cross"){
+                    $querys = $querys->where('email','');
+                }
+                
+            }
+
+            if (!empty($data['b_card_status'])) {
+                if ($data['b_card_status'] == "tick") {
+                    $querys = $querys->where(function($q) {
+                        $q->where(function($sub) {
+                            $sub->whereNotNull('business_card')
+                                ->where('business_card', '!=', '');
+                        })->orWhere(function($sub) {
+                            $sub->whereNotNull('business_card_two')
+                                ->where('business_card_two', '!=', '');
+                        });
+                    });
+                } elseif ($data['b_card_status'] == "cross") {
+                    $querys = $querys->where(function($q) {
+                        $q->where(function($sub) {
+                            $sub->whereNull('business_card')
+                                ->orWhere('business_card', '');
+                        })->where(function($sub) {
+                            $sub->whereNull('business_card_two')
+                                ->orWhere('business_card_two', '');
+                        });
+                    });
+                }
+            }
+
+
             if(!empty($data['category'])){
                 $querys = $querys->where('category','like','%'.$data['category'].'%');
             }

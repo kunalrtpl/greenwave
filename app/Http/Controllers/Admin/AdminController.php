@@ -87,7 +87,7 @@ class AdminController extends Controller
 
             $user = User::where('mobile', $request->mobile)->first();
             if (!$user) {
-                return redirect()->back()->with('flash_message_error', 'Mobile number not registered.');
+                return redirect()->back()->with('flash_message_error', 'Mobile number not registered.')->withInput();
             }
 
             $sessionOtp = Session::get('otp_' . $request->mobile);
@@ -96,11 +96,11 @@ class AdminController extends Controller
             if (!$sessionOtp || now()->gt($expiresAt)) {
                 Session::forget('otp_' . $request->mobile);
                 Session::forget('otp_expire_' . $request->mobile);
-                return redirect()->back()->with('flash_message_error', 'OTP expired. Please try again.');
+                return redirect()->back()->with('flash_message_error', 'OTP expired. Please try again.')->withInput();
             }
 
             if ($sessionOtp != $request->otp) {
-                return redirect()->back()->with('flash_message_error', 'Invalid OTP.');
+                return redirect()->back()->with('flash_message_error', 'Invalid OTP.')->withInput();
             }
 
             Auth::login($user);
