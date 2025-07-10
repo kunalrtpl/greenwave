@@ -2309,4 +2309,44 @@ class ExecutiveController extends Controller
         }
     }
 
+
+    public function updateCustomerLatitudeLongitude(Request $request)
+    {
+        $data = $request->all();
+        $resp = $this->resp; // Assuming you are checking auth or something similar
+
+        if ($resp['status'] && isset($resp['user'])) {
+            $rules = [
+                'customer_id' => 'required|integer|exists:customers,id',
+                'latitude'    => 'required|numeric',
+                'longitude'   => 'required|numeric',
+            ];
+
+            $validator = Validator::make($data, $rules);
+
+            if ($validator->fails()) {
+                return response()->json(validationResponse($validator), 422);
+            }
+
+            try {
+                \App\Customer::where('id', $data['customer_id'])->update([
+                    'latitude'  => $data['latitude'],
+                    'longitude' => $data['longitude'],
+                ]);
+
+                $message = "Customer location updated successfully.";
+                return response()->json(apiSuccessResponse($message), 200);
+
+            } catch (\Exception $e) {
+                //\Log::error("Failed to update customer location: ".$e->getMessage());
+
+                $message = "Failed to update customer location.";
+                return response()->json(apiErrorResponse($message), 422);
+            }
+        } else {
+            $message = "Unauthorized request.";
+            return response()->json(apiErrorResponse($message), 401);
+        }
+    }
+
 }

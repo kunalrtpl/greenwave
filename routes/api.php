@@ -108,6 +108,7 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::match(['get', 'post'], 'delete-bulk-sale-invoice','DealerController@deleteBulkSaleInvoice');
 			Route::match(['get', 'post'], 'customer-invoice-sales','DealerController@customerInvoiceSales');
 
+			Route::match(['get', 'post'], 'update-customer-latitude-longitude','DealerController@updateCustomerLatitudeLongitude');
 			
 		});
 	});
@@ -231,6 +232,7 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::match(['get', 'post'], 'get-sales-projection','ExecutiveController@getSalesProjections');
 			Route::match(['get', 'post'], 'get-monthly-projection-status','ExecutiveController@getMonthlyProjectionStatus');
 			Route::match(['get', 'post'], 'update-sales-projection-action','ExecutiveController@updateSalesProjectionAction');
+			Route::match(['get', 'post'], 'update-customer-latitude-longitude','ExecutiveController@updateCustomerLatitudeLongitude');
 		});
 	});
 });
