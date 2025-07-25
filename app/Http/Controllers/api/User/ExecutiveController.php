@@ -2226,7 +2226,9 @@ class ExecutiveController extends Controller
                 return response()->json(validationResponse($validator),422); 
             }
             $userId = $resp['user']['id'];
-            $salesProjections  = SalesProjection::with(['customer','product'])->where('month_year', $request->month_year)->where('created_by', $userId)->get();
+            $salesProjections  = SalesProjection::with(['customer','product'=> function($query){
+                $query->with('pricings');
+            }])->where('month_year', $request->month_year)->where('created_by', $userId)->get();
             $result['sales_projections'] = $salesProjections;
             $message = "Sales projections fetched successfully";
             return response()->json(apiSuccessResponse($message,$result), 200);

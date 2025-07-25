@@ -49,6 +49,13 @@
                                     </div>
                                 </div> 
                                 <div class="form-group">
+                                    <label class="col-md-3 control-label">Designation</label>
+                                    <div class="col-md-4">
+                                        <input  type="text" placeholder="Designation" name="designation" style="color:gray" class="form-control" value="{{(!empty($dealerdata['designation']))?$dealerdata['designation']: '' }}"/>
+                                        <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-designation"></h4>
+                                    </div>
+                                </div> 
+                                <div class="form-group">
                                     <label class="col-md-3 control-label">Short Name <span class="asteric">*</span></label>
                                     <div class="col-md-4">
                                         <input  type="text" placeholder="Short Name" name="short_name" style="color:gray" class="form-control" value="{{(!empty($dealerdata['short_name']))?$dealerdata['short_name']: '' }}"/>
