@@ -12,7 +12,7 @@ class SalesProjection extends Model
     ];
 
     public function customer(){
-        return $this->belongsTo('App\Customer')->select('id', 'name', 'contact_person_name', 'mobile', 'email');
+        return $this->belongsTo('App\Customer')->select('id', 'name', 'contact_person_name', 'mobile', 'email','dealer_id')->with('dealer');
     }
 
     public function product(){

@@ -37,6 +37,7 @@ use App\MarketSample;
 use App\ComplaintSample;
 use App\FreeSamplingStock;
 use App\SamplingSaleInvoice;
+use App\DealerPurchaseProjection;
 class DealerController extends Controller
 {
     //
@@ -1902,4 +1903,204 @@ class DealerController extends Controller
             return response()->json(apiErrorResponse($message), 401);
         }
     }
+
+    public function savePurchaseProjection(Request $request)
+    {
+        $data = $request->all(); 
+        $resp = $this->resp;
+
+        if ($resp['status'] && isset($resp['dealer'])) {
+            $rules = [
+                'action' => 'required|in:SAVE,SUBMIT',
+                'month_year' => 'required|string',
+                'products' => 'required|array',
+                'products.*.product_id' => 'required|integer',
+                'products.*.projected_qty' => 'required|numeric|min:0',
+            ];
+
+            $validator = Validator::make($data, $rules);
+            if ($validator->fails()) {
+                return response()->json(validationResponse($validator), 422); 
+            }
+
+            $dealerId = Dealer::getParentDealer($resp['dealer']);
+            $createdBy = $resp['dealer']['id'];
+            $monthYear = $request->month_year;
+
+            DB::beginTransaction();
+            try {
+                $productIds = collect($request->products)->pluck('product_id')->toArray();
+
+                // 🔥 1. Delete all existing projections in one go
+                DealerPurchaseProjection::where('dealer_id', $dealerId)
+                    ->where('month_year', $monthYear)
+                    ->where('created_by', $createdBy)
+                    ->whereIn('product_id', $productIds)
+                    ->delete();
+
+                // 🔥 2. Prepare new projections
+                $insertData = [];
+                $timestamp = now();
+
+                foreach ($request->products as $product) {
+                    $insertData[] = [
+                        'dealer_id'      => $dealerId,
+                        'product_id'     => $product['product_id'],
+                        'projected_qty'  => $product['projected_qty'],
+                        'action'         => $request->action,
+                        'month_year'     => $monthYear,
+                        'created_by'     => $createdBy,
+                        'created_at'     => $timestamp,
+                        'updated_at'     => $timestamp,
+                    ];
+                }
+
+                // 🔥 3. Bulk insert in one query
+                DealerPurchaseProjection::insert($insertData);
+
+                DB::commit();
+                return response()->json(apiSuccessResponse("Purchase projections saved successfully"), 200);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                return response()->json(apiErrorResponse("Failed to save projections"), 422);
+            }
+        }
+
+        return response()->json(apiErrorResponse("Unauthorized or invalid request"), 401);
+    }
+
+
+    public function getPurchaseProjections(Request $request)
+    {
+        $data = $request->all(); 
+        $resp = $this->resp;
+
+        if ($resp['status'] && isset($resp['dealer'])) {
+            $rules = [
+                'month_year' => 'required|string',
+            ];
+
+            $validator = Validator::make($data, $rules);
+
+            if ($validator->fails()) {
+                return response()->json(validationResponse($validator), 422); 
+            }
+
+            // Support multiple month_years (split by #)
+            $monthYearList = explode('#', $request->month_year);
+            $monthYearList = array_map('trim', $monthYearList);
+
+            $dealerId = Dealer::getParentDealer($resp['dealer']);
+            $createdBy = $resp['dealer']['id'];
+
+            $projections = DealerPurchaseProjection::with([
+                    'dealer',
+                    'created_by_dealer',
+                    'product' => function ($query) {
+                        $query->with('pricings');
+                    }
+                ])
+                ->whereIn('month_year', $monthYearList)
+                ->where('dealer_id', $dealerId)
+                ->get();
+
+            $result['purchase_projections'] = $projections;
+            $message = "Purchase projections fetched successfully";
+
+            return response()->json(apiSuccessResponse($message, $result), 200);
+        }
+
+        return response()->json(apiErrorResponse("Unauthorized or invalid request"), 401);
+    }
+
+
+    public function getMonthlyProjectionStatus(Request $request)
+    {
+        $data = $request->all(); 
+        $resp = $this->resp;
+
+        if ($resp['status'] && isset($resp['dealer'])) {
+            $rules = [
+                'month_years' => 'required|string',
+            ];
+
+            $validator = Validator::make($data, $rules);
+            if ($validator->fails()) {
+                return response()->json(validationResponse($validator), 422); 
+            }
+
+            $createdBy = $resp['dealer']['id'];
+            $dealerId = Dealer::getParentDealer($resp['dealer']);
+            $monthYears = explode('#', $data['month_years']);
+
+            // Build placeholders for binding
+            $placeholders = implode(',', array_fill(0, count($monthYears), '?'));
+
+            $bindings = array_merge([$dealerId, $createdBy], $monthYears);
+
+            $results = DB::select("
+                SELECT month_year, action, updated_at FROM (
+                    SELECT *, ROW_NUMBER() OVER (PARTITION BY month_year ORDER BY id ASC) AS rn
+                    FROM dealer_purchase_projections
+                    WHERE dealer_id = ? AND created_by = ? AND month_year IN ($placeholders)
+                ) AS sub
+                WHERE rn = 1
+            ", $bindings);
+
+            $monthYearMap = collect($results)->map(function ($item) {
+                return [
+                    'month_year' => $item->month_year,
+                    'action'     => $item->action,
+                    'updated_at' => $item->updated_at,
+                ];
+            })->toArray();
+
+            $result['details'] = $monthYearMap;
+            $message = "Data fetched successfully";
+            return response()->json(apiSuccessResponse($message, $result), 200);
+        }
+
+        return response()->json(apiErrorResponse("Unauthorized or invalid request"), 401);
+    }
+
+
+
+    public function updatePurchaseProjectionAction(Request $request)
+    {
+        $data = $request->all();
+        $resp = $this->resp;
+
+        if ($resp['status'] && isset($resp['dealer'])) {
+            $rules = [
+                'purchase_projection_ids' => 'required|string',
+                'action' => 'required|in:SAVE,SUBMIT',
+            ];
+
+            $validator = Validator::make($data, $rules);
+
+            if ($validator->fails()) {
+                return response()->json(validationResponse($validator), 422);
+            }
+
+            $ids = explode(',', $data['purchase_projection_ids']);
+            $ids = array_filter(array_map('trim', $ids)); // remove whitespace and empty values
+
+            try {
+                DealerPurchaseProjection::whereIn('id', $ids)->update([
+                    'action' => $data['action'],
+                ]);
+
+                $message = "Purchase projection actions updated successfully.";
+                return response()->json(apiSuccessResponse($message), 200);
+
+            } catch (\Exception $e) {
+                $message = "Failed to update purchase projection actions.";
+                return response()->json(apiErrorResponse($message), 422);
+            }
+        }
+
+        return response()->json(apiErrorResponse("Unauthorized or invalid request"), 401);
+    }
+
 }

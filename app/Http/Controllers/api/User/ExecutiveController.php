@@ -2213,25 +2213,44 @@ class ExecutiveController extends Controller
     }
 
 
-    public function getSalesProjections(Request $request){
+    public function getSalesProjections(Request $request)
+    {
         $data = $request->all(); 
         $resp = $this->resp;
-        if($resp['status'] && isset($resp['user'])){
-            $rules= [
+
+        if ($resp['status'] && isset($resp['user'])) {
+            $rules = [
                 'month_year' => 'required|string',
             ];
-            $customMessages = [];
-            $validator = Validator::make($data,$rules,$customMessages);
+
+            $validator = Validator::make($data, $rules);
+
             if ($validator->fails()) {
-                return response()->json(validationResponse($validator),422); 
+                return response()->json(validationResponse($validator), 422); 
             }
+
+            // Explode by #
+            $monthYearList = explode('#', $request->month_year);
+
+            // Clean whitespace
+            $monthYearList = array_map('trim', $monthYearList);
+
             $userId = $resp['user']['id'];
-            $salesProjections  = SalesProjection::with(['customer','product'=> function($query){
-                $query->with('pricings');
-            }])->where('month_year', $request->month_year)->where('created_by', $userId)->get();
+
+            $salesProjections = SalesProjection::with([
+                'customer',
+                'product' => function ($query) {
+                    $query->with('pricings');
+                }
+            ])
+            ->whereIn('month_year', $monthYearList)
+            ->where('created_by', $userId)
+            ->get();
+
             $result['sales_projections'] = $salesProjections;
             $message = "Sales projections fetched successfully";
-            return response()->json(apiSuccessResponse($message,$result), 200);
+
+            return response()->json(apiSuccessResponse($message, $result), 200);
         }
     }
 
@@ -2251,7 +2270,7 @@ class ExecutiveController extends Controller
             $monthYears = explode('#',$data['month_years']);
 
             $results = DB::select("
-                SELECT month_year, action FROM (
+                SELECT month_year, action,updated_at FROM (
                     SELECT *, ROW_NUMBER() OVER (PARTITION BY month_year ORDER BY id ASC) AS rn
                     FROM sales_projections
                     WHERE created_by = ? AND month_year IN (" . implode(',', array_fill(0, count($monthYears), '?')) . ")
@@ -2264,6 +2283,7 @@ class ExecutiveController extends Controller
                 return [
                     'month_year' => $item->month_year,
                     'action'     => $item->action,
+                    'updated_at' => $item->updated_at,
                 ];
             })->toArray();
 

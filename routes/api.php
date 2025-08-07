@@ -109,6 +109,13 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::match(['get', 'post'], 'customer-invoice-sales','DealerController@customerInvoiceSales');
 
 			Route::match(['get', 'post'], 'update-customer-latitude-longitude','DealerController@updateCustomerLatitudeLongitude');
+
+
+			Route::match(['get', 'post'], 'save-purchase-projection','DealerController@savePurchaseProjection');
+			Route::match(['get', 'post'], 'get-purchase-projection','DealerController@getPurchaseProjections');
+			Route::match(['get', 'post'], 'get-monthly-projection-status','DealerController@getMonthlyProjectionStatus');
+			Route::match(['get', 'post'], 'update-purchase-projection-action','DealerController@updatePurchaseProjectionAction');
+
 			
 		});
 	});
