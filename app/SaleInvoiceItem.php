@@ -12,6 +12,6 @@ class SaleInvoiceItem extends Model
     }
 
     public function productinfo(){
-    	return $this->belongsTo('App\Product','product_id')->select('id','product_name','product_code','hsn_code','keywords','product_detail_info');
+    	return $this->belongsTo('App\Product','product_id')->select('id','product_name','product_code','hsn_code','keywords','product_detail_info','packing_size_id')->with('productpacking');
     }
 }

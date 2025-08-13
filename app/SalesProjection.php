@@ -16,6 +16,6 @@ class SalesProjection extends Model
     }
 
     public function product(){
-        return $this->belongsTo('App\Product')->select('id', 'product_name', 'keywords', 'product_code', 'product_detail_info');
+        return $this->belongsTo('App\Product')->select('id', 'product_name', 'keywords', 'product_code', 'product_detail_info','packing_size_id')->with('productpacking');
     }
 }

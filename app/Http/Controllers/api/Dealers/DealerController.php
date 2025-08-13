@@ -919,6 +919,7 @@ class DealerController extends Controller
         if($request->isMethod('post')){
             $resp = $this->resp;
             if($resp['status'] && isset($resp['dealer'])) {
+                $resp['dealer']['id'] = Dealer::getParentDealer($resp['dealer']);
                 $data = $request->all();
                 $rules = [
                     "customer_id"=> "required|exists:customers,id",
@@ -1131,6 +1132,31 @@ class DealerController extends Controller
                     $result['sale_returns'] = $cprs;
                     return response()->json(apiSuccessResponse($message,$result),200);
                 }
+            }
+        }
+    }
+
+    public function purchase_data(Request $request){
+        if($request->isMethod('post')){
+            $resp = $this->resp;
+            if($resp['status'] && isset($resp['dealer'])) {
+                $data = $request->all();
+                $rules = [
+                    "start_date"=> "required|date_format:Y-m-d",
+                    "end_date"=> "required|date_format:Y-m-d",
+                ];
+                $customMessages = [];
+                $validator = Validator::make($data,$rules,$customMessages);
+                if ($validator->fails()) {
+                    return response()->json(validationResponse($validator),422); 
+                }
+                $saleinvoices = SaleInvoice::getDealerSaleInvoices($data,$resp);
+                $purchaseReturns = DealerPurchaseReturn::entries($data,$resp);
+                $message = 'Fetched successfully';
+                $result['saleinvoices'] = $saleinvoices;
+                $result['purchase_returns'] = $purchaseReturns;
+                return response()->json(apiSuccessResponse($message,$result),200);
+                
             }
         }
     }
@@ -2101,6 +2127,94 @@ class DealerController extends Controller
         }
 
         return response()->json(apiErrorResponse("Unauthorized or invalid request"), 401);
+    }
+
+    public function getMonthlySalesProjectionStatus(Request $request){
+        $data = $request->all(); 
+        $resp = $this->resp;
+        if($resp['status'] && isset($resp['dealer'])){
+            $rules= [
+                'month_years' => 'required|string',
+            ];
+            $customMessages = [];
+            $validator = Validator::make($data,$rules,$customMessages);
+            if ($validator->fails()) {
+                return response()->json(validationResponse($validator),422); 
+            }
+            $dealerId = Dealer::getParentDealer($resp['dealer']);
+
+            $customerIds = \App\Customer::where('business_model','Dealer')->where('dealer_id',$dealerId)->pluck('id')->toArray();
+            $monthYears = explode('#',$data['month_years']);
+
+            $results = DB::select("
+                SELECT month_year, action, updated_at FROM (
+                    SELECT *, ROW_NUMBER() OVER (PARTITION BY month_year ORDER BY id ASC) AS rn
+                    FROM sales_projections
+                    WHERE customer_id IN (" . implode(',', array_fill(0, count($customerIds), '?')) . ")
+                      AND month_year IN (" . implode(',', array_fill(0, count($monthYears), '?')) . ")
+                ) AS sub
+                WHERE rn = 1
+            ", array_merge($customerIds, $monthYears));
+
+
+            // Convert to array of associative arrays
+            $monthYearMap = collect($results)->map(function ($item) {
+                return [
+                    'month_year' => $item->month_year,
+                    'action'     => $item->action,
+                    'updated_at' => $item->updated_at,
+                ];
+            })->toArray();
+
+
+
+            $result['details'] = $monthYearMap;
+            $message = "Data fetched successfully";
+            return response()->json(apiSuccessResponse($message,$result), 200);
+        }
+    }
+
+    public function getSalesProjections(Request $request)
+    {
+        $data = $request->all(); 
+        $resp = $this->resp;
+
+        if ($resp['status'] && isset($resp['dealer'])) {
+            $rules = [
+                'month_year' => 'required|string',
+            ];
+
+            $validator = Validator::make($data, $rules);
+
+            if ($validator->fails()) {
+                return response()->json(validationResponse($validator), 422); 
+            }
+
+            $dealerId = Dealer::getParentDealer($resp['dealer']);
+
+            $customerIds = \App\Customer::where('business_model','Dealer')->where('dealer_id',$dealerId)->pluck('id')->toArray();
+
+            // Explode by #
+            $monthYearList = explode('#', $request->month_year);
+
+            // Clean whitespace
+            $monthYearList = array_map('trim', $monthYearList);
+
+            $salesProjections = \App\SalesProjection::with([
+                'customer',
+                'product' => function ($query) {
+                    $query->with(['pricings','productpacking']);
+                }
+            ])
+            ->whereIn('month_year', $monthYearList)
+            ->wherein('customer_id', $customerIds)
+            ->get();
+
+            $result['sales_projections'] = $salesProjections;
+            $message = "Sales projections fetched successfully";
+
+            return response()->json(apiSuccessResponse($message, $result), 200);
+        }
     }
 
 }

@@ -116,7 +116,11 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::match(['get', 'post'], 'get-monthly-projection-status','DealerController@getMonthlyProjectionStatus');
 			Route::match(['get', 'post'], 'update-purchase-projection-action','DealerController@updatePurchaseProjectionAction');
 
-			
+
+			Route::match(['get', 'post'], 'get-monthly-sales-projection-status','DealerController@getMonthlySalesProjectionStatus');
+
+			Route::match(['get', 'post'], 'get-sales-projection','DealerController@getSalesProjections');
+			Route::match(['get', 'post'], 'purchase-data','DealerController@purchase_data');
 		});
 	});
 

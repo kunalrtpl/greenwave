@@ -2240,7 +2240,7 @@ class ExecutiveController extends Controller
             $salesProjections = SalesProjection::with([
                 'customer',
                 'product' => function ($query) {
-                    $query->with('pricings');
+                    $query->with(['pricings','productpacking']);
                 }
             ])
             ->whereIn('month_year', $monthYearList)

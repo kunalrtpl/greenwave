@@ -129,6 +129,19 @@ class SaleInvoice extends Model
         $updateSO->save();
     }
 
+    public static function getDealerSaleInvoices($data,$resp){
+        $saleInvoices = SaleInvoice::with(['dealer','invoice_items','purchase_order'=>function($query){
+            $query->select('id','customer_purchase_order_no');
+        }])->whereDate('sale_invoice_date','>=',$data['start_date'])->whereDate('sale_invoice_date','<=',$data['end_date']);
+        
+        $dealerIds = \App\Dealer::getParentChildDealers($resp['dealer']);
+        $saleInvoices = $saleInvoices->whereNull('customer_id');
+        $saleInvoices = $saleInvoices->whereIn('dealer_id',$dealerIds);
+        $saleInvoices = $saleInvoices->get();
+        return $saleInvoices;
+    }
+
+
     public static function getCustSaleInvoices($data,$resp){
         $saleInvoices = SaleInvoice::with(['dealer','customer','invoice_items','purchase_order'=>function($query){
             $query->select('id','customer_purchase_order_no');
