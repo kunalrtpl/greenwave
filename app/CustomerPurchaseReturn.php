@@ -15,12 +15,16 @@ class CustomerPurchaseReturn extends Model
     	return $this->belongsTo('App\Customer');
     }
 
+    public function linked_employee(){
+        return $this->belongsTo('App\User','linked_employee_id','id')->select('id','name','designation','email','mobile');
+    }
+
     public function dealer(){
         return $this->belongsTo('App\Dealer');
     }
 
     public static function cprEntries($data,$resp){
-        $entries = CustomerPurchaseReturn::with(['items','customer','dealer'])->whereDate('return_date','>=',$data['start_date'])->whereDate('return_date','<=',$data['end_date']);
+        $entries = CustomerPurchaseReturn::with(['items','customer','dealer','linked_employee'])->whereDate('return_date','>=',$data['start_date'])->whereDate('return_date','<=',$data['end_date']);
         if(isset($resp['dealer']['id'])){
             $dealerIds = \App\Dealer::getParentChildDealers($resp['dealer']);
             //$entries = $entries->where(['dealer_id'=>$resp['dealer']['id']]);

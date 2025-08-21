@@ -144,7 +144,7 @@ class SaleInvoice extends Model
 
     public static function getCustSaleInvoices($data,$resp){
         $saleInvoices = SaleInvoice::with(['dealer','customer','invoice_items','purchase_order'=>function($query){
-            $query->select('id','customer_purchase_order_no');
+            $query->select('id','customer_purchase_order_no','linked_employee_id')->with('linked_employee');
         }])->whereDate('sale_invoice_date','>=',$data['start_date'])->whereDate('sale_invoice_date','<=',$data['end_date']);
         if(isset($resp['dealer']['id'])){
             $dealerIds = \App\Dealer::getParentChildDealers($resp['dealer']);

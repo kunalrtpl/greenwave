@@ -934,10 +934,14 @@ class DealerController extends Controller
                 if ($validator->fails()) {
                     return response()->json(validationResponse($validator),422); 
                 }
-                DB::beginTransaction();
+                //DB::beginTransaction();
                 $cpr = new CustomerPurchaseReturn;
                 $cpr->dealer_id = $resp['dealer']['id'];
                 $cpr->customer_id = $data['customer_id'];
+                $empDetails = \App\UserCustomerShare::where('customer_id',$data['customer_id'])->orderby('user_date','DESC')->first();
+                if(is_object($empDetails)){
+                    $cpr->linked_employee_id =  $empDetails->user_id;
+                }
                 $cpr->return_date = $data['return_date'];
                 $cpr->remarks = $data['remarks']; 
                 $cpr->credit_note_no = $data['credit_note_no']; 
@@ -995,7 +999,7 @@ class DealerController extends Controller
                 $updateCpr->gst = $data['gst'];
                 $updateCpr->grand_total = $totatSaleAmt;
                 $updateCpr->save();
-                DB::commit();
+                //DB::commit();
                 $message = "Record has been added successfully";
                 return response()->json(apiSuccessResponse($message),200);
             }else{

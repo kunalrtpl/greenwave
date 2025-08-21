@@ -1286,8 +1286,25 @@ class ExecutiveController extends Controller
                 if(isset($data['customer_id']) && !empty($data['customer_id'])){
                     $data['customer_ids'] = array();
                 }else{
-                    $customerids = \App\UserCustomerShare::where('user_id',$resp['user']['id'])->pluck('customer_id')->toArray();
+                    // check user_ids param
+                    $userIds = [];
+                    if (isset($data['user_ids']) && !empty($data['user_ids'])) {
+                        $userIds = array_filter(array_map('trim', explode(',', $data['user_ids'])));
+                    }
+
+                    // fallback to current user if no user_ids provided
+                    if (empty($userIds)) {
+                        $userIds = [$resp['user']['id']];
+                    }
+
+                    $customerids = \App\UserCustomerShare::whereIn('user_id', $userIds)
+                        ->pluck('customer_id')
+                        ->unique()            // make collection unique
+                        ->values()            // reset array indexes
+                        ->toArray();
+
                     $data['customer_ids'] = $customerids;
+
                 }             
                 if($data['type'] == "all"){
                     $saleinvoices = SaleInvoice::getCustSaleInvoices($data,$resp);
@@ -2221,6 +2238,7 @@ class ExecutiveController extends Controller
         if ($resp['status'] && isset($resp['user'])) {
             $rules = [
                 'month_year' => 'required|string',
+                'user_ids'   => 'nullable|string', // comma separated
             ];
 
             $validator = Validator::make($data, $rules);
@@ -2235,7 +2253,16 @@ class ExecutiveController extends Controller
             // Clean whitespace
             $monthYearList = array_map('trim', $monthYearList);
 
-            $userId = $resp['user']['id'];
+            // check user_ids param
+            $userIds = [];
+            if (!empty($data['user_ids'])) {
+                $userIds = array_filter(array_map('trim', explode(',', $data['user_ids'])));
+            }
+
+            // fallback to current user if no user_ids provided
+            if (empty($userIds)) {
+                $userIds = [$resp['user']['id']];
+            }
 
             $salesProjections = SalesProjection::with([
                 'customer',
@@ -2244,7 +2271,7 @@ class ExecutiveController extends Controller
                 }
             ])
             ->whereIn('month_year', $monthYearList)
-            ->where('created_by', $userId)
+            ->whereIn('created_by', $userIds)
             ->get();
 
             $result['sales_projections'] = $salesProjections;
@@ -2254,47 +2281,63 @@ class ExecutiveController extends Controller
         }
     }
 
+
     public function getMonthlyProjectionStatus(Request $request){
         $data = $request->all(); 
         $resp = $this->resp;
-        if($resp['status'] && isset($resp['user'])){
-            $rules= [
+
+        if ($resp['status'] && isset($resp['user'])) {
+            $rules = [
                 'month_years' => 'required|string',
+                'user_ids'    => 'nullable|string', // comma separated
             ];
-            $customMessages = [];
-            $validator = Validator::make($data,$rules,$customMessages);
+
+            $validator = Validator::make($data, $rules);
             if ($validator->fails()) {
-                return response()->json(validationResponse($validator),422); 
+                return response()->json(validationResponse($validator), 422); 
             }
-            $userId = $resp['user']['id'];
-            $monthYears = explode('#',$data['month_years']);
+
+            // check user_ids param
+            $userIds = [];
+            if (isset($data['user_ids']) && !empty($data['user_ids'])) {
+                $userIds = array_filter(array_map('trim', explode(',', $data['user_ids'])));
+            }
+
+            // fallback to current user if no user_ids provided
+            if (empty($userIds)) {
+                $userIds = [$resp['user']['id']];
+            }
+
+            $monthYears = explode('#', $data['month_years']);
+
+            // prepare placeholders
+            $userPlaceholders  = implode(',', array_fill(0, count($userIds), '?'));
+            $monthPlaceholders = implode(',', array_fill(0, count($monthYears), '?'));
 
             $results = DB::select("
-                SELECT month_year, action,updated_at FROM (
-                    SELECT *, ROW_NUMBER() OVER (PARTITION BY month_year ORDER BY id ASC) AS rn
+                SELECT month_year, action, updated_at, created_by FROM (
+                    SELECT *, ROW_NUMBER() OVER (PARTITION BY month_year, created_by ORDER BY id ASC) AS rn
                     FROM sales_projections
-                    WHERE created_by = ? AND month_year IN (" . implode(',', array_fill(0, count($monthYears), '?')) . ")
+                    WHERE created_by IN ($userPlaceholders) 
+                    AND month_year IN ($monthPlaceholders)
                 ) AS sub
                 WHERE rn = 1
-            ", array_merge([$userId], $monthYears));
+            ", array_merge($userIds, $monthYears));
 
-            // Convert to array of associative arrays
             $monthYearMap = collect($results)->map(function ($item) {
                 return [
                     'month_year' => $item->month_year,
                     'action'     => $item->action,
                     'updated_at' => $item->updated_at,
+                    'user_id'    => $item->created_by, // add user info if needed
                 ];
             })->toArray();
 
-
-
             $result['details'] = $monthYearMap;
             $message = "Data fetched successfully";
-            return response()->json(apiSuccessResponse($message,$result), 200);
+            return response()->json(apiSuccessResponse($message, $result), 200);
         }
     }
-
 
     public function updateSalesProjectionAction(Request $request)
     {

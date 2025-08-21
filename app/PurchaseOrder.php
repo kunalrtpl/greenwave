@@ -9,6 +9,7 @@ use App\PurchaseOrderItemRawMaterial;
 use App\Product;
 use App\Dealer;
 use App\DealerProduct;
+use App\UserCustomerShare;
 use DB;
 class PurchaseOrder extends Model
 {
@@ -23,6 +24,10 @@ class PurchaseOrder extends Model
 
     public function customer_employee(){
         return $this->belongsTo('App\CustomerEmployee');
+    }
+
+    public function linked_employee(){
+        return $this->belongsTo('App\User','linked_employee_id','id')->select('id','name','designation','email','mobile');
     }
 
     public function orderitems(){
@@ -125,6 +130,13 @@ class PurchaseOrder extends Model
                 }
                 $createpo->po_ref_no   =  $refNo;
                 $createpo->po_ref_no_string   =  "CUST-".$refNo."/".financialYear();
+            }
+        }
+        
+        if(isset($data['customer_id']) && !empty($data['customer_id'])){
+            $empDetails = UserCustomerShare::where('customer_id',$data['customer_id'])->orderby('user_date','DESC')->first();
+            if(is_object($empDetails)){
+                $createpo->linked_employee_id =  $empDetails->user_id;
             }
         }
         $createpo->action =  $data['action'];
