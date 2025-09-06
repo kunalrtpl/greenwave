@@ -9,7 +9,7 @@ class PurchaseOrderItem extends Model
     //
 
     public function product(){
-    	return $this->belongsTo('App\Product')->select('id','product_detail_id','product_name','product_code','hsn_code','description','how_to_use','suggested_dosage','technical_literature','gots_certification','zdhc_certification','msds','current_stock','moq','average_dispatch_time');
+    	return $this->belongsTo('App\Product')->select('id','product_detail_id','product_name','product_code','hsn_code','description','how_to_use','suggested_dosage','technical_literature','gots_certification','zdhc_certification','msds','current_stock','moq','average_dispatch_time','product_detail_info');
     }
 
     public function packingsize(){

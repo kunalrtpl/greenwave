@@ -1376,7 +1376,13 @@ class DealerController extends Controller
     public function linkedDealers(){
         $resp = $this->resp;
         if($resp['status'] && isset($resp['dealer'])){
-            $linked_dealers = explode(',',$resp['dealer']['linked_dealers']);
+            if(empty($resp['dealer']['parent_id'])){
+                $linked_dealers = explode(',',$resp['dealer']['linked_dealers']);
+            }else{
+                $parentDealerId = Dealer::getParentDealer($resp['dealer']);
+                $dealerInfo = Dealer::find($parentDealerId);
+                $linked_dealers = explode(',',$dealerInfo->linked_dealers);
+            }
             $dealers = Dealer::whereIn('id',$linked_dealers)->get()->toArray();
             $message = "Fetched successfully";
             $result['dealers'] = $dealers;
@@ -1388,12 +1394,13 @@ class DealerController extends Controller
         $data = $request->all();
         $resp = $this->resp;
         if($resp['status'] && isset($resp['dealer'])){
-            $getDealerProductStock = DealerProduct::where(['dealer_id'=>$resp['dealer']['id'],'product_id'=>$data['product_id']])->first();
+            $parentDealerId = Dealer::getParentDealer($resp['dealer']);
+            $getDealerProductStock = DealerProduct::where(['dealer_id'=>$parentDealerId,'product_id'=>$data['product_id']])->first();
             if(is_object($getDealerProductStock)){
-                DB::beginTransaction();
+                //DB::beginTransaction();
                 $to_dealer_pro_details = $this->toDealerProductDetails($data);
                 $stockLog = new InterDealerStockLog;
-                $stockLog->from_dealer_id = $resp['dealer']['id'];
+                $stockLog->from_dealer_id = $parentDealerId;
                 $stockLog->to_dealer_id = $data['to_dealer'];
                 $stockLog->product_id = $data['product_id'];
                 $stockLog->transfer_stock = $data['transfer_stock'];
@@ -1403,9 +1410,9 @@ class DealerController extends Controller
                 $stockLog->invoice_number = $data['invoice_number'];
                 $stockLog->remarks = $data['remarks'];
                 $stockLog->save();
-                DealerProduct::where(['dealer_id'=>$resp['dealer']['id'],'product_id'=>$data['product_id']])->decrement('stock_in_hand',$data['transfer_stock']);
+                DealerProduct::where(['dealer_id'=>$parentDealerId,'product_id'=>$data['product_id']])->decrement('stock_in_hand',$data['transfer_stock']);
                 DealerProduct::where(['dealer_id'=>$data['to_dealer'],'product_id'=>$data['product_id']])->increment('stock_in_hand',$data['transfer_stock']);
-                DB::commit();
+                //DB::commit();
                 $message = "Stock has been transferred successfully";
                 return response()->json(apiSuccessResponse($message),200);
             }else{
