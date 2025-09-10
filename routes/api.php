@@ -70,6 +70,7 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::match(['get', 'post'], '/delete-debit-credit-entry/{id}','DealerController@deleteDebitCreditEntry');
 			Route::match(['get', 'post'], '/get-debit-credit-account-of','DealerController@getDebitCreditAccountOf');
 			Route::match(['get', 'post'], '/customer-purchase-return','DealerController@customerPurchaseReturn');
+			Route::match(['get', 'post'], '/delete-customer-purchase-return','DealerController@deleteCustomerPurchaseReturn');
 			Route::match(['get', 'post'], '/dealer-purchase-return','DealerController@dealerPurchaseReturn');
 			Route::match(['get', 'post'], '/return-history','DealerController@return_history');
 			Route::match(['get', 'post'], '/save-feedback','DealerController@saveFeedback');

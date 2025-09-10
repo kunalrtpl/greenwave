@@ -1009,6 +1009,67 @@ class DealerController extends Controller
         }
     }
 
+    public function deleteCustomerPurchaseReturn(Request $request)
+    {
+        if ($request->isMethod('post')) {
+            $resp = $this->resp;
+            if ($resp['status'] && isset($resp['dealer'])) {
+                $dealerId = Dealer::getParentDealer($resp['dealer']);
+                $data = $request->all();
+
+                $rules = [
+                    "cpr_id" => "required|exists:customer_purchase_returns,id",
+                ];
+                $validator = Validator::make($data, $rules);
+                if ($validator->fails()) {
+                    return response()->json(validationResponse($validator), 422);
+                }
+
+                $cpr = CustomerPurchaseReturn::where('id', $data['cpr_id'])
+                    ->where('dealer_id', $dealerId)
+                    ->first();
+
+                if (!$cpr) {
+                    return response()->json(apiErrorResponse("Purchase return not found."), 404);
+                }
+
+                //DB::beginTransaction();
+                try {
+                    $items = CustomerPurchaseReturnItem::where('customer_purchase_return_id', $cpr->id)->get();
+
+                    foreach ($items as $item) {
+                        // Reduce stock from dealer
+                        $dealerProd = DealerProduct::where([
+                            'dealer_id'  => $dealerId,
+                            'product_id' => $item->product_id
+                        ])->first();
+
+                        if ($dealerProd) {
+                            // Ensure stock never goes negative
+                            $dealerProd->stock_in_hand = max(0, $dealerProd->stock_in_hand - $item->qty);
+                            $dealerProd->save();
+                        }
+
+                        // Delete CPR item
+                        $item->delete();
+                    }
+
+                    // Delete main CPR
+                    $cpr->delete();
+
+                    //DB::commit();
+                    return response()->json(apiSuccessResponse("Purchase return deleted successfully"), 200);
+                } catch (\Exception $e) {
+                    //DB::rollBack();
+                    return response()->json(apiErrorResponse("Something went wrong: " . $e->getMessage()), 500);
+                }
+            } else {
+                return response()->json(apiErrorResponse("Unable to fetch dealer."), 422);
+            }
+        }
+    }
+
+
     public function dealerPurchaseReturn(Request $request){
         if($request->isMethod('post')){
             $resp = $this->resp;
