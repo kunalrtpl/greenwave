@@ -1390,34 +1390,63 @@ class DealerController extends Controller
         }
     }
 
-    public function transferStock(Request $request){
+    public function transferStock(Request $request)
+    {
         $data = $request->all();
         $resp = $this->resp;
-        if($resp['status'] && isset($resp['dealer'])){
+
+        if ($resp['status'] && isset($resp['dealer'])) {
             $parentDealerId = Dealer::getParentDealer($resp['dealer']);
-            $getDealerProductStock = DealerProduct::where(['dealer_id'=>$parentDealerId,'product_id'=>$data['product_id']])->first();
-            if(is_object($getDealerProductStock)){
-                //DB::beginTransaction();
-                $to_dealer_pro_details = $this->toDealerProductDetails($data);
-                $stockLog = new InterDealerStockLog;
-                $stockLog->from_dealer_id = $parentDealerId;
-                $stockLog->to_dealer_id = $data['to_dealer'];
-                $stockLog->product_id = $data['product_id'];
-                $stockLog->transfer_stock = $data['transfer_stock'];
-                $stockLog->from_dealer_stock = $getDealerProductStock->stock_in_hand;
-                $stockLog->to_dealer_stock = $to_dealer_pro_details->stock_in_hand;
-                $stockLog->transfer_date = $data['transfer_date'];
-                $stockLog->invoice_number = $data['invoice_number'];
-                $stockLog->remarks = $data['remarks'];
-                $stockLog->save();
-                DealerProduct::where(['dealer_id'=>$parentDealerId,'product_id'=>$data['product_id']])->decrement('stock_in_hand',$data['transfer_stock']);
-                DealerProduct::where(['dealer_id'=>$data['to_dealer'],'product_id'=>$data['product_id']])->increment('stock_in_hand',$data['transfer_stock']);
-                //DB::commit();
+
+            if (isset($data['products']) && is_array($data['products']) && !empty($data['products'])) {
+                foreach ($data['products'] as $productData) {
+                    if (!isset($productData['product_id'], $productData['transfer_stock'])) {
+                        continue; // skip if required keys are missing
+                    }
+
+                    $getDealerProductStock = DealerProduct::where([
+                        'dealer_id'  => $parentDealerId,
+                        'product_id' => $productData['product_id']
+                    ])->first();
+
+                    if (is_object($getDealerProductStock)) {
+                        // $to_dealer_pro_details will fetch/create product stock for to_dealer
+                        $to_dealer_pro_details = $this->toDealerProductDetails([
+                            'to_dealer'   => $data['to_dealer'],
+                            'product_id'  => $productData['product_id']
+                        ]);
+
+                        $stockLog = new InterDealerStockLog;
+                        $stockLog->from_dealer_id   = $parentDealerId;
+                        $stockLog->to_dealer_id     = $data['to_dealer'];
+                        $stockLog->product_id       = $productData['product_id'];
+                        $stockLog->transfer_stock   = $productData['transfer_stock'];
+                        $stockLog->from_dealer_stock= $getDealerProductStock->stock_in_hand;
+                        $stockLog->to_dealer_stock  = $to_dealer_pro_details->stock_in_hand;
+                        $stockLog->transfer_date    = $data['transfer_date'];
+                        $stockLog->invoice_number   = $data['invoice_number'] ?? null;
+                        $stockLog->remarks          = $data['remarks'] ?? null;
+                        $stockLog->save();
+
+                        // Decrement stock from parent dealer
+                        DealerProduct::where([
+                            'dealer_id'  => $parentDealerId,
+                            'product_id' => $productData['product_id']
+                        ])->decrement('stock_in_hand', $productData['transfer_stock']);
+
+                        // Increment stock to child dealer
+                        DealerProduct::where([
+                            'dealer_id'  => $data['to_dealer'],
+                            'product_id' => $productData['product_id']
+                        ])->increment('stock_in_hand', $productData['transfer_stock']);
+                    }
+                }
+
                 $message = "Stock has been transferred successfully";
-                return response()->json(apiSuccessResponse($message),200);
-            }else{
-                $message = "Dealer Product not found";
-                return response()->json(apiErrorResponse($message),422);
+                return response()->json(apiSuccessResponse($message), 200);
+            } else {
+                $message = "Please update the app to use this feature";
+                return response()->json(apiErrorResponse($message), 422);
             }
         }
     }
