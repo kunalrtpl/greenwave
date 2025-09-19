@@ -51,6 +51,8 @@ use App\UserScheduler;
 use App\SalesProjection;
 use Illuminate\Support\Facades\Input;
 use PDF;
+use App\Attendance;
+use App\Holiday;
 class ExecutiveController extends Controller
 {
     //
@@ -2414,4 +2416,190 @@ class ExecutiveController extends Controller
         }
     }
 
+
+    public function markAttendance(Request $request)
+    {
+        $resp = $this->resp;
+        if (!$resp['status'] || !isset($resp['user'])) {
+            return response()->json(apiErrorResponse("Token expired or invalid user"), 422);
+        }
+
+        $userId = $resp['user']['id'];
+        $date   = $request->input('date') ?? now()->toDateString();
+        $status = $request->input('status');
+        $remarks = $request->input('remarks');
+
+        if (!in_array($status, ['present','absent','leave','holiday'])) {
+            return response()->json(apiErrorResponse("Invalid status"), 422);
+        }
+
+        $attendance = Attendance::updateOrCreate(
+            ['user_id' => $userId, 'date' => $date],
+            ['status' => $status, 'remarks' => $remarks]
+        );
+
+        return response()->json(apiSuccessResponse("Attendance marked", $attendance));
+    }
+
+    /**
+     * 2. Attendance List (monthly)
+     */
+    public function attendanceList(Request $request)
+    {
+        $resp = $this->resp;
+        if (!$resp['status'] || !isset($resp['user'])) {
+            return response()->json(apiErrorResponse("Token expired or invalid user"), 422);
+        }
+        $userId = $resp['user']['id'];
+
+        $startDate = $request->input('start_date');
+        $endDate   = $request->input('end_date');
+
+        if (!$startDate || !$endDate) {
+            return response()->json(apiErrorResponse("start_date and end_date are required"), 422);
+        }
+
+        // Get user attendance
+        $records = Attendance::where('user_id', $userId)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->orderBy('date')
+            ->get(['date','status','remarks']);
+
+        // DB holidays
+        $holidays = Holiday::whereBetween('date', [$startDate, $endDate])->get();
+
+        // Map attendance
+        $statusList = $records->map(function($r){
+            return [
+                'date' => $r->date,
+                'status' => $r->status,
+                'remarks' => $r->remarks,
+            ];
+        });
+
+        // Map DB holidays
+        $holidayList = $holidays->map(function($h){
+            return [
+                'date' => $h->date,
+                'reason' => $h->reason
+            ];
+        })->toArray();
+
+        // Generate Sundays as holidays
+        $sundays = [];
+        $period = new \DatePeriod(
+            new \DateTime($startDate),
+            new \DateInterval('P1D'),
+            (new \DateTime($endDate))->modify('+1 day') // include end date
+        );
+
+        foreach ($period as $date) {
+            if ($date->format('w') == 0) { // 0 = Sunday
+                $sundays[] = [
+                    'date' => $date->format('Y-m-d'),
+                    'reason' => 'Sunday'
+                ];
+            }
+        }
+
+        // Merge DB holidays + Sundays
+        $holidayList = array_merge($holidayList, $sundays);
+
+        // Group by month
+        $grouped = [];
+        foreach ($statusList as $record) {
+            $month = date('m', strtotime($record['date']));
+            $year  = date('Y', strtotime($record['date']));
+            $monthName = date('F', strtotime($record['date'])); // Full month name
+            $monthShortName = date('M', strtotime($record['date'])); // Full month name
+            $key = $year.'-'.$month;
+
+            if (!isset($grouped[$key])) {
+                $grouped[$key] = [
+                    'month_name' => $monthName,
+                    'month_short_name' => $monthShortName,
+                    'month' => $month,
+                    'year' => $year,
+                    'status' => [],
+                    'holidays' => []
+                ];
+            }
+            $grouped[$key]['status'][] = $record;
+        }
+
+        foreach ($holidayList as $holiday) {
+            $month = date('m', strtotime($holiday['date']));
+            $year  = date('Y', strtotime($holiday['date']));
+            $key = $year.'-'.$month;
+
+            if (!isset($grouped[$key])) {
+                $grouped[$key] = [
+                    'month' => $month,
+                    'year' => $year,
+                    'status' => [],
+                    'holidays' => []
+                ];
+            }
+            $grouped[$key]['holidays'][] = $holiday;
+        }
+
+        // Sort months in reverse (latest first)
+        krsort($grouped);
+        $result['attendances'] = array_values($grouped);
+
+        return response()->json(apiSuccessResponse("Attendance list", $result));
+    }
+
+    /**
+     * 3. Leave Request
+     */
+    public function leaveRequest(Request $request)
+    {
+        $resp = $this->resp;
+        if (!$resp['status'] || !isset($resp['user'])) {
+            return response()->json(apiErrorResponse("Token expired or invalid user"), 422);
+        }
+        $userId = $resp['user']['id'];
+
+        $dates = $request->input('dates');
+        $remarks = $request->input('remarks');
+
+        if (empty($dates)) {
+            return response()->json(apiErrorResponse("At least one date required"), 422);
+        }
+
+        foreach ($dates as $d) {
+            Attendance::updateOrCreate(
+                ['user_id' => $userId, 'date' => $d],
+                ['status' => 'leave', 'remarks' => $remarks]
+            );
+        }
+
+        return response()->json(apiSuccessResponse("Leave marked successfully"));
+    }
+
+    public function holidaysByYears(Request $request)
+    {
+        $years = $request->input('years', []);
+
+        // If empty, take current year
+        if (empty($years)) {
+            $years = [date('Y')];
+        }
+
+        // Fetch holidays from DB (exclude Sundays)
+        $holidays = Holiday::whereIn(DB::raw('YEAR(date)'), $years)
+            ->whereRaw('WEEKDAY(date) != 6') // Exclude Sundays (MySQL: Sunday=6 in WEEKDAY())
+            ->orderBy('date')
+            ->get(['date', 'reason']);
+
+        $holidayList = $holidays->map(function($h){
+            return [
+                'date' => $h->date,
+                'reason' => $h->reason,
+            ];
+        });
+        $result['holidays'] = $holidayList;
+        return response()->json(apiSuccessResponse("Holidays fetched successfully", $result));
+    }
 }

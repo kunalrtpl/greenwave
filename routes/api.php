@@ -245,6 +245,11 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::match(['get', 'post'], 'get-monthly-projection-status','ExecutiveController@getMonthlyProjectionStatus');
 			Route::match(['get', 'post'], 'update-sales-projection-action','ExecutiveController@updateSalesProjectionAction');
 			Route::match(['get', 'post'], 'update-customer-latitude-longitude','ExecutiveController@updateCustomerLatitudeLongitude');
+			//Attendance Routes
+			Route::match(['get', 'post'], 'mark-attendance','ExecutiveController@markAttendance');
+			Route::match(['get', 'post'], 'attendance-list','ExecutiveController@attendanceList');
+			Route::match(['get', 'post'], 'leave-request','ExecutiveController@leaveRequest');
+			Route::match(['get', 'post'], 'holiday-by-years','ExecutiveController@holidaysByYears');
 		});
 	});
 });
