@@ -2427,7 +2427,7 @@ class ExecutiveController extends Controller
         $userId = $resp['user']['id'];
         $date   = $request->input('date') ?? now()->toDateString();
         $status = $request->input('status');
-        $remarks = $request->input('remarks');
+        $remarks = $request->input('remarks') ?? '';
 
         if (!in_array($status, ['present','absent','leave','holiday'])) {
             return response()->json(apiErrorResponse("Invalid status"), 422);
@@ -2435,7 +2435,12 @@ class ExecutiveController extends Controller
 
         $attendance = Attendance::updateOrCreate(
             ['user_id' => $userId, 'date' => $date],
-            ['status' => $status, 'remarks' => $remarks]
+            [
+                'status' => $status, 
+                'latitude' => $request->input('latitude') ?? '',
+                'longitude' => $request->input('longitude') ?? '',
+                'remarks' => $remarks
+            ]
         );
 
         return response()->json(apiSuccessResponse("Attendance marked", $attendance));
