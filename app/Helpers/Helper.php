@@ -428,35 +428,15 @@
         return $value;
     }
 
-    function sendSms($params) {
-	    $key = "VCjKFCXQgrrJAMff";	
-	    $mbl = $params['mobile'];
-	    $message_content = urlencode($params['message']);
-	    $senderid = "GRNWAV";	
-
-	    $url = "https://msg.hypecreationz.com/vb/apikey.php";
-	    $query = [
-	        'apikey'   => $key,
-	        'senderid' => $senderid,
-	        'number'   => $mbl,
-	        'message'  => $message_content,
-	    ];
-
-	    $ch = curl_init();
-	    curl_setopt($ch, CURLOPT_URL, $url . '?' . http_build_query($query));
-	    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-	    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // if SSL issues occur
-	    $output = curl_exec($ch);
-
-	    if (curl_errno($ch)) {
-	        $error_msg = curl_error($ch);
-	        curl_close($ch);
-	        return ['status' => false, 'error' => $error_msg];
-	    }
-
-	    curl_close($ch);
-	    return ['status' => true, 'response' => $output];
-	}
+    function sendSms($params){
+    	$key = "VCjKFCXQgrrJAMff";	
+		$mbl= $params['mobile'];
+		$message_content=urlencode($params['message']);
+		$senderid="GRNWAV";	
+		$url = "https://msg.hypecreationz.com/vb/apikey.php?apikey=$key&senderid=$senderid&number=$mbl&message=$message_content";
+							
+		$output = file_get_contents($url);	
+    }
 
     function cashDiscounts(){
     	return array(
