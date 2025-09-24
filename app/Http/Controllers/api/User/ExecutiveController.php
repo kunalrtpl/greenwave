@@ -2425,11 +2425,11 @@ class ExecutiveController extends Controller
         }
         /*if($resp['user']['id'] != "16"){*/
             // Time check: only allow between 9:00 AM and 10:00 AM
-            $currentTime = now();
-            $startTime = now()->setHour(9)->setMinute(0)->setSecond(0);
-            $endTime = now()->setHour(10)->setMinute(0)->setSecond(0);
+            $currentTime = date('H:i'); // current time in 24-hour format
+            $startTime = '09:00';
+            $endTime   = '10:00';
 
-            if ($currentTime->lt($startTime) || $currentTime->gt($endTime)) {
+            if ($currentTime < $startTime || $currentTime > $endTime) {
                 return response()->json(apiErrorResponse("Attendance can only be marked between 9:00 AM and 10:00 AM"), 422);
             }
         /*}*/
