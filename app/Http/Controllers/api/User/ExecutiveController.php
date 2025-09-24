@@ -2423,7 +2423,7 @@ class ExecutiveController extends Controller
         if (!$resp['status'] || !isset($resp['user'])) {
             return response()->json(apiErrorResponse("Token expired or invalid user"), 422);
         }
-        /*if($resp['user']['id'] != "16"){*/
+        if($resp['user']['id'] != "16"){
             // Time check: only allow between 9:00 AM and 10:00 AM
             $currentTime = date('H:i'); // current time in 24-hour format
             $startTime = '09:00';
@@ -2432,7 +2432,7 @@ class ExecutiveController extends Controller
             if ($currentTime < $startTime || $currentTime > $endTime) {
                 return response()->json(apiErrorResponse("Attendance can only be marked between 9:00 AM and 10:00 AM"), 422);
             }
-        /*}*/
+        }
 
         $userId = $resp['user']['id'];
         $date   = $request->input('date') ?? now()->toDateString();
