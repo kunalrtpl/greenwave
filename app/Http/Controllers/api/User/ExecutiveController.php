@@ -829,9 +829,10 @@ class ExecutiveController extends Controller
                 $dvr->visit_type = $data['visit_type'];
                 $dvr->visit_detail = $data['visit_detail'];
                 if(!empty($data['trial_details'])){
-                    $trial_details = json_decode($data['trial_details'], true, JSON_UNESCAPED_SLASHES);
+                    /*$trial_details = json_decode($data['trial_details'], true, JSON_UNESCAPED_SLASHES);
                     $trial_details = json_encode($trial_details);
-                    $dvr->trial_details = $trial_details;
+                    $dvr->trial_details = NULL;*/
+                    $dvr->trial_details = $data['trial_details'];
                 }
                 $dvr->next_plan = $data['next_plan'];
                 if($request->hasFile('trial_report')){
