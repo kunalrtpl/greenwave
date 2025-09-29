@@ -187,6 +187,45 @@ class DealerController extends Controller
 
     }
 
+    public function updateHashSalt(Request $request){
+        if ($request->isMethod('post')) {
+            $resp = $this->resp; // Assuming this contains dealer info
+
+            if ($resp['status'] && isset($resp['dealer'])) {
+                $data = $request->all();
+
+                $rules = [
+                    'hash' => 'bail|required|string',
+                    'salt' => 'bail|required|string',
+                ];
+                $validator = Validator::make($data, $rules);
+
+                if ($validator->fails()) {
+                    return response()->json(validationResponse($validator), 422);
+                } else {
+                    $dealer = Dealer::find($resp['dealer']['id']);
+                    if ($dealer) {
+                        $dealer->hash_salt = [
+                            'hash' => $data['hash'],
+                            'salt' => $data['salt']
+                        ];
+                        $dealer->save();
+
+                        $message = "Hash and Salt have been updated successfully";
+                        return response()->json(apiSuccessResponse($message), 200);
+                    } else {
+                        $message = "Dealer not found";
+                        return response()->json(apiErrorResponse($message), 422);
+                    }
+                }
+            } else {
+                $message = "Unable to fetch dealer. Please try again later";
+                return response()->json(apiErrorResponse($message), 422);
+            }
+        }
+    }
+
+
     public function profile(Request $request){
     	if($request->isMethod('post')){
 			$resp = $this->resp;

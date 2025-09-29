@@ -44,6 +44,7 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 	Route::middleware('DealerAuth')->group(function () {
 		Route::prefix('dealer')->namespace('Dealers')->group(function(){
 			Route::match(['get', 'post'], '/update-password','DealerController@updatePassword'); 
+			Route::match(['get', 'post'], '/update-hash-salt','DealerController@updateHashSalt'); 
 			Route::match(['get', 'post'], '/profile','DealerController@profile'); 
 			Route::match(['get', 'post'], '/add-on-users','DealerController@addOnUsers'); 
 			Route::match(['get', 'post'], '/add-edit-add-on-user','DealerController@addEditAddOnUser'); 

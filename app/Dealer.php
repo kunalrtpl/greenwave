@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class Dealer extends Model
 {
+
+    protected $casts = [
+        'hash_salt' => 'array'
+    ];
     //
     public function contact_persons(){
     	return $this->hasMany('App\DealerContactPerson','dealer_id');

@@ -69,6 +69,15 @@ class DealerController extends Controller
                     <a style="font-size:11px;" title="Manage Dealer Stock" class="btn btn-sm red margin-top-10" href="'.url('/admin/manage-dealer-stock/'.$dealer['id']).'">Manage Stock</a>
                     <a style="font-size:11px;" title="Special Discount" class="btn btn-sm green margin-top-10" href="'.url('/admin/dealer-special-discount/'.$dealer['id']).'">Special Discount</a>
                     <a style="font-size:11px;" title="Dealer Users" class="btn btn-sm yellow margin-top-10" href="'.url('/admin/dealer-users/'.$dealer['id']).'">Add-on Users</a>';
+                $resetPin = '';
+                if ( !empty($dealer['hash_salt'])) {
+                    $resetPin = '
+                    <a title="Reset Pin" class="btn btn-sm red margin-top-10" 
+                       href="'.url('admin/dealer-reset-pin/'.$dealer['id']).'" 
+                       onclick="return confirm(\'Are you sure you want to reset the pin?\');">
+                       Reset Pin
+                    </a>';
+                }
                 $num = ++$i;
                 $records["data"][] = array(      
                     $dealer['id'],
@@ -79,7 +88,7 @@ class DealerController extends Controller
                     '<div style="text-align:center;">'.$dealer['customers_count']."</div>",
                     '<div style="text-align:center;">'.$dealer['linked_products_count']."</div>",
                     '<div  id="'.$dealer['id'].'" rel="dealers" class="bootstrap-switch  bootstrap-switch-'.$checked.'  bootstrap-switch-wrapper bootstrap-switch-animate toogle_switch">
-                    <div class="bootstrap-switch-container" ><span class="bootstrap-switch-handle-on bootstrap-switch-primary">&nbsp;Active&nbsp;&nbsp;</span><label class="bootstrap-switch-label">&nbsp;</label><span class="bootstrap-switch-handle-off bootstrap-switch-default">&nbsp;Inactive&nbsp;</span></div></div>',   
+                    <div class="bootstrap-switch-container" ><span class="bootstrap-switch-handle-on bootstrap-switch-primary">&nbsp;Active&nbsp;&nbsp;</span><label class="bootstrap-switch-label">&nbsp;</label><span class="bootstrap-switch-handle-off bootstrap-switch-default">&nbsp;Inactive&nbsp;</span></div></div>'.$resetPin,   
                     $actionValues
                 );
             }
@@ -243,6 +252,13 @@ class DealerController extends Controller
         /*}catch(\Exception $e){
             return response()->json(['status'=>false,'message'=>$e->getMessage(),'errors'=>array('value'=>$e->getMessage())]);
         }*/
+    }
+
+    public function resetPin($dealerid){
+        Dealer::where('id',$dealerid)->update([
+            'hash_salt' => null
+        ]);
+        return redirect::to('/admin/dealers')->with('flash_message_success','PIN has been reset successfully');
     }
 
     public function dealerIncentives(Request $Request){
