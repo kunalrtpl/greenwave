@@ -94,6 +94,15 @@ class UsersController extends Controller
                     <a title="Update Role" class="btn btn-sm yellow margin-top-10" href="'.url('admin/update-role/'.$user['id']).'"> <i class="fa fa-clock-o"></i>
                     </a>';
                 }
+                if ($rolesExtraPermission && $user['app_access'] == "Yes" && !empty($user['hash_salt'])) {
+                    $actionValues .= '
+                    <a title="Reset Pin" class="btn btn-sm red margin-top-10" 
+                       href="'.url('admin/user-reset-pin/'.$user['id']).'" 
+                       onclick="return confirm(\'Are you sure you want to reset the pin?\');">
+                       Reset Pin
+                    </a>';
+                }
+
                 $num = ++$i;
                 $records["data"][] = array(     
                     $num,
@@ -193,7 +202,7 @@ class UsersController extends Controller
                     if(!isset($data['user_depts'])){
                         return response()->json(['status'=>false,'errors'=>array('user_depts'=> ['Please add atleast one user department'])]);
                     }
-                    DB::beginTransaction();
+                    //DB::beginTransaction();
                     if($type =="add"){
                         $user = new User; 
                     }else{
@@ -316,7 +325,7 @@ class UsersController extends Controller
                     }else{
                         $user->customers()->sync($data['customers']);  
                     }*/
-                    DB::commit();
+                    //DB::commit();
                     $redirectTo = url('/admin/users?s');
                     return response()->json(['status'=>true,'message'=>'ok','url'=>$redirectTo]);
                 }else{
@@ -327,6 +336,14 @@ class UsersController extends Controller
             return response()->json(['status'=>false,'message'=>$e->getMessage(),'errors'=>array('password'=>$e->getMessage())]);
         }
     }
+
+    public function resetPin($userid){
+        User::where('id',$userid)->update([
+            'hash_salt' => null
+        ]);
+        return redirect::to('/admin/users')->with('flash_message_success','PIN has been reset successfully');
+    }
+
 
     public function openUserDeptModal(Request $request){
         if($request->ajax()){

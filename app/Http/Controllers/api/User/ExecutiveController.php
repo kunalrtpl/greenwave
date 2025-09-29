@@ -219,6 +219,44 @@ class ExecutiveController extends Controller
 
     }
 
+
+    public function updateHashSalt(Request $request) {
+        if ($request->isMethod('post')) {
+            $resp = $this->resp; // Assuming this contains user info
+            if ($resp['status'] && isset($resp['user'])) {
+                $data = $request->all();
+
+                $rules = [
+                    'hash' => 'bail|required|string',
+                    'salt' => 'bail|required|string',
+                ];
+                $validator = Validator::make($data, $rules);
+
+                if ($validator->fails()) {
+                    return response()->json(validationResponse($validator), 422);
+                } else {
+                    $user = User::find($resp['user']['id']);
+                    if ($user) {
+                        $user->hash_salt = [
+                            'hash' => $data['hash'],
+                            'salt' => $data['salt']
+                        ];
+                        $user->save();
+
+                        $message = "Hash and Salt have been updated successfully";
+                        return response()->json(apiSuccessResponse($message), 200);
+                    } else {
+                        $message = "User not found";
+                        return response()->json(apiErrorResponse($message), 422);
+                    }
+                }
+            } else {
+                $message = "Unable to fetch user. Please try again later";
+                return response()->json(apiErrorResponse($message), 422);
+            }
+        }
+    }
+
     public function profile(Request $request){
     	if($request->isMethod('post')){
 			$resp = $this->resp;
