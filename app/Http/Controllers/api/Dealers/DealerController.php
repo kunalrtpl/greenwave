@@ -225,6 +225,40 @@ class DealerController extends Controller
         }
     }
 
+    public function updatePasscodeStatus(Request $request){
+        if ($request->isMethod('post')) {
+            $resp = $this->resp; // Assuming this contains dealer info
+
+            if ($resp['status'] && isset($resp['dealer'])) {
+                $data = $request->all();
+
+                $rules = [
+                    'passcode' => 'bail|required|in:0,1',
+                ];
+                $validator = Validator::make($data, $rules);
+
+                if ($validator->fails()) {
+                    return response()->json(validationResponse($validator), 422);
+                } else {
+                    $dealer = Dealer::find($resp['dealer']['id']);
+                    if ($dealer) {
+                        $dealer->enable_passcode = $data['passcode'];
+                        $dealer->save();
+
+                        $message = "Passcode have been updated successfully";
+                        return response()->json(apiSuccessResponse($message), 200);
+                    } else {
+                        $message = "Dealer not found";
+                        return response()->json(apiErrorResponse($message), 422);
+                    }
+                }
+            } else {
+                $message = "Unable to fetch dealer. Please try again later";
+                return response()->json(apiErrorResponse($message), 422);
+            }
+        }
+    }
+
 
     public function profile(Request $request){
     	if($request->isMethod('post')){
