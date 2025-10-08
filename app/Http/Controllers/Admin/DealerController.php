@@ -256,7 +256,8 @@ class DealerController extends Controller
 
     public function resetPin($dealerid){
         Dealer::where('id',$dealerid)->update([
-            'hash_salt' => null
+            'hash_salt' => null,
+            'enable_passcode' =>0
         ]);
         return redirect::to('/admin/dealers')->with('flash_message_success','PIN has been reset successfully');
     }
