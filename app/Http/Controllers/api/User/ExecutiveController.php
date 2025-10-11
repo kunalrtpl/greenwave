@@ -2465,8 +2465,8 @@ class ExecutiveController extends Controller
         if($resp['user']['id'] != "16"){
             // Time check: only allow between 9:00 AM and 10:00 AM
             $currentTime = date('H:i'); // current time in 24-hour format
-            $startTime = '09:00';
-            $endTime   = '10:00';
+            $startTime = env('ATTENDANCE_START_TIME');
+            $endTime   = env('ATTENDANCE_END_TIME');
 
             if ($currentTime < $startTime || $currentTime > $endTime) {
                 return response()->json(apiErrorResponse("Attendance can only be marked between 9:00 AM and 10:00 AM"), 422);
@@ -2504,7 +2504,9 @@ class ExecutiveController extends Controller
         if (!$resp['status'] || !isset($resp['user'])) {
             return response()->json(apiErrorResponse("Token expired or invalid user"), 422);
         }
-        $userId = $resp['user']['id'];
+
+        // If user_id is provided in request, use it, else fallback to logged-in user
+        $userId = $request->input('user_id', $resp['user']['id']);
 
         $startDate = $request->input('start_date');
         $endDate   = $request->input('end_date');
@@ -2599,7 +2601,12 @@ class ExecutiveController extends Controller
 
         // Sort months in reverse (latest first)
         krsort($grouped);
+
+        $startTime = env('ATTENDANCE_START_TIME');
+        $endTime   = env('ATTENDANCE_END_TIME');
         $result['attendances'] = array_values($grouped);
+        $result['attendance_start_time'] = $startTime;
+        $result['attendance_end_time'] = $endTime;
 
         return response()->json(apiSuccessResponse("Attendance list", $result));
     }
