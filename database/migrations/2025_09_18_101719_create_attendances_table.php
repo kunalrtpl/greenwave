@@ -18,6 +18,8 @@ class CreateAttendancesTable extends Migration
             $table->unsignedBigInteger('user_id');
             $table->date('date');
             $table->enum('status', ['present', 'absent', 'leave', 'holiday']);
+            $table->string('secondary_status',100)->nullable();
+            $table->string('leave_time')->nullable();
             $table->text('remarks')->nullable();
             $table->timestamps();
 

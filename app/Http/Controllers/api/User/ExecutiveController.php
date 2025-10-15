@@ -2462,22 +2462,29 @@ class ExecutiveController extends Controller
         if (!$resp['status'] || !isset($resp['user'])) {
             return response()->json(apiErrorResponse("Token expired or invalid user"), 422);
         }
-        if($resp['user']['id'] != "16"){
-            // Time check: only allow between 9:00 AM and 10:00 AM
-            $currentTime = date('H:i'); // current time in 24-hour format
-            $startTime = env('ATTENDANCE_START_TIME');
-            $endTime   = env('ATTENDANCE_END_TIME');
+        
+        // Time check: only allow between 9:00 AM and 10:00 AM
+        $currentTime = date('H:i'); // current time in 24-hour format
+        $startTime = env('ATTENDANCE_START_TIME');
+        $endTime   = env('ATTENDANCE_END_TIME');
+        $halfdayTime     = env('ATTENDANCE_HALFDAY_TIME');
 
-            if ($currentTime < $startTime || $currentTime > $endTime) {
-                return response()->json(apiErrorResponse("Attendance can only be marked between 9:00 AM and 10:00 AM"), 422);
-            }
+        if ($currentTime < $startTime || $currentTime > $endTime) {
+            $formattedStart = date('g:i A', strtotime($startTime)); // 9:00 AM
+            $formattedEnd   = date('g:i A', strtotime($endTime));   // 03:00 PM
+            return response()->json(apiErrorResponse("Attendance can only be marked between {$formattedStart} and {$formattedEnd}"), 422);
         }
+        
 
         $userId = $resp['user']['id'];
         $date   = $request->input('date') ?? now()->toDateString();
         $status = $request->input('status');
         $remarks = $request->input('remarks') ?? '';
-
+        // ✅ Half-day check
+        $secondaryStatus = null;
+        if ($currentTime > $halfdayTime) {
+            $secondaryStatus = 'First Half Leave';
+        }
         if (!in_array($status, ['present','absent','leave','holiday'])) {
             return response()->json(apiErrorResponse("Invalid status"), 422);
         }
@@ -2488,7 +2495,8 @@ class ExecutiveController extends Controller
                 'status' => $status, 
                 'latitude' => $request->input('latitude') ?? '',
                 'longitude' => $request->input('longitude') ?? '',
-                'remarks' => $remarks
+                'remarks' => $remarks,
+                'secondary_status'=> $secondaryStatus
             ]
         );
 
@@ -2519,18 +2527,14 @@ class ExecutiveController extends Controller
         $records = Attendance::where('user_id', $userId)
             ->whereBetween('date', [$startDate, $endDate])
             ->orderBy('date')
-            ->get(['date','status','remarks']);
+            ->get();
 
         // DB holidays
         $holidays = Holiday::whereBetween('date', [$startDate, $endDate])->get();
 
         // Map attendance
         $statusList = $records->map(function($r){
-            return [
-                'date' => $r->date,
-                'status' => $r->status,
-                'remarks' => $r->remarks,
-            ];
+            return $r;
         });
 
         // Map DB holidays
@@ -2604,9 +2608,11 @@ class ExecutiveController extends Controller
 
         $startTime = env('ATTENDANCE_START_TIME');
         $endTime   = env('ATTENDANCE_END_TIME');
+        $halfDayTime   = env('ATTENDANCE_HALFDAY_TIME');
         $result['attendances'] = array_values($grouped);
         $result['attendance_start_time'] = $startTime;
         $result['attendance_end_time'] = $endTime;
+        $result['attendance_halfday_time'] = $halfDayTime;
 
         return response()->json(apiSuccessResponse("Attendance list", $result));
     }
@@ -2663,4 +2669,68 @@ class ExecutiveController extends Controller
         $result['holidays'] = $holidayList;
         return response()->json(apiSuccessResponse("Holidays fetched successfully", $result));
     }
+
+    public function markEmergencyLeave(Request $request)
+    {
+        $resp = $this->resp;
+        if (!$resp['status'] || !isset($resp['user'])) {
+            return response()->json(apiErrorResponse("Token expired or invalid user"), 422);
+        }
+        $data = $request->all();
+
+        $userId = $resp['user']['id'];
+
+        $rules = [
+            'attendance_id'     => 'required|integer|exists:attendances,id',
+            'secondary_status'  => 'required|string',
+            'leave_time'        => 'required|date_format:H:i',
+        ];
+        $customMessages = [];
+        $validator = Validator::make($data,$rules,$customMessages);
+        if ($validator->fails()) {
+            return response()->json(validationResponse($validator),422); 
+        }
+
+        $attendanceId = $data['attendance_id'];
+        $secondaryStatus = $data['secondary_status'];
+        $leaveTime = $data['leave_time'];
+
+        // ✅ Fetch config times from .env
+        $emergencyStart = env('EMERGENCY_LEAVE_START_TIME', '09:00');
+        $emergencyEnd   = env('EMERGENCY_LEAVE_END_TIME', '21:00');
+
+        // ✅ Check if current time is within emergency leave window
+        if ($leaveTime < $emergencyStart || $leaveTime > $emergencyEnd) {
+            $formattedStart = date('g:i A', strtotime($emergencyStart));
+            $formattedEnd   = date('g:i A', strtotime($emergencyEnd));
+            return response()->json(apiErrorResponse("Emergency leave can only be marked between {$formattedStart} and {$formattedEnd}"), 422);
+        }
+
+        // ✅ Find attendance record
+        $attendance = Attendance::where('id', $attendanceId)
+            ->where('user_id', $userId)
+            ->first();
+
+        if (!$attendance) {
+            return response()->json(apiErrorResponse("Attendance record not found."), 404);
+        }
+
+        // ✅ Allow emergency leave only if status is "Present"
+        if (strtolower($attendance->status) !== 'present') {
+            return response()->json(apiErrorResponse("Emergency leave can only be applied for Present status."), 422);
+        }
+
+        // ✅ Update record
+        $attendance->update([
+            'secondary_status' => $secondaryStatus,
+            'leave_time'       => $leaveTime,
+        ]);
+
+        return response()->json(apiSuccessResponse("Emergency leave marked successfully.", [
+            'attendance_id' => $attendance->id,
+            'secondary_status' => $secondaryStatus,
+            'leave_time' => $leaveTime,
+        ]));
+    }
+
 }
