@@ -2684,6 +2684,7 @@ class ExecutiveController extends Controller
             'attendance_id'     => 'required|integer|exists:attendances,id',
             'secondary_status'  => 'required|string',
             'leave_time'        => 'required|date_format:H:i',
+            'remarks'           => 'required',
         ];
         $customMessages = [];
         $validator = Validator::make($data,$rules,$customMessages);
@@ -2694,6 +2695,7 @@ class ExecutiveController extends Controller
         $attendanceId = $data['attendance_id'];
         $secondaryStatus = $data['secondary_status'];
         $leaveTime = $data['leave_time'];
+        $remarks = $data['remarks'];
 
         // ✅ Fetch config times from .env
         $emergencyStart = env('EMERGENCY_LEAVE_START_TIME', '09:00');
@@ -2724,6 +2726,7 @@ class ExecutiveController extends Controller
         $attendance->update([
             'secondary_status' => $secondaryStatus,
             'leave_time'       => $leaveTime,
+            'remarks'          => $remarks
         ]);
 
         return response()->json(apiSuccessResponse("Emergency leave marked successfully.", [
