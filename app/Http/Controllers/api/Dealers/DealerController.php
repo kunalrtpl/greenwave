@@ -827,33 +827,84 @@ class DealerController extends Controller
     }
 
 
-    public function v2intransitMaterials(Request $request){
-        if($request->isMethod('get')){
-            $resp = $this->resp;
-            if($resp['status'] && isset($resp['dealer'])) {
-                //echo "<pre>"; print_r($resp); die;
-                $dealerIds = \App\Dealer::getParentChildDealers($resp['dealer']);
-                $lrNos = SaleInvoice::with(['item','dealer'])->whereIN('dealer_id',$dealerIds)->where('dealer_invoice_no','!=','')->orderby('dispatch_date','ASC')->where('is_delivered',0)->select('lr_no')->groupby('lr_no')->get();
-                $lrNos = json_decode(json_encode($lrNos),true);
-                $saleInvoices = [];
-                foreach($lrNos as $lkey=> $lrNo){
-                    $saleInvoices[$lkey]['lr_no'] = $lrNo['lr_no'];
-                    $invoices = SaleInvoice::with(['item','dealer'])->whereIN('dealer_id',$dealerIds)->where('dealer_invoice_no','!=','')->orderby('dispatch_date','ASC')->where('is_delivered',0)->Where('lr_no',$lrNo)->get();
-                    $invoices = json_decode(json_encode($invoices),true);
-                    $saleInvoices[$lkey]['invoices'] = $invoices;
-                }
-                $message = "Sale Invoice has been fetched successfully";
-                $result['sale_invoices'] = $saleInvoices;
-                return response()->json(apiSuccessResponse($message,$result),200);
-            }else{
-                $message = "Unable to fetch. PLease try again after sometime";
-                return response()->json(apiErrorResponse($message),422);
-            }
-        }else{
-            $message = "Unsupported Route";
-            return response()->json(apiErrorResponse($message),422); 
+    /**
+     * Fetch in-transit materials for dealer (v2 version)
+     *
+     * This API returns grouped sale invoices that are not yet delivered.
+     * - Invoices with a valid LR number are grouped under `sale_invoices` by `lr_no`
+     * - Invoices without an LR number are grouped under `sale_invoices_no_lr` by `dealer_invoice_no`
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function v2intransitMaterials(Request $request)
+    {
+        // Ensure request method is GET only
+        if (!$request->isMethod('get')) {
+            return response()->json(apiErrorResponse("Unsupported Route"), 422);
         }
+
+        // Basic response validation and dealer existence check
+        $resp = $this->resp;
+        if (!($resp['status'] && isset($resp['dealer']))) {
+            return response()->json(apiErrorResponse("Unable to fetch. Please try again after sometime"), 422);
+        }
+
+        // Get all related dealer IDs (parent + child dealers)
+        $dealerIds = \App\Dealer::getParentChildDealers($resp['dealer']);
+
+        /**
+         * Fetch all in-transit sale invoices
+         * - belonging to the dealer(s)
+         * - with a valid dealer invoice number
+         * - not yet delivered
+         * - ordered by dispatch date (ascending)
+         */
+        $allInvoices = SaleInvoice::with(['item', 'dealer'])
+            ->whereIn('dealer_id', $dealerIds)
+            ->where('dealer_invoice_no', '!=', '')
+            ->where('is_delivered', 0)
+            ->orderBy('dispatch_date', 'ASC')
+            ->get();
+
+        /**
+         * Split the invoices into two sets:
+         * 1. $groupedByLr   → invoices having LR number
+         * 2. $groupedNoLr   → invoices having no LR number
+         */
+        $groupedByLr = $allInvoices->filter(fn($inv) => !empty($inv->lr_no))
+                                   ->groupBy('lr_no');
+
+        $groupedNoLr = $allInvoices->filter(fn($inv) => empty($inv->lr_no))
+                                   ->groupBy('dealer_invoice_no');
+
+        // Prepare final structured response arrays
+        $saleInvoices = [];
+        foreach ($groupedByLr as $lrNo => $invoices) {
+            $saleInvoices[] = [
+                'lr_no' => $lrNo,                 // Group identifier
+                'invoices' => $invoices->values() // Collection of invoice objects
+            ];
+        }
+
+        $saleInvoicesNoLr = [];
+        foreach ($groupedNoLr as $dealerInvoiceNo => $invoices) {
+            $saleInvoicesNoLr[] = [
+                'dealer_invoice_no' => $dealerInvoiceNo, // Group identifier for missing LR
+                'invoices' => $invoices->values()        // Collection of invoice objects
+            ];
+        }
+
+        // Combine both grouped data in final API response
+        $result = [
+            'sale_invoices' => $saleInvoices,             // Invoices grouped by LR No
+            'sale_invoices_no_lr' => $saleInvoicesNoLr,   // Invoices with no LR No
+        ];
+
+        // Return consistent success response (no structure or key changed)
+        return response()->json(apiSuccessResponse("Sale Invoice has been fetched successfully", $result), 200);
     }
+
 
     public function updateMaterialDeliver(Request $request){
         if($request->isMethod('post')){
