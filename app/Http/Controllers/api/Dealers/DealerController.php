@@ -812,8 +812,7 @@ class DealerController extends Controller
             $resp = $this->resp;
             if($resp['status'] && isset($resp['dealer'])) {
                 //echo "<pre>"; print_r($resp); die;
-                /*$saleInvoices = SaleInvoice::with('item')->where('dealer_id',$resp['dealer']['id'])->where('transport_name','!=','')->orderby('dispatch_date','ASC')->where('is_delivered',0)->get();*/
-                $saleInvoices = SaleInvoice::with('item')->where('dealer_id',$resp['dealer']['id'])->where('dealer_invoice_no','!=','')->orderby('dispatch_date','ASC')->where('is_delivered',0)->get();
+                $saleInvoices = SaleInvoice::with('item')->where('dealer_id',$resp['dealer']['id'])->where('transport_name','!=','')->orderby('dispatch_date','ASC')->where('is_delivered',0)->get();
                 $message = "Sale Invoice has been fetched successfully";
                 $result['sale_invoices'] = $saleInvoices;
                 return response()->json(apiSuccessResponse($message,$result),200);
@@ -834,12 +833,12 @@ class DealerController extends Controller
             if($resp['status'] && isset($resp['dealer'])) {
                 //echo "<pre>"; print_r($resp); die;
                 $dealerIds = \App\Dealer::getParentChildDealers($resp['dealer']);
-                $lrNos = SaleInvoice::with(['item','dealer'])->whereIN('dealer_id',$dealerIds)->where('transport_name','!=','')->orderby('dispatch_date','ASC')->where('is_delivered',0)->select('lr_no')->groupby('lr_no')->get();
+                $lrNos = SaleInvoice::with(['item','dealer'])->whereIN('dealer_id',$dealerIds)->where('dealer_invoice_no','!=','')->orderby('dispatch_date','ASC')->where('is_delivered',0)->select('lr_no')->groupby('lr_no')->get();
                 $lrNos = json_decode(json_encode($lrNos),true);
                 $saleInvoices = [];
                 foreach($lrNos as $lkey=> $lrNo){
                     $saleInvoices[$lkey]['lr_no'] = $lrNo['lr_no'];
-                    $invoices = SaleInvoice::with(['item','dealer'])->whereIN('dealer_id',$dealerIds)->where('transport_name','!=','')->orderby('dispatch_date','ASC')->where('is_delivered',0)->Where('lr_no',$lrNo)->get();
+                    $invoices = SaleInvoice::with(['item','dealer'])->whereIN('dealer_id',$dealerIds)->where('dealer_invoice_no','!=','')->orderby('dispatch_date','ASC')->where('is_delivered',0)->Where('lr_no',$lrNo)->get();
                     $invoices = json_decode(json_encode($invoices),true);
                     $saleInvoices[$lkey]['invoices'] = $invoices;
                 }
