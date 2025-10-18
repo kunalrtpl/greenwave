@@ -812,7 +812,8 @@ class DealerController extends Controller
             $resp = $this->resp;
             if($resp['status'] && isset($resp['dealer'])) {
                 //echo "<pre>"; print_r($resp); die;
-                $saleInvoices = SaleInvoice::with('item')->where('dealer_id',$resp['dealer']['id'])->where('transport_name','!=','')->orderby('dispatch_date','ASC')->where('is_delivered',0)->get();
+                /*$saleInvoices = SaleInvoice::with('item')->where('dealer_id',$resp['dealer']['id'])->where('transport_name','!=','')->orderby('dispatch_date','ASC')->where('is_delivered',0)->get();*/
+                $saleInvoices = SaleInvoice::with('item')->where('dealer_id',$resp['dealer']['id'])->where('dealer_invoice_no','!=','')->orderby('dispatch_date','ASC')->where('is_delivered',0)->get();
                 $message = "Sale Invoice has been fetched successfully";
                 $result['sale_invoices'] = $saleInvoices;
                 return response()->json(apiSuccessResponse($message,$result),200);
