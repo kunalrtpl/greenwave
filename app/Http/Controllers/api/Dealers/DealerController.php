@@ -882,7 +882,7 @@ class DealerController extends Controller
         $saleInvoices = [];
         foreach ($groupedByLr as $lrNo => $invoices) {
             $saleInvoices[] = [
-                'lr_no' => $lrNo,                 // Group identifier
+                'lr_no' => (string)$lrNo,                 // Group identifier
                 'invoices' => $invoices->values() // Collection of invoice objects
             ];
         }
@@ -890,7 +890,7 @@ class DealerController extends Controller
         $saleInvoicesNoLr = [];
         foreach ($groupedNoLr as $dealerInvoiceNo => $invoices) {
             $saleInvoicesNoLr[] = [
-                'dealer_invoice_no' => $dealerInvoiceNo, // Group identifier for missing LR
+                'dealer_invoice_no' =>  (string)$dealerInvoiceNo, // Group identifier for missing LR
                 'invoices' => $invoices->values()        // Collection of invoice objects
             ];
         }
