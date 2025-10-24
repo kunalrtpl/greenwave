@@ -257,6 +257,40 @@ class ExecutiveController extends Controller
         }
     }
 
+    public function updatePasscodeStatus(Request $request){
+        if ($request->isMethod('post')) {
+            $resp = $this->resp; // Assuming this contains dealer info
+
+            if ($resp['status'] && isset($resp['user'])) {
+                $data = $request->all();
+
+                $rules = [
+                    'passcode' => 'bail|required|in:0,1',
+                ];
+                $validator = Validator::make($data, $rules);
+
+                if ($validator->fails()) {
+                    return response()->json(validationResponse($validator), 422);
+                } else {
+                    $user = User::find($resp['user']['id']);
+                    if ($user) {
+                        $user->enable_passcode = $data['passcode'];
+                        $user->save();
+
+                        $message = "Passcode have been updated successfully";
+                        return response()->json(apiSuccessResponse($message), 200);
+                    } else {
+                        $message = "User not found";
+                        return response()->json(apiErrorResponse($message), 422);
+                    }
+                }
+            } else {
+                $message = "Unable to fetch user. Please try again later";
+                return response()->json(apiErrorResponse($message), 422);
+            }
+        }
+    }
+
     public function profile(Request $request){
     	if($request->isMethod('post')){
 			$resp = $this->resp;

@@ -339,7 +339,8 @@ class UsersController extends Controller
 
     public function resetPin($userid){
         User::where('id',$userid)->update([
-            'hash_salt' => null
+            'hash_salt' => null,
+            'enable_passcode' =>0
         ]);
         return redirect::to('/admin/users')->with('flash_message_success','PIN has been reset successfully');
     }
