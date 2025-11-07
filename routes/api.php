@@ -19,6 +19,7 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 Route::namespace('api')->middleware(['api.log'])->group(function () {
 	Route::post('/check-version','ApiController@checkVersion');
 	Route::get('/cities','ApiController@cities');
+	Route::get('/windows-app-installer','ApiController@windowsAppInstaller');
 	Route::post('/save-quick-enquiry', 'ApiController@saveQuickEnquiry');
 	Route::post('/save-dealership-enquiry', 'ApiController@saveDealershipEnquiry');
 	Route::post('/save-job-enquiry', 'ApiController@saveJobEnquiry');

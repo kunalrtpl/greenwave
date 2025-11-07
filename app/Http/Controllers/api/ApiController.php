@@ -383,4 +383,16 @@ class ApiController extends Controller
         $result['cities'] = $cities;
         return response()->json(apiSuccessResponse($message,$result),200);
     }
+
+    public function windowsAppInstaller()
+    {
+        // Use Laravel's url() helper to generate the full file URL dynamically
+        $url = url('Installer/Greenwave_Installer_v1.0.0.exe');
+
+        $message = "Installer URL has been fetched successfully";
+
+        $result['installer_url'] = $url;
+
+        return response()->json(apiSuccessResponse($message, $result), 200);
+    }
 }
