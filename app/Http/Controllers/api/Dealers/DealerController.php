@@ -862,6 +862,7 @@ class DealerController extends Controller
          */
         $allInvoices = SaleInvoice::with(['item', 'dealer'])
             ->whereIn('dealer_id', $dealerIds)
+            ->whereNull('customer_id')
             ->where('dealer_invoice_no', '!=', '')
             ->where('is_delivered', 0)
             ->orderBy('dispatch_date', 'ASC')
