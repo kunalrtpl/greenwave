@@ -927,6 +927,17 @@ class ExecutiveController extends Controller
                         $dvr->trial_costing_report = $mainFilename;
                     }
                 }
+
+                if($request->hasFile('trial_report_two')){
+                    if (Input::file('trial_report_two')->isValid()) {
+                        $file = Input::file('trial_report_two');
+                        $destination = 'DvrDocuments/';
+                        $ext= $file->getClientOriginalExtension();
+                        $mainFilename = "trial_report_two".uniqid().date('h-i-s').".".$ext;
+                        $file->move($destination, $mainFilename);
+                        $dvr->trial_report_two = $mainFilename;
+                    }
+                }
                 $dvr->save();
                 if(isset($data['include_products']) && !empty($data['include_products'])){
                     $products = explode(',', $data['include_products']);
@@ -994,6 +1005,18 @@ class ExecutiveController extends Controller
                     }
                 }else{
                     $dvr->trial_costing_report = NULL;
+                }
+                if($request->hasFile('trial_report_two')){
+                    if (Input::file('trial_report_two')->isValid()) {
+                        $file = Input::file('trial_report_two');
+                        $destination = 'DvrDocuments/';
+                        $ext= $file->getClientOriginalExtension();
+                        $mainFilename = "trial_report_two".uniqid().date('h-i-s').".".$ext;
+                        $file->move($destination, $mainFilename);
+                        $dvr->trial_report_two = $mainFilename;
+                    }
+                }else{
+                    $dvr->trial_report_two = NULL;
                 }
                 $dvr->save();
                 $message = 'Media has been uploaded successfully';
@@ -2768,6 +2791,208 @@ class ExecutiveController extends Controller
             'secondary_status' => $secondaryStatus,
             'leave_time' => $leaveTime,
         ]));
+    }
+
+
+    public function sendOtpForCustomerContact(Request $request)
+    {
+        if ($request->isMethod('post')) {
+            $data = $request->all();
+            $resp = $this->resp;
+
+            // ✅ Validation (only mobile number needed)
+            $rules = [
+                'mobile_number' => 'bail|required|numeric|digits:10'
+            ];
+            $customMessages = [];
+            $validator = Validator::make($data, $rules, $customMessages);
+
+            if ($validator->fails()) {
+                return response()->json(validationResponse($validator), 422);
+            }
+
+            if ($resp['status'] && isset($resp['user'])) {
+
+                // Generate OTP
+                $otp = rand(100000, 999999);
+                $otp = 123456;
+                // Store OTP temporarily for verification
+                $key = 'contact_otp_' . $data['mobile_number'];
+                \Cache::put($key, $otp, 300); // valid for 5 minutes
+
+                // sendOtpSms($data['mobile_number'], $otp);
+
+                return response()->json(apiSuccessResponse("OTP sent successfully"), 200);
+            }
+        }
+    }
+
+
+    public function createCustomerContact(Request $request)
+    {
+        if ($request->isMethod('post')) {
+            $data = $request->all();
+            $resp = $this->resp;
+
+            // ✅ Validation
+            $rules = [
+                'customer_id'   => 'bail|required|numeric',
+                'name'          => 'bail|required|string',
+                'mobile_number' => 'bail|required|numeric|digits:10',
+                'otp'           => 'bail|required|numeric|digits:6',
+                'dvr_id'        => 'bail|required|numeric'
+            ];
+            $validator = Validator::make($data, $rules);
+
+            if ($validator->fails()) {
+                return response()->json(validationResponse($validator), 422);
+            }
+
+            if ($resp['status'] && isset($resp['user'])) {
+
+                // ✅ 1. Check if mobile already exists
+                $existing = \App\CustomerContact::where('mobile_number', $data['mobile_number'])->first();
+
+                if ($existing) {
+                    // ✅ if active → do NOT allow duplicate
+                    if ($existing->status == 'active') {
+                        return response()->json(apiErrorResponse("This contact number has alreday been used for other customer"), 400);
+                    }
+                    // if inactive → allowed (continue)
+                }
+
+                // ✅ 2. Validate OTP
+                $key = 'contact_otp_' . $data['mobile_number'];
+                $storedOtp = \Cache::get($key);
+
+                if (!$storedOtp) {
+                    return response()->json(apiErrorResponse("The OTP you entered is incorrect or has expired."), 400);
+                }
+
+                if ($storedOtp != $data['otp']) {
+                    return response()->json(apiErrorResponse("Invalid OTP."), 400);
+                }
+
+                // ✅ 3. OTP correct → Create Contact
+                $contact = \App\CustomerContact::create([
+                    'customer_id'    => $data['customer_id'],
+                    'name'           => $data['name'],
+                    'designation'    => $data['designation'] ?? null,
+                    'mobile_number'  => $data['mobile_number'],
+                    'created_by'     => $resp['user']['id'],
+                    'status'         => 'active',
+                ]);
+
+                // ✅ remove OTP from cache
+                \Cache::forget($key);
+
+                // ✅ 4. Update DVR table
+                $dvr = \App\Dvr::find($data['dvr_id']);
+
+                if (!$dvr) {
+                    return response()->json(apiErrorResponse("Invalid DVR ID"), 400);
+                }
+
+                $dvr->customer_contact_id = $contact->id;
+                $dvr->dvr_verified_date_time = date('Y-m-d H:i:s');
+                $dvr->save();
+
+                return response()->json(apiSuccessResponse("Customer contact created and DVR updated successfully", [
+                    'contact' => $contact,
+                    'dvr'     => $dvr
+                ]), 200);
+            }
+        }
+    }
+
+
+    public function verifyExistingContactOtp(Request $request)
+    {
+        if ($request->isMethod('post')) {
+            $data = $request->all();
+            $resp = $this->resp;
+
+            // ✅ Validation
+            $rules = [
+                'contact_id' => 'bail|required|numeric',
+                'otp'        => 'bail|required|numeric|digits:6',
+                'dvr_id'     => 'bail|required|numeric'
+            ];
+            $validator = Validator::make($data, $rules);
+
+            if ($validator->fails()) {
+                return response()->json(validationResponse($validator), 422);
+            }
+
+            if ($resp['status'] && isset($resp['user'])) {
+
+                $contact = \App\CustomerContact::find($data['contact_id']);
+
+                if (!$contact) {
+                    return response()->json(apiErrorResponse("Invalid contact ID"), 400);
+                }
+
+                if ($contact->status != 'active') {
+                    return response()->json(apiErrorResponse("This contact is not active."), 400);
+                }
+
+                $key = 'contact_otp_' . $contact->mobile_number;
+                $storedOtp = \Cache::get($key);
+
+                if (!$storedOtp) {
+                    return response()->json(apiErrorResponse("The OTP you entered is incorrect or has expired."), 400);
+                }
+
+                if ($storedOtp != $data['otp']) {
+                    return response()->json(apiErrorResponse("Invalid OTP."), 400);
+                }
+
+                // ✅ OTP Success — Now update DVR
+                $dvr = \App\Dvr::find($data['dvr_id']);
+
+                if (!$dvr) {
+                    return response()->json(apiErrorResponse("Invalid DVR ID"), 400);
+                }
+
+                // update dvr fields
+                $dvr->dvr_verified_date_time = date('Y-m-d H:i:s');
+                $dvr->customer_contact_id = $contact->id;
+                $dvr->save();
+
+                // ✅ clear otp
+                \Cache::forget($key);
+
+                return response()->json(apiSuccessResponse("Contact verified and DVR updated successfully"), 200);
+            }
+        }
+    }
+
+
+    public function getCustomerContacts(Request $request)
+    {
+        if ($request->isMethod('post')) {
+            $data = $request->all();
+            $resp = $this->resp;
+
+            // ✅ Validation
+            $rules = [
+                'customer_id' => 'bail|required|numeric'
+            ];
+            $validator = Validator::make($data, $rules);
+
+            if ($validator->fails()) {
+                return response()->json(validationResponse($validator), 422);
+            }
+
+            if ($resp['status'] && isset($resp['user'])) {
+
+                $contacts = \App\CustomerContact::where('customer_id', $data['customer_id'])
+                            ->where('status', 'active')
+                            ->get();
+
+                return response()->json(apiSuccessResponse("Data fetched successfully", $contacts), 200);
+            }
+        }
     }
 
 }

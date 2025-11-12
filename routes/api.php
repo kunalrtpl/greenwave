@@ -256,6 +256,13 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::match(['get', 'post'], 'attendance-list','ExecutiveController@attendanceList');
 			Route::match(['get', 'post'], 'leave-request','ExecutiveController@leaveRequest');
 			Route::match(['get', 'post'], 'holiday-by-years','ExecutiveController@holidaysByYears');
+
+
+			Route::post('customer-contact/send-otp', 'ExecutiveController@sendOtpForCustomerContact');
+			Route::post('customer-contact/create', 'ExecutiveController@createCustomerContact');
+			Route::post('customer-contact/verify-otp-existing', 'ExecutiveController@verifyExistingContactOtp');
+			Route::post('customer-contact/list', 'ExecutiveController@getCustomerContacts');
+
 		});
 	});
 });
