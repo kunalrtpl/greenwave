@@ -1031,7 +1031,7 @@ class ExecutiveController extends Controller
             $resp = $this->resp;
             if($resp['status'] && isset($resp['user'])){
                 $data = $request->all();
-                $dvrs = Dvr::with(['customer','products','customer_register_request','complaint_info','query_info','other_team_member_info','trial_report_info','complaint_sample','market_sample','sample_submission','user_scheduler','trial_reports']);
+                $dvrs = Dvr::with(['customer','products','customer_register_request','complaint_info','query_info','other_team_member_info','trial_report_info','complaint_sample','market_sample','sample_submission','user_scheduler','trial_reports','customer_contact_info']);
                 if(isset($data['customer_id']) && !empty($data['customer_id'])){
                     $dvrs = $dvrs->where('customer_id',$data['customer_id']);
                 }
@@ -1065,7 +1065,7 @@ class ExecutiveController extends Controller
             $resp = $this->resp;
             if($resp['status'] && isset($resp['user'])){
                 $data = $request->all();
-                $dvr = Dvr::with(['customer','products','customer_register_request','complaint_info','query_info','other_team_member_info','trial_report_info','complaint_sample','market_sample','sample_submission','user_scheduler','trial_reports'])->where('id',$dvrid)->orderby('id','DESC')->first();
+                $dvr = Dvr::with(['customer','products','customer_register_request','complaint_info','query_info','other_team_member_info','trial_report_info','complaint_sample','market_sample','sample_submission','user_scheduler','trial_reports','customer_contact_info'])->where('id',$dvrid)->orderby('id','DESC')->first();
                 $message = 'Record has ben fetched successfully';
                 $result['report_base_url'] = url('/DvrDocuments/').'/';
                 $result['dvr'] = $dvr;

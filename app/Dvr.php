@@ -64,4 +64,8 @@ class Dvr extends Model
         return $this->belongsto('App\UserScheduler','user_scheduler_id','id')->with(['customer','customer_register_request','previous_scheduler','next_scheduler']);
     }
 
+    public function customer_contact_info(){
+        return $this->belongsto('App\CustomerContact','customer_contact_id','id')->select('id','name','designation','mobile_number');
+    }
+
 }
