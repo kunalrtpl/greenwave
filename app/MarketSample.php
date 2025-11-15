@@ -99,6 +99,28 @@ class MarketSample extends Model
                 $market_sample->sample_document = $mainFilename;
             }
         }
+        if($request->hasFile('sample_document_two')){
+            if (Input::file('sample_document_two')->isValid()) {
+                $file = Input::file('sample_document_two');
+                $destination = 'MarketSampleDocuments/';
+                $ext= $file->getClientOriginalExtension();
+                $mainFilename = "sample_document_two".uniqid().date('h-i-s').".".$ext;
+                $file->move($destination, $mainFilename);
+                $market_sample->sample_document_two = $mainFilename;
+            }
+        }
+
+        if($request->hasFile('sample_document_three')){
+            if (Input::file('sample_document_three')->isValid()) {
+                $file = Input::file('sample_document_three');
+                $destination = 'MarketSampleDocuments/';
+                $ext= $file->getClientOriginalExtension();
+                $mainFilename = "sample_document_three".uniqid().date('h-i-s').".".$ext;
+                $file->move($destination, $mainFilename);
+                $market_sample->sample_document_three = $mainFilename;
+            }
+        }
+        
         $histories = array('Sample Collected');
         $market_sample->status = "Sample Collected";
         if($request->hasFile('courier_document')){
