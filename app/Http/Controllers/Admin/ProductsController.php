@@ -454,7 +454,7 @@ class ProductsController extends Controller
             }
             return redirect()->back()->with('flash_message_success','Information has been updated successfully');
         }
-        $title = "Product QC";
+        $title = "Product QC (".$productdata['product_name'].")";
         return view('admin.products.qc')->with(compact('title','productdata','productid'));
     }
 
@@ -464,7 +464,7 @@ class ProductsController extends Controller
             return redirect('/admin/dashboard')->with('flash_message_error','You have no right to access this functionality');
         }
 
-        $productdata = Product::with(['raw_materials','pricings','product_stages','weightages'])->where('id',$productid)->first();
+        $productdata = Product::with(['raw_materials','pricings','product_stages','weightages','productpacking'])->where('id',$productid)->first();
         $productdata = json_decode(json_encode($productdata),true);
         if($request->isMethod('post')){
             $data = $request->all();
@@ -531,7 +531,8 @@ class ProductsController extends Controller
             }
             return redirect()->back()->with('flash_message_success','Information has been updated successfully');
         }
-        $title = "Product Costing";
+        //echo "<pre>"; print_r($productdata); die;
+        $title = "Product Costing (".$productdata['product_name'].")";
         return view('admin.products.product-costing')->with(compact('title','productdata','productid'));
     }
 

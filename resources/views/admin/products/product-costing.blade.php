@@ -281,6 +281,32 @@
             $('#MarketPriceVal').text('Rs. '+Math.round(marketprice));
         }
     }
+
+    $(document).on('keyup change', 'input[name="moq"]', function () {
+        let moq = parseFloat($(this).val());
+        let packSize = {{ $productdata['productpacking']['size'] }}; // 50
+
+        if (moq && (moq % packSize !== 0)) {
+            $("#Product-moq").text("MOQ must be divisible by " + packSize).show();
+        } else {
+            $("#Product-moq").hide();
+        }
+    });
+
+    $('form').on('submit', function (e) {
+
+        let moq = parseFloat($('input[name="moq"]').val());
+        let packSize = {{ $productdata['productpacking']['size'] }}; // 50
+
+        if (moq && (moq % packSize !== 0)) {
+            e.preventDefault();
+            $("#Product-moq").text("MOQ must be divisible by " + packSize).show();
+            $('input[name="moq"]').focus();
+            return false;
+        }
+    });
+
+    
 </script>
 
 <style>

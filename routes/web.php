@@ -382,6 +382,11 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 		Route::match(['get', 'post'], '/fetch-product-batch-consumptions', 'BatchSheetController@fetchProductBatchConsumptions');
 
 
+		Route::get('/attendance-report', 'AttendanceReportController@index')->name('attendance.form');
+		Route::post('/attendance-report/generate', 'AttendanceReportController@generate')->name('attendance.generate');
+
+
+
 	});
 });
 Route::match(['get', 'post'], '/send-notifications', 'Admin\NotificationController@sendNotifications');

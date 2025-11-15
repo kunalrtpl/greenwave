@@ -952,6 +952,7 @@ class ExecutiveController extends Controller
                     UserScheduler::where('id',$data['user_scheduler_id'])->update(['dvr_id'=>$dvr->id]);
                 }
                 $result['dvr_id'] = $dvr->id;
+                $result['id']     = $dvr->id;
                 $message = 'DVR has been submitted successfully';
                 return response()->json(apiSuccessResponse($message,$result),200);
             }
