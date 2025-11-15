@@ -8,11 +8,12 @@ use App\Attendance;
 use App\Holiday;
 use PDF;  
 use Carbon\Carbon;
-
+use Session;
 class AttendanceReportController extends Controller
 {
     public function index()
     {
+        Session::put('active','attendanceReport');
         $users = User::orderBy('name')->select('id','name')->where('status',1)->get();
 
         $years = range(2025, Carbon::now()->year);
