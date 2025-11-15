@@ -2991,7 +2991,7 @@ class ExecutiveController extends Controller
                             ->where('status', 'active')
                             ->get();
                 $result['persons'] = $contacts;
-                return response()->json(apiSuccessResponse("Data fetched successfully", $contacts), 200);
+                return response()->json(apiSuccessResponse("Data fetched successfully", $result), 200);
             }
         }
     }
