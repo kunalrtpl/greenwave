@@ -2990,7 +2990,7 @@ class ExecutiveController extends Controller
                 $contacts = \App\CustomerContact::where('customer_id', $data['customer_id'])
                             ->where('status', 'active')
                             ->get();
-
+                $result['persons'] = $contacts;
                 return response()->json(apiSuccessResponse("Data fetched successfully", $contacts), 200);
             }
         }
