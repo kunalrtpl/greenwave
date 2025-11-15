@@ -9,7 +9,7 @@ class ComplaintSample extends Model
 {
     //
 
-    protected $appends = ['sample_document_url','courier_document_url'];
+    protected $appends = ['sample_document_url','sample_document_two_url','sample_document_three_url','courier_document_url'];
     
     public function histories(){
         return $this->hasMany('App\ComplaintSampleHistory','complaint_sample_id')->with(['userinfo','dealerinfo']);
@@ -39,6 +39,22 @@ class ComplaintSample extends Model
         $sample_document_url ="";
         if(!empty($this->sample_document)){
             $sample_document_url = url('ComplaintSampleDocuments/'.$this->sample_document);
+        }
+        return $sample_document_url;
+    }
+
+    public function getSampleDocumentTwoUrlAttribute(){
+        $sample_document_url ="";
+        if(!empty($this->sample_document_two)){
+            $sample_document_url = url('ComplaintSampleDocuments/'.$this->sample_document_two);
+        }
+        return $sample_document_url;
+    }
+
+    public function getSampleDocumentThreeUrlAttribute(){
+        $sample_document_url ="";
+        if(!empty($this->sample_document_three)){
+            $sample_document_url = url('ComplaintSampleDocuments/'.$this->sample_document_three);
         }
         return $sample_document_url;
     }

@@ -9,7 +9,7 @@ use App\MarketSampleProduct;
 class MarketSample extends Model
 {
     //
-    protected $appends = ['sample_document_url','courier_document_url'];
+    protected $appends = ['sample_document_url','sample_document_two_url','sample_document_three_url','courier_document_url'];
 
     public function products(){
         return $this->hasMany('App\MarketSampleProduct','market_sample_id')->with('productinfo');
@@ -31,6 +31,22 @@ class MarketSample extends Model
         $sample_document_url ="";
         if(!empty($this->sample_document)){
             $sample_document_url = url('MarketSampleDocuments/'.$this->sample_document);
+        }
+        return $sample_document_url;
+    }
+
+    public function getSampleDocumentTwoUrlAttribute(){
+        $sample_document_url ="";
+        if(!empty($this->sample_document_two)){
+            $sample_document_url = url('MarketSampleDocuments/'.$this->sample_document_two);
+        }
+        return $sample_document_url;
+    }
+
+    public function getSampleDocumentThreeUrlAttribute(){
+        $sample_document_url ="";
+        if(!empty($this->sample_document_three)){
+            $sample_document_url = url('MarketSampleDocuments/'.$this->sample_document_three);
         }
         return $sample_document_url;
     }
@@ -120,7 +136,7 @@ class MarketSample extends Model
                 $market_sample->sample_document_three = $mainFilename;
             }
         }
-        
+
         $histories = array('Sample Collected');
         $market_sample->status = "Sample Collected";
         if($request->hasFile('courier_document')){
