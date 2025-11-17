@@ -198,11 +198,10 @@
     </table>
 
 
-    <!-- SUMMARY BOX -->
     <table style="margin-top:15px; width:100%; border:1px solid #999; border-collapse:collapse; font-size:12px;">
         <tr style="background:#f2f2f2; font-weight:bold;">
             <td colspan="2" style="padding:7px; text-align:center; font-size:13px;">
-                Monthly Attendance Summary
+                Attendance Overview
             </td>
         </tr>
 
@@ -212,28 +211,56 @@
         </tr>
 
         <tr>
-            <td style="padding:6px; text-align:left;">Present (Full Days)</td>
-            <td style="padding:6px; text-align:center;">{{ $totalPresent }}</td>
-        </tr>
-
-        <tr>
-            <td style="padding:6px; text-align:left;">Half Days</td>
-            <td style="padding:6px; text-align:center;">{{ $totalHalfDay }}</td>
-        </tr>
-
-        <tr>
-            <td style="padding:6px; text-align:left;">Leave Days</td>
+            <td style="padding:6px; text-align:left;">Leaves</td>
             <td style="padding:6px; text-align:center;">{{ $totalLeave }}</td>
         </tr>
 
         <tr>
-            <td style="padding:6px; text-align:left;">Absent Days</td>
+            <td style="padding:6px; text-align:left;">Absent</td>
             <td style="padding:6px; text-align:center;">{{ $totalAbsent }}</td>
         </tr>
 
         <tr style="font-weight:bold;">
-            <td style="padding:6px; text-align:left;">Total Days Worked</td>
-            <td style="padding:6px; text-align:center;">{{ $totalCalc }} / {{ $totalWorkingDays }}</td>
+            <td style="padding:6px; text-align:left;">Net Present Days</td>
+            <td style="padding:6px; text-align:center;">{{ $totalWorkingDays -  $totalLeave - $totalAbsent}}</td>
+        </tr>
+    </table>
+
+    <table style="margin-top:15px; width:100%; border:1px solid #999; border-collapse:collapse; font-size:12px;">
+        <tr style="background:#f2f2f2; font-weight:bold;">
+            <td colspan="3" style="padding:7px; text-align:center; font-size:13px;">
+                Breakdown Summary
+            </td>
+        </tr>
+
+        <tr>
+            <th style="padding:6px;">Type</th>
+            <th style="padding:6px;">Count</th>
+            <th style="padding:6px;">Equivalent Days</th>
+        </tr>
+
+        <tr>
+            <td>Full Day Count</td>
+            <td>{{ $totalPresent }}</td>
+            <td>{{ $totalPresent }}</td>
+        </tr>
+
+        <tr>
+            <td>Half Day Count</td>
+            <td>{{ $totalHalfDay }}</td>
+            <td>{{ $totalHalfDay * 0.5 }}</td>
+        </tr>
+
+        <tr>
+            <td>Less Than 4.5 Hours</td>
+            <td>{{ $lessThanHalf }}</td>
+            <td>0</td>
+        </tr>
+
+        <tr style="font-weight:bold;">
+            <td>Total</td>
+            <td>{{ $totalPresent + $totalHalfDay + $lessThanHalf }}</td>
+            <td>{{ $totalCalc }}</td>
         </tr>
     </table>
 

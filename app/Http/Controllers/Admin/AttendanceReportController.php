@@ -247,6 +247,7 @@ class AttendanceReportController extends Controller
         $totalLeave   = 0;
         $totalAbsent  = 0;
         $totalCalc    = 0;
+        $lessThanHalf = 0; // NEW COUNT for <4.5 hours
 
         foreach ($allDates as $d) {
 
@@ -255,9 +256,20 @@ class AttendanceReportController extends Controller
             }
 
             if ($d['status'] === 'Present') {
-                if ((float)$d['calc'] == 1) $totalPresent++;
-                if ((float)$d['calc'] == 0.5) $totalHalfDay++;
+
+                if ((float)$d['calc'] == 1) {
+                    $totalPresent++;   // Full day
+                }
+
+                if ((float)$d['calc'] == 0.5) {
+                    $totalHalfDay++;   // Half day
+                }
+
+                if ((float)$d['calc'] == 0) {
+                    $lessThanHalf++;   // NEW: Less than 4.5 hrs
+                }
             }
+
 
             if ($d['status'] === 'Absent') $totalAbsent++;
             if ($d['status'] === 'Leave')  $totalLeave++;
@@ -273,7 +285,7 @@ class AttendanceReportController extends Controller
         $pdf = PDF::loadView('admin.attendance.report.pdf', compact(
             'allDates','user','month','year',
             'totalWorkingDays','totalPresent','totalHalfDay',
-            'totalAbsent','totalLeave','totalCalc'
+            'totalAbsent','totalLeave','totalCalc','lessThanHalf'
         ))->setPaper('A4','portrait');
 
         $monthName = \Carbon\Carbon::create()->month($month)->format('F');
