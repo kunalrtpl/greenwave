@@ -2817,7 +2817,7 @@ class ExecutiveController extends Controller
                 // Generate OTP
                 $otp = rand(100000, 999999);
                 $params['mobile'] = $data['mobile_number'];
-                $params['message'] = "Dear Customer, your code to verify Greenwave Executive's visit is ".$otp.". GREENWAVE GLOBAL LTD";
+                $params['message'] = "Dear Customer, Your code to verify Greenwave Executive's visit is ".$otp.". GREENWAVE GLOBAL LTD";
                 sendSms($params);
                 // Store OTP temporarily for verification
                 $key = 'contact_otp_' . $data['mobile_number'];
