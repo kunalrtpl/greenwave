@@ -37,6 +37,7 @@ use App\MarketSample;
 use App\ComplaintSample;
 use App\FreeSamplingStock;
 use App\SamplingSaleInvoice;
+use App\SampleSubmission;
 use App\DealerPurchaseProjection;
 class DealerController extends Controller
 {
@@ -1989,7 +1990,7 @@ class DealerController extends Controller
                 $saleInvoice = SamplingSaleInvoice::with('sampling')->find($saleInvid);
                 if($saleInvoice->sampling->sample_type == "free")
                 {
-                    $execProd = DB::table('free_sampling_stocks')->where(['dealer_id'=>$saleInvoice->dealer_id,'product_id'=>$saleInvoice->product_id])->first();
+                    $execProd = DB::table('dealer_products')->where(['dealer_id'=>$saleInvoice->dealer_id,'product_id'=>$saleInvoice->product_id])->first();
                     if($execProd){
                         $updateexecProd = FreeSamplingStock::find($execProd->id);
                         $updateexecProd->in_transit = $execProd->in_transit - $saleInvoice->qty;
@@ -2440,6 +2441,176 @@ class DealerController extends Controller
             $message = "Sales projections fetched successfully";
 
             return response()->json(apiSuccessResponse($message, $result), 200);
+        }
+    }
+
+
+    public function sampleSubmissionList(Request $request ){
+        if($request->isMethod('get')){
+            $resp = $this->resp;
+            if($resp['status'] && isset($resp['dealer'])){
+                $resp['dealer']['id'] = Dealer::getParentDealer($resp['dealer']);
+                $list = SampleSubmission::with(['customer','product','complaint_info'])->where('dealer_id',$resp['dealer']['id'])->get();
+                $result['sample_submissions'] = $list;
+                $message = 'Data has been fetched successfully';
+                return response()->json(apiSuccessResponse($message,$result),200);
+            }
+        }
+    }
+
+    public function sampleSubmission(Request $request){
+        if($request->isMethod('post')){
+            $resp = $this->resp;
+            if($resp['status'] && isset($resp['dealer'])) {
+                $resp['dealer']['id'] = Dealer::getParentDealer($resp['dealer']);
+                $data = $request->all();
+                $rules = [
+                    "submission_date"=> "required|date_format:Y-m-d",
+                    "customer_id"=> "required",
+                ];
+                $customMessages = [];
+                $validator = Validator::make($data,$rules,$customMessages);
+                if ($validator->fails()) {
+                    return response()->json(validationResponse($validator),422); 
+                }
+                if(isset($data['sample_submission_id']) && !empty($data['sample_submission_id'])){
+                    $sample_submission = SampleSubmission::find($data['sample_submission_id']);
+                    $old_qty = $sample_submission->qty;
+                }else{
+                    $sample_submission = new SampleSubmission;
+                }
+                $sample_submission->dealer_id = $resp['dealer']['id']; 
+                $sample_submission->customer_id = $data['customer_id']; 
+                $sample_submission->submission_date = $data['submission_date']; 
+                $sample_submission->purpose = $data['purpose']; 
+                $sample_submission->submission_type = $data['submission_type']; 
+                $sample_submission->complaint_id = $data['complaint_id']; 
+                $sample_submission->product_id = $data['product_id']; 
+                $sample_submission->qty = $data['qty']; 
+                $sample_submission->from = $data['from']; 
+                $sample_submission->sample_value = $data['sample_value']; 
+                $sample_submission->remarks = $data['remarks']; 
+                $sample_submission->save();
+                $dealerStock = DB::table('dealer_products')->where(['product_id'=>$data['product_id']])->where('dealer_id',$resp['dealer']['id'])->first();
+                if(is_object($dealerStock)){
+                    $update_sample_stock = DealerProduct::find($dealerStock->id);
+                    $update_sample_stock->stock_in_hand = $update_sample_stock->stock_in_hand + $old_qty - $data['qty'];
+                    $update_sample_stock->save();
+                }else{
+                    $sample_stock = new DealerProduct;
+                    $sample_stock->dealer_id = $resp['dealer']['id'];
+                    $sample_stock->product_id = $data['product_id'];
+                    $sample_stock->stock_in_hand = 0 - $data['qty'];
+                    $sample_stock->save();
+                }
+                
+                $message = 'Request has been submitted successfully';
+                return response()->json(apiSuccessResponse($message),200);
+            }
+        }
+    }
+
+    public function updateSampleSubmissionValues(Request $request){
+        if($request->isMethod('post')){
+            $resp = $this->resp;
+            if($resp['status'] && isset($resp['dealer'])) {
+                $data = $request->all();
+                foreach($data['values'] as $sampleVal){
+                    $update_sample = SampleSubmission::find($sampleVal['sample_submission_id']);
+                    $update_sample->sample_value = $sampleVal['value'];
+                    $update_sample->save();
+                }
+                $message = 'Request has been submitted successfully';
+                return response()->json(apiSuccessResponse($message),200);
+            }
+        }
+    }
+
+    public function addSampleSubsmissionFeedback(Request $request){
+        if($request->isMethod('post')){
+            $resp = $this->resp;
+            if($resp['status'] && isset($resp['dealer'])) {
+                $data = $request->all();
+                $rules = [
+                    "sample_submission_id"=> "required",
+                    "feedback_date"=> "required|date_format:Y-m-d",
+                    "feedback"=> "required",
+                ];
+                $customMessages = [];
+                $validator = Validator::make($data,$rules,$customMessages);
+                if ($validator->fails()) {
+                    return response()->json(validationResponse($validator),422); 
+                }
+                $sample_submission = SampleSubmission::find($data['sample_submission_id']);
+                $sample_submission->feedback_date = $data['feedback_date'];
+                $sample_submission->feedback = $data['feedback'];
+                $sample_submission->feedback_remarks = $data['feedback_remarks'];
+                if($data['feedback'] =="Positive"){
+                    $sample_submission->status = "Order Awaited";
+                }else{
+                    $sample_submission->status = "Closed";
+                    $sample_submission->is_close = 1;
+                    $sample_submission->close_reason =$data['feedback_remarks'];
+                }
+                $sample_submission->save(); 
+                $message = 'Feedback has been submitted successfully';
+                return response()->json(apiSuccessResponse($message),200);
+            }
+        }
+    }
+
+    public function closeSampleSubmission(Request $request){
+        if($request->isMethod('post')){
+            $resp = $this->resp;
+            if($resp['status'] && isset($resp['dealer'])) {
+                $data = $request->all();
+                $rules = [
+                    "sample_submission_id"=> "required",
+                    "close_reason"=> "required"
+                ];
+                $customMessages = [];
+                $validator = Validator::make($data,$rules,$customMessages);
+                if ($validator->fails()) {
+                    return response()->json(validationResponse($validator),422); 
+                }
+                $sample_submission = SampleSubmission::find($data['sample_submission_id']);
+                $sample_submission->status = "Closed";
+                $sample_submission->is_close = 1;
+                $sample_submission->close_reason = $data['close_reason'];
+                $sample_submission->save();
+                $message = 'Closed successfully';
+                return response()->json(apiSuccessResponse($message),200);
+            }
+        }
+    }
+
+    public function returnSampleSubmission(Request $request){
+        if($request->isMethod('post')){
+            $resp = $this->resp;
+            if($resp['status'] && isset($resp['dealer'])) {
+                $data = $request->all();
+                $rules = [
+                    "sample_submission_id"=> "required",
+                    "return_qty"=> "required",
+                ];
+                $customMessages = [];
+                $validator = Validator::make($data,$rules,$customMessages);
+                if ($validator->fails()) {
+                    return response()->json(validationResponse($validator),422); 
+                }
+                $sample_submission = SampleSubmission::find($data['sample_submission_id']);
+                $sample_submission->is_returned = 1;
+                $sample_submission->return_qty = $data['return_qty'];
+                $sample_submission->save();
+                $dealeStock = DB::table('dealer_products')->where(['product_id'=>$sample_submission->product_id])->where('dealer_id',$sample_submission->dealer_id)->first();
+                if(is_object($dealeStock)){
+                    $update_sample_stock = DealerProduct::find($dealeStock->id);
+                    $update_sample_stock->stock_in_hand = $update_sample_stock->stock_in_hand + $data['return_qty'];
+                    $update_sample_stock->save();
+                }
+                $message = 'Returned successfully';
+                return response()->json(apiSuccessResponse($message),200);
+            }
         }
     }
 

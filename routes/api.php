@@ -125,6 +125,14 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 
 			Route::match(['get', 'post'], 'get-sales-projection','DealerController@getSalesProjections');
 			Route::match(['get', 'post'], 'purchase-data','DealerController@purchase_data');
+
+
+			Route::match(['get', 'post'], '/sample-submission','DealerController@sampleSubmission');
+			Route::match(['get', 'post'], '/update-sample-submission-values','DealerController@updateSampleSubmissionValues');
+			Route::match(['get', 'post'], '/sample-submission-list','DealerController@sampleSubmissionList');
+			Route::match(['get', 'post'], '/add-sample-submission-feedback','DealerController@addSampleSubsmissionFeedback');
+			Route::match(['get', 'post'], '/close-sample-submission','DealerController@closeSampleSubmission');
+			Route::match(['get', 'post'], '/return-sample-submission','DealerController@returnSampleSubmission');
 		});
 	});
 
