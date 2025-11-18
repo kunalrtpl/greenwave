@@ -2477,6 +2477,7 @@ class DealerController extends Controller
                     $sample_submission = SampleSubmission::find($data['sample_submission_id']);
                     $old_qty = $sample_submission->qty;
                 }else{
+                    $old_qty = 0;
                     $sample_submission = new SampleSubmission;
                 }
                 $sample_submission->dealer_id = $resp['dealer']['id']; 
