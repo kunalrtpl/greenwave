@@ -15,7 +15,8 @@ class CreateCustomerContactsTable extends Migration
     {
         Schema::create('customer_contacts', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->unsignedBigInteger('customer_id');
+            $table->unsignedBigInteger('customer_id')->nullable();
+            $table->unsignedBigInteger('customer_register_request_id')->nullable();
             $table->string('name');
             $table->string('designation')->nullable();
             $table->string('mobile_number');
@@ -24,6 +25,7 @@ class CreateCustomerContactsTable extends Migration
             $table->timestamps();
             
             $table->foreign('customer_id')->references('id')->on('customers')->onDelete('cascade');
+            $table->foreign('customer_register_request_id')->references('id')->on('customer_register_requests')->onDelete('cascade');
         });
 
     }

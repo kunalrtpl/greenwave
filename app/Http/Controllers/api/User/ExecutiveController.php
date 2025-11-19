@@ -2834,17 +2834,20 @@ class ExecutiveController extends Controller
     public function createCustomerContact(Request $request)
     {
         if ($request->isMethod('post')) {
+
             $data = $request->all();
             $resp = $this->resp;
 
-            // ✅ Validation
+            // ✅ Validation Rules
             $rules = [
-                'customer_id'   => 'bail|required|numeric',
-                'name'          => 'bail|required|string',
-                'mobile_number' => 'bail|required|numeric|digits:10',
-                'otp'           => 'bail|required|numeric|digits:6',
-                'dvr_id'        => 'bail|required|numeric'
+                'customer_id'                   => 'bail|required_without:customer_register_request_id|numeric',
+                'customer_register_request_id'  => 'bail|required_without:customer_id|numeric',
+                'name'                          => 'bail|required|string',
+                'mobile_number'                 => 'bail|required|numeric|digits:10',
+                'otp'                           => 'bail|required|numeric|digits:6',
+                'dvr_id'                        => 'bail|required|numeric'
             ];
+
             $validator = Validator::make($data, $rules);
 
             if ($validator->fails()) {
@@ -2857,11 +2860,10 @@ class ExecutiveController extends Controller
                 $existing = \App\CustomerContact::where('mobile_number', $data['mobile_number'])->first();
 
                 if ($existing) {
-                    // ✅ if active → do NOT allow duplicate
                     if ($existing->status == 'active') {
-                        return response()->json(apiErrorResponse("This contact number has alreday been used for other customer"), 400);
+                        return response()->json(apiErrorResponse("This contact number has already been used for another customer"), 400);
                     }
-                    // if inactive → allowed (continue)
+                    // inactive → allowed
                 }
 
                 // ✅ 2. Validate OTP
@@ -2876,20 +2878,25 @@ class ExecutiveController extends Controller
                     return response()->json(apiErrorResponse("Invalid OTP."), 400);
                 }
 
-                // ✅ 3. OTP correct → Create Contact
+                // Pick whichever ID is present
+                $customerId = $data['customer_id'] ?? null;
+                $customerRegisterId = $data['customer_register_request_id'] ?? null;
+
+                // ✅ 3. Create Contact
                 $contact = \App\CustomerContact::create([
-                    'customer_id'    => $data['customer_id'],
-                    'name'           => $data['name'],
-                    'designation'    => $data['designation'] ?? null,
-                    'mobile_number'  => $data['mobile_number'],
-                    'created_by'     => $resp['user']['id'],
-                    'status'         => 'active',
+                    'customer_id'                 => $customerId,
+                    'customer_register_request_id'=> $customerRegisterId,
+                    'name'                        => $data['name'],
+                    'designation'                 => $data['designation'] ?? null,
+                    'mobile_number'               => $data['mobile_number'],
+                    'created_by'                  => $resp['user']['id'],
+                    'status'                      => 'active',
                 ]);
 
-                // ✅ remove OTP from cache
+                // delete OTP
                 \Cache::forget($key);
 
-                // ✅ 4. Update DVR table
+                // 4. Update DVR table
                 $dvr = \App\Dvr::find($data['dvr_id']);
 
                 if (!$dvr) {
@@ -2907,6 +2914,7 @@ class ExecutiveController extends Controller
             }
         }
     }
+
 
 
     public function verifyExistingContactOtp(Request $request)
@@ -2974,13 +2982,16 @@ class ExecutiveController extends Controller
     public function getCustomerContacts(Request $request)
     {
         if ($request->isMethod('post')) {
+
             $data = $request->all();
             $resp = $this->resp;
 
-            // ✅ Validation
+            // ✅ Validation (at least one is required)
             $rules = [
-                'customer_id' => 'bail|required|numeric'
+                'customer_id'                  => 'bail|required_without:customer_register_request_id|numeric',
+                'customer_register_request_id' => 'bail|required_without:customer_id|numeric',
             ];
+
             $validator = Validator::make($data, $rules);
 
             if ($validator->fails()) {
@@ -2989,13 +3000,29 @@ class ExecutiveController extends Controller
 
             if ($resp['status'] && isset($resp['user'])) {
 
-                $contacts = \App\CustomerContact::where('customer_id', $data['customer_id'])
-                            ->where('status', 'active')
-                            ->get();
-                $result['persons'] = $contacts;
-                return response()->json(apiSuccessResponse("Data fetched successfully", $result), 200);
+                // Determine which ID to use
+                $customerId = $data['customer_id'] ?? null;
+                $customerRegisterId = $data['customer_register_request_id'] ?? null;
+
+                // Build query
+                $query = \App\CustomerContact::where('status', 'active');
+
+                if ($customerId) {
+                    $query->where('customer_id', $customerId);
+                }
+
+                if ($customerRegisterId) {
+                    $query->where('customer_register_request_id', $customerRegisterId);
+                }
+
+                $contacts = $query->get();
+
+                return response()->json(apiSuccessResponse("Data fetched successfully", [
+                    'persons' => $contacts
+                ]), 200);
             }
         }
-    }
+}
+
 
 }

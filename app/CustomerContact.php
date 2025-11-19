@@ -10,6 +10,7 @@ class CustomerContact extends Model
 
     protected $fillable = [
         'customer_id',
+        'customer_register_request_id',
         'name',
         'designation',
         'mobile_number',
