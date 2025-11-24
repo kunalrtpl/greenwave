@@ -864,6 +864,10 @@ class ExecutiveController extends Controller
                     $dvr->complaint_id = $data['complaint_id'];
                 }
 
+                if(isset($data['have_you_met'])) {
+                    $dvr->have_you_met = $data['have_you_met'];
+                }
+
                 if(isset($data['other_team_member_id']) && !empty($data['other_team_member_id'])){
                     $dvr->other_team_member_id = $data['other_team_member_id'];
                 }

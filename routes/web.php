@@ -385,6 +385,9 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 		Route::get('/attendance-report', 'AttendanceReportController@index')->name('attendance.form');
 		Route::post('/attendance-report/generate', 'AttendanceReportController@generate')->name('attendance.generate');
 
+		// Attendance screen view + filter
+	    Route::get('attendance/view','AttendanceViewController@index');
+	    Route::post('attendance/update-status','AttendanceViewController@updateStatus');
 
 
 	});

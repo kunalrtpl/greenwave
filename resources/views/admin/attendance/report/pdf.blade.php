@@ -173,7 +173,17 @@
                     </td>
 
                     <td class="{{ $isLate ? 'late-text' : '' }}">
-                        {{ $d['in'] }}
+                        @if($d['status'] == 'Present')
+                            {{ $d['in'] }}
+                        @else
+                                -
+                        @endif
+                        @if(isset($d['is_edited']) && $d['is_edited'] == 1)
+                            <span title="Edited by Admin" 
+                                  style="background:#0052cc;color:white;font-size:10px;padding:2px 4px;border-radius:3px;margin-left:4px;cursor:pointer;">
+                                E
+                            </span>
+                        @endif
                     </td>
 
                     <td>{{ $d['out'] }}</td>
