@@ -357,6 +357,88 @@ class PurchaseOrder extends Model
         $updatePO->gst = $calGST;
         $updatePO->grand_total = $totatSaleAmt;
         $updatePO->save();
+        //self::sendPOEmails($createpo->id, $data);
         return $createpo->id;
     }
+
+
+    /**
+     * ------------------------------------------------------------
+     * Send Email Notifications After Purchase Order is Created
+     * ------------------------------------------------------------
+     *
+     * @param int   $poId
+     * @param array $data
+     * @return void
+     */
+    public static function sendPOEmails($poId, $data)
+    {
+        try {
+            $po = PurchaseOrder::with([
+                'dealer',
+                'customer',
+                'orderitems.product'
+            ])->find($poId);
+
+            if (!$po) {
+                \Log::error("PO Email Error: Purchase Order not found. ID: " . $poId);
+                return;
+            }
+
+            /**
+             * ---------------------------
+             * Send Admin Notification
+             * ---------------------------
+             */
+            $adminEmails = [
+                'kunalmahajan710@gmail.com',
+                'singhania.kamal@gmail.com'
+            ];
+
+            \Mail::to($adminEmails)->send(new \App\Mail\AdminPOCreatedMail($po));
+
+            /**
+             * ---------------------------
+             * Action-Based Email Rules
+             * ---------------------------
+             */
+            if ($data['action'] == 'dealer_customer') {
+                $po->dealer->email = "singhania.kamal@gmail.com";
+                // Dealer email
+                if ($po->dealer && $po->dealer->email) {
+                    \Mail::to($po->dealer->email)
+                        ->send(new \App\Mail\DealerCustomerPOCreatedMail($po));
+                }
+
+                // Customer email
+                if ($po->customer && $po->customer->email) {
+                    $po->customer->email = "singhania.kamal@gmail.com";
+                    \Mail::to($po->customer->email)
+                        ->send(new \App\Mail\CustomerPOCreatedMail($po));
+                }
+
+            } elseif ($data['action'] == 'dealer') {
+
+                // Dealer places PO for himself
+                if ($po->dealer && $po->dealer->email) {
+                    $po->dealer->email = "singhania.kamal@gmail.com";
+                    \Mail::to($po->dealer->email)
+                        ->send(new \App\Mail\DealerSelfPOCreatedMail($po));
+                }
+
+            } elseif ($data['action'] == 'customer') {
+
+                // Customer Places PO for himself
+                if ($po->customer && $po->customer->email) {
+                    $po->customer->email = "singhania.kamal@gmail.com";
+                    \Mail::to($po->customer->email)
+                        ->send(new \App\Mail\CustomerPOCreatedMail($po));
+                }
+            }
+
+        } catch (\Exception $e) {
+            \Log::error("PO Email Error: " . $e->getMessage());
+        }
+    }
+
 }

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { 
+            font-family: Arial, Helvetica, sans-serif; 
+            background:#f4f6f8; 
+            padding:20px; 
+        }
+        .email-container { 
+            max-width:750px; 
+            margin:auto; 
+            background:#fff; 
+            padding:25px; 
+            border-radius:10px; 
+            box-shadow:0px 2px 8px rgba(0,0,0,0.08);
+        }
+        .logo { text-align:center; margin-bottom:20px; }
+        .logo img { max-width:220px; }
+        .header { 
+            background:#007a3d; 
+            color:#fff; 
+            padding:18px; 
+            font-size:22px; 
+            font-weight:bold; 
+            border-radius:8px; 
+            text-align:center; 
+            letter-spacing:0.5px;
+        }
+        .info-box {
+            background:#e8f5e9;
+            padding:18px;
+            border-left:5px solid #2e7d32;
+            border-radius:8px;
+            margin-top:20px;
+            font-size:14px;
+            color:#2e7d32;
+            line-height:1.6;
+        }
+        .highlight { font-weight:bold; color:#1a237e; }
+        .section-title { 
+            font-size:18px; 
+            font-weight:bold; 
+            margin-top:30px; 
+            margin-bottom:10px;
+            color:#333;
+        }
+        table { width:100%; border-collapse:collapse; margin-top:15px; font-size:14px; }
+        table th { 
+            background:#f1f1f1; 
+            padding:10px; 
+            text-align:left; 
+            border-bottom:1px solid #ccc; 
+            font-weight:bold; 
+        }
+        table td { 
+            padding:10px; 
+            border-bottom:1px solid #eee; 
+        }
+        .footer { 
+            margin-top:35px; 
+            font-size:12px; 
+            color:#777; 
+            text-align:center; 
+        }
+    </style>
+</head>
+
+<body>
+<div class="email-container">
+
+    <!-- Logo -->
+    <div class="logo">
+        <img src="https://g2app.in/images/greenwave-logo-1-275-sl.jpg" alt="Greenwave Logo">
+    </div>
+
+    <!-- Header Text Based on PO Source -->
+    @php
+        $sourceText = "New Purchase Order";
+
+        if ($po->action == 'dealer') {
+            $sourceText = "Dealer Placed a Purchase Order";
+        } elseif ($po->action == 'dealer_customer') {
+            $sourceText = "Dealer Placed a Customer Order";
+        } elseif ($po->action == 'customer') {
+            $sourceText = "Customer Placed a Purchase Order";
+        }
+    @endphp
+
+    <div class="header">
+        {{ $sourceText }}
+    </div>
+
+    <!-- Info Box for Admin -->
+    <div class="info-box">
+        Dear Admin,<br><br>
+        You have received a new purchase order. Details are mentioned below.  
+        Please review and process it accordingly.
+    </div>
+
+    <!-- Summary details -->
+    <p><strong>PO Number:</strong> {{ $po->po_ref_no_string }}</p>
+    <p><strong>Order Action:</strong> {{ strtoupper($po->action) }}</p>
+    <p><strong>Dealer:</strong> {{ $po->dealer->name ?? 'N/A' }}</p>
+    @if(isset($po->customer->name))
+    	<p><strong>Customer:</strong> {{ $po->customer->name ?? 'N/A' }}</p>
+    @endif
+    <p><strong>Placed On:</strong> {{ \Carbon\Carbon::parse($po->po_date)->format('d M Y h:i A') }}</p>
+
+    <!-- Order Items Table -->
+    <div class="section-title">Order Items</div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Qty (Kgs)</th>
+
+                <!-- Uncomment later to show pricing -->
+                <!--
+                <th>Price</th>
+                <th>Net Price</th>
+                <th>Total</th>
+                -->
+            </tr>
+        </thead>
+
+        <tbody>
+        @foreach($po->orderitems as $item)
+            <tr>
+                <td>{{ $item->product->product_name ?? '' }}</td>
+                <td>{{ $item->qty }} Kgs</td>
+
+                <!-- Uncomment when required -->
+                <!--
+                <td>₹{{ number_format($item->product_price,2) }}</td>
+                <td>₹{{ number_format($item->net_price,2) }}</td>
+                <td>₹{{ number_format($item->qty * $item->net_price,2) }}</td>
+                -->
+            </tr>
+        @endforeach
+        </tbody>
+    </table>
+
+    <!-- Uncomment summary when pricing is needed -->
+    <!--
+    <div class="section-title">Order Summary</div>
+    <div class="summary-box">
+        <p><strong>Subtotal:</strong> ₹{{ number_format($po->price,2) }}</p>
+        <p><strong>GST ({{ $po->gst_per }}%):</strong> ₹{{ number_format($po->gst,2) }}</p>
+        <p style="font-size:18px;"><strong>Grand Total:</strong> ₹{{ number_format($po->grand_total,2) }}</p>
+    </div>
+    -->
+
+    <div class="info-box" style="background:#fff9e6; border-left-color:#ff9800;">
+        <strong>Next Step:</strong>  
+        Review the PO details in your admin dashboard and take necessary action.
+    </div>
+
+    <div class="footer">
+        This is an automated email generated by Greenwave System.  
+        Please do not reply to this email.
+    </div>
+
+</div>
+</body>
+</html>

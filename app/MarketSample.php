@@ -105,6 +105,8 @@ class MarketSample extends Model
         $market_sample->is_urgent = (isset($data['is_urgent'])?$data['is_urgent']:'');
         $market_sample->user_id = (isset($data['user_id'])?$data['user_id']:NULL);
         $market_sample->dealer_id = (isset($data['dealer_id'])?$data['dealer_id']:NULL);
+        $market_sample->application = (isset($data['application'])?$data['application']:NULL);
+        $market_sample->substrate = (isset($data['substrate'])?$data['substrate']:NULL);
         if($request->hasFile('sample_document')){
             if (Input::file('sample_document')->isValid()) {
                 $file = Input::file('sample_document');
