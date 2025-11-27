@@ -21,6 +21,7 @@ class AttendanceViewController extends Controller
 
         // Employees allowed for attendance
         $users = User::where('status', 1)
+            ->where('type','employee')
             ->where('app_access', 'Yes')
             ->orderBy('name')
             ->get(['id','name']);

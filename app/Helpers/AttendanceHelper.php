@@ -78,38 +78,50 @@ class AttendanceHelper
             /**
              * ATTENDANCE DECISION PRIORITY
              */
-            
-            // 1️⃣ Weekends OR declared holidays → No attendance expected
-            if ($day == 'Sun' || $reason) {
+
+            /**
+             * 1️⃣ Holiday or Sunday — BUT employee may have WORKED.
+             *
+             * RULE:
+             * - If it's a holiday OR Sunday AND NO attendance entry → mark Holiday.
+             * - If attendance exists → allow normal attendance logic.
+             */
+            if ((!$attendance && ($reason || $day == 'Sun'))) {
                 $records[] = self::formatHolidayDay($date, $day, $reason);
-                $start->addDay(); continue;
+                $start->addDay();
+                continue;
             }
 
-            // 2️⃣ No entry = Absent day
+            // 2️⃣ No entry = Absent day (only if not a holiday/sunday above)
             if (!$attendance) {
                 $records[] = self::formatAbsentDay(null, $date, $day);
-                $start->addDay(); continue;
+                $start->addDay(); 
+                continue;
             }
 
-            // 3️⃣ DB flagged this day as holiday
+            // 3️⃣ DB flagged this day as holiday — but we ALLOW working on holidays
             if ($attendance->status == 'holiday') {
+                // If admin stored holiday status manually, still honor it
                 $records[] = self::formatHolidayDay($date, $day, $reason);
-                $start->addDay(); continue;
+                $start->addDay(); 
+                continue;
             }
 
             // 4️⃣ Leave stored in DB
             if ($attendance->status == 'leave') {
                 $records[] = self::formatLeaveDay($attendance, $date, $day);
-                $start->addDay(); continue;
+                $start->addDay(); 
+                continue;
             }
 
             // 5️⃣ DB explicitly marked Absent
             if ($attendance->status == 'absent') {
                 $records[] = self::formatAbsentDay($attendance, $date, $day);
-                $start->addDay(); continue;
+                $start->addDay(); 
+                continue;
             }
 
-            // 6️⃣ Default → Present logic (late, half day, partial leave)
+            // 6️⃣ Default → Present logic (late, half-day, partial leave)
             $records[] = self::processPresentDay(
                 $attendance, $date, $day, $lateCounter,
                 $morningStart, $morningEnd, $halfDayCut
@@ -159,13 +171,34 @@ class AttendanceHelper
             'lessThanHalf'     => 0,
         ];
 
-        // Count valid working days (Excluding Sundays + holidays)
+        /**
+         * Count valid working days.
+         * IMPORTANT:
+         * - Sunday counts as working day ONLY if employee worked.
+         * - Holiday counts as working day ONLY if employee worked.
+         */
         $cursor = $first->copy();
         while ($cursor->lte($lastValid)) {
-            if ($cursor->format("D") !== "Sun"
-                && !isset($holidays[$cursor->toDateString()])) {
+
+            $dateStr = $cursor->toDateString();
+            $isSunday = $cursor->format("D") === "Sun";
+
+            // Find that day's attendance entry from the generated list
+            $workedThatDay = collect($allDates)->firstWhere('date', $dateStr);
+
+            $isHoliday = isset($holidays[$dateStr]);
+
+            $employeeWorked = $workedThatDay 
+                              && $workedThatDay['status'] != 'Holiday';
+
+            // RULE:
+            //   Count as working day if:
+            //   - Not a holiday AND not a Sunday
+            //   - OR it's holiday/Sunday AND employee actually worked
+            if ((!$isSunday && !$isHoliday) || $employeeWorked) {
                 $summary['totalWorkingDays']++;
             }
+
             $cursor->addDay();
         }
 
@@ -254,20 +287,33 @@ class AttendanceHelper
         $inCarbon = Carbon::parse($attendance->created_at);
         $inTime   = $inCarbon->format('h:i A');
 
-        $remarks  = "";
-        $calc     = 1; // Default full day credit
+        // Start with admin remarks if present
+        $remarks  = $attendance->remarks ?? "";
 
+        $calc     = 1; // Default full day credit
         $timeOnly = $inCarbon->format("H:i");
+
+        // System-generated logic ----------------------------------------
 
         // Check if half-day entry based on ENV rules
         if ($timeOnly >= $halfDayCut) {
-            $remarks = "Half Day";
-            $calc    = 0.5;
+            $sysRemark = "Half Day";
+            $calc      = 0.5;
         }
         // Otherwise count late arrivals
         elseif ($timeOnly > $morningEnd) {
             $lateCount++;
-            $remarks = "(Late $lateCount)";
+            $sysRemark = "(Late $lateCount)";
+        }
+        else {
+            $sysRemark = "";
+        }
+
+        // Merge admin + system remarks (clean)
+        if ($remarks && $sysRemark) {
+            $remarks = $remarks . " | " . $sysRemark;
+        } elseif ($sysRemark) {
+            $remarks = $sysRemark;
         }
 
         $out = "-";
@@ -283,9 +329,16 @@ class AttendanceHelper
             // Second half leave: <4.5 hrs = unpaid
             $calc = $minutes < 270 ? 0 : 0.5;
 
-            $remarks = "Partial Off, Worked: "
+            $partialRemark = "Partial Off, Worked: "
                 . floor($minutes / 60)."h "
                 . ($minutes % 60)."m";
+
+            // merge again if admin remarks present
+            if ($remarks) {
+                $remarks = $remarks . " | " . $partialRemark;
+            } else {
+                $remarks = $partialRemark;
+            }
         }
 
         return [
@@ -294,9 +347,10 @@ class AttendanceHelper
             'in'         => $inTime,
             'out'        => $out,
             'status'     => 'Present',
-            'remarks'    => $remarks,
+            'remarks'    => $remarks,   // FINAL merged value
             'calc'       => $calc,
             'is_edited'  => $attendance->is_edited_by_admin ?? 0
         ];
     }
+
 }

@@ -23,6 +23,7 @@ class AttendanceReportController extends Controller
 
         $users = User::orderBy('name')
             ->select('id','name')
+            ->where('type','employee')
             ->where('status', 1)
             ->where('app_access', 'Yes')
             ->whereRaw("FIND_IN_SET('attendance', app_roles)")

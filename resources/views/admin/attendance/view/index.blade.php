@@ -187,14 +187,14 @@
 
                                                 <td>
                                                     {{-- Hide Change Status button on Sundays --}}
-                                                    @if($d['day'] != 'Sun')
-                                                        <button type="button"
-                                                            class="btn btn-xs blue editAttendanceBtn"
-                                                            data-date="{{ $d['date'] }}"
-                                                            data-status="{{ $d['status'] }}">
-                                                            Change Status
-                                                        </button>
-                                                    @endif
+                                                    
+                                                    <button type="button"
+                                                        class="btn btn-xs blue editAttendanceBtn"
+                                                        data-date="{{ $d['date'] }}"
+                                                        data-status="{{ $d['status'] }}">
+                                                        Change Status
+                                                    </button>
+                                                    
                                                 </td>
                                             </tr>
 
