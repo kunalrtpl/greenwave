@@ -840,7 +840,7 @@ class ExecutiveController extends Controller
                 $rules = [
                     /*"customer_id"=> "required",*/
                     "dvr_date"=> "required|date_format:Y-m-d",
-                    "purpose_of_visit"=> "required",
+                    //"purpose_of_visit"=> "required",
                     /*"trial_type"=> "required",*/
                 ];
                 $customMessages = [];
