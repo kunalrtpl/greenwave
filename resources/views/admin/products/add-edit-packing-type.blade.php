@@ -56,11 +56,48 @@
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label class="col-md-3 control-label">Use for Additional Packing</label>
-                                    <div class="col-md-4">
-                                        <input style="margin-top: 12px;" type="checkbox" name="additional_packing" value="1" @if(isset($packingtypedata['additional_packing']) && $packingtypedata['additional_packing'] ==1) checked @endif>
+                                    <label class="col-md-3 control-label">Use for Additional Packing <span class="asteric">*</span></label>
+                                    <div class="col-md-4" style="margin-top:8px;">
+
+                                        @php 
+                                            $additional = $packingtypedata['additional_packing'] ?? 0;
+                                        @endphp
+
+                                        <label>
+                                            <input type="radio" name="additional_packing" value="1"
+                                                @if($additional == 1) checked @endif> Yes
+                                        </label>
+
+                                        <label style="margin-left:15px;">
+                                            <input type="radio" name="additional_packing" value="0"
+                                                @if($additional == 0) checked @endif> No
+                                        </label>
+
+                                        <h4 class="text-danger text-center" id="PackingType-additional_packing" style="display:none;"></h4>
                                     </div>
-                                </div>         
+                                </div>
+
+                                <!-- IF YES -->
+                                <div class="form-group" id="facilitation_cost_group" style="display:none;">
+                                    <label class="col-md-3 control-label">Packing Facilitation Cost (Rs/Kg) <span class="asteric">*</span></label>
+                                    <div class="col-md-4">
+                                        <input type="text" name="facilitation_cost" class="form-control"
+                                            value="{{ $packingtypedata['facilitation_cost'] ?? '' }}" placeholder="0.00">
+                                        <h4 class="text-danger text-center" id="PackingType-facilitation_cost" style="display:none;"></h4>
+                                    </div>
+                                </div>
+
+                                <!-- IF NO -->
+                                <div class="form-group" id="packing_loss_group" style="display:none;">
+                                    <label class="col-md-3 control-label">Packing Loss % (if any)</label>
+                                    <div class="col-md-4">
+                                        <input type="text" name="packing_loss" class="form-control"
+                                            value="{{ $packingtypedata['packing_loss'] ?? '' }}" placeholder="0 - 100">
+                                        <h4 class="text-danger text-center" id="PackingType-packing_loss" style="display:none;"></h4>
+                                    </div>
+                                </div>
+
+         
                             </div>
                             <div class="form-actions right1 text-center">
                                 <button class="btn green" type="submit">Submit</button>
@@ -109,4 +146,30 @@
         });
     });
 </script>
+<script>
+$(document).ready(function () {
+
+    function togglePackingFields() {
+        let value = $('input[name="additional_packing"]:checked').val();
+
+        if (value === "1") {
+            $('#facilitation_cost_group').show();
+            $('#packing_loss_group').hide();
+        } else {
+            $('#facilitation_cost_group').hide();
+            $('#packing_loss_group').show();
+        }
+    }
+
+    // On page load (edit mode)
+    togglePackingFields();
+
+    // On change
+    $('input[name="additional_packing"]').on('change', function () {
+        togglePackingFields();
+    });
+});
+</script>
+
+
 @endsection

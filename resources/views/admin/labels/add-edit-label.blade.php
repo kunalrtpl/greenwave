@@ -50,6 +50,13 @@
                                     </div>
                                 </div>
                                 <div class="form-group">
+                                    <label class="col-md-3 control-label">Price<span class="asteric">*</span></label>
+                                    <div class="col-md-4">
+                                        <input  type="number" placeholder="Price" name="price" style="color:gray" class="form-control" value="{{(!empty($labeldata['price']))?$labeldata['price']: '' }}"/>
+                                        <h4 class="text-center text-danger pt-3" style="display: none;" id="Label-price"></h4>
+                                    </div>
+                                </div>
+                                <div class="form-group">
                                     <label class="col-md-3 control-label">For Product Type<span class="asteric">*</span></label>
                                     <div class="col-md-6">
                                         <select class="form-control select2" name="for_product_types[]" required multiple>

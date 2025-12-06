@@ -78,6 +78,14 @@
                                         <h4 class="text-center text-danger pt-3" style="display: none;" id="Product-zdhc_certification"></h4>
                                     </div>
                                 </div>
+                                <div class="form-group" id="zdhc_pid_group" style="display:none;">
+                                    <label class="col-md-3 control-label">ZDHC PID Number</label>
+                                    <div class="col-md-4">
+                                        <input placeholder="ZDHC PID Number" type="text" name="zdhc_pid" class="form-control" value="{{ $productdata['zdhc_pid'] ?? '' }}">
+                                        <h4 class="text-center text-danger pt-3" id="Product-zdhc_pid"></h4>
+                                    </div>
+                                </div>
+
                                 <div class="form-group">
                                     <label class="col-md-3 control-label">Oekotex Certified <span class="asteric">*</span></label>
                                     <div class="col-md-4" style="margin-top:8px;">
@@ -236,6 +244,26 @@
             updateSerialNumbers();
         });
     });
+</script>
+<script>
+$(document).ready(function () {
+    function toggleZdhcField() {
+        let value = $('input[name="zdhc_certification"]:checked').val();
+        if (value === 'Yes') {
+            $('#zdhc_pid_group').show();
+        } else {
+            $('#zdhc_pid_group').hide();
+        }
+    }
+
+    // On page load
+    toggleZdhcField();
+
+    // On change
+    $('input[name="zdhc_certification"]').on('change', function () {
+        toggleZdhcField();
+    });
+});
 </script>
 
 @endsection

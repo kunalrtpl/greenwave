@@ -164,6 +164,20 @@
                                             @endforeach
                                         </select>
                                         <h4 class="text-center text-danger pt-3" style="display: none;" id="Product-packing_size_id"></h4>
+                                        @if(isset($productdata['packing_size_id']))
+                                            Order Size Id :- {{$productdata['packing_size_id']}} 
+                                        @endif
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-md-3 control-label">Select Label <span class="asteric">*</span></label>
+                                    <div class="col-md-4">
+                                        <select class="form-control select2" name="label_id">
+                                            @foreach($labels as $labelInfo)
+                                                <option value="{{$labelInfo['id']}}" {{(!empty($productdata) && $productdata['label_id'] == $sizeInfo['id'])?'selected': '' }}>{{$labelInfo['label_type']}}</option>
+                                            @endforeach
+                                        </select>
+                                        <h4 class="text-center text-danger pt-3" style="display: none;" id="Product-packing_size_id"></h4>
                                     </div>
                                 </div>
                                 <div class="form-group">

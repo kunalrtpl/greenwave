@@ -40,10 +40,71 @@
                                             <h4 class="text-center text-danger pt-3" style="display: none;" id="Product-formulation_cost"></h4>
                                         </div>
                                     </div> -->
-                                    <div class="form-group">
+                                    <!-- <div class="form-group">
                                         <label class="col-md-3 control-label">Packing Cost (Rs.)</label>
                                         <div class="col-md-4">
                                             <p class="form-control">{{(!empty($productdata['packing_cost']))?$productdata['packing_cost']: ''}}</p>
+                                        </div>
+                                    </div> -->
+                                    <div class="form-group">
+                                        <label class="col-md-3 control-label">Packing Cost (per kg)</label>
+
+                                        <div class="col-md-7">
+
+                                            <table class="table table-bordered" style="background:#fff;">
+                                                <thead style="background:#f5f5f5;">
+                                                    <tr>
+                                                        <th style="width:50%">Description</th>
+                                                        <th style="width:50%">Rate (Rs.)</th>
+                                                    </tr>
+                                                </thead>
+
+                                                <tbody>
+
+                                                    <tr>
+                                                        <td>1. Basic Packing Material Cost (per kg)</td>
+                                                        <td>{{ number_format($productdata['basic_packing_material_cost'] ?? 0, 2) }}</td>
+                                                    </tr>
+
+                                                    <tr>
+                                                        <td>2. Additional Packing Material Cost (if any)</td>
+                                                        <td>{{ number_format($productdata['additional_packing_material_cost'] ?? 0, 2) }}</td>
+                                                    </tr>
+
+                                                    <tr>
+                                                        <td>3. Label Cost</td>
+                                                        <td>{{ number_format($productdata['label_cost'] ?? 0, 2) }}</td>
+                                                    </tr>
+
+                                                    <tr>
+                                                        <td>4. Packing Facilitation Cost (Rs./kg)</td>
+                                                        <td>{{ number_format($productdata['facilitation_cost'] ?? 0, 2) }}</td>
+                                                        
+                                                    </tr>
+
+                                                    <tr style="background:#e6f7ff; font-weight:bold;">
+                                                        <td>Total Packing Cost (Rs./kg)</td>
+                                                        <td>{{ number_format($productdata['packing_cost'] ?? 0, 2) }}</td>
+                                                    </tr>
+
+                                                </tbody>
+                                            </table>
+
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="col-md-3 control-label">Batch Time (Hrs.)</label>
+                                        <div class="col-md-4">
+                                            <input  type="text"  placeholder="Batch Time" name="batch_time" style="color:gray" class="form-control" value="{{(!empty($productdata['batch_time']))?$productdata['batch_time']: '' }}"/>
+                                            <h4 class="text-center text-danger pt-3" style="display: none;" id="Product-batch_time"></h4>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-md-3 control-label">Production Loss (%)</label>
+                                        <div class="col-md-4">
+                                            <input  type="number"  step="0.01"placeholder="Production Loss" name="production_loss" style="color:gray" class="form-control" value="{{(!empty($productdata['production_loss']))?$productdata['production_loss']: '' }}"/>
+                                            <h4 class="text-center text-danger pt-3" style="display: none;" id="Product-production_loss"></h4>
                                         </div>
                                     </div>
                                     <div class="form-group">

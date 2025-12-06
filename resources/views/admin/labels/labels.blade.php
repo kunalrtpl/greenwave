@@ -49,6 +49,9 @@
                                         <th >
                                            Label Type
                                         </th>
+                                        <th >
+                                           Price
+                                        </th>
                                         <th>
                                             Status
                                         </th>
@@ -59,6 +62,7 @@
                                     <tr role="row" class="filter">
                                         <td></td>
                                         <td><input type="text" class="form-control form-filter input-sm" name="label_type" placeholder="Label Type"></td>
+                                        <td></td>
                                         <td></td>
                                         <td>
                                             <div class="margin-bottom-5">

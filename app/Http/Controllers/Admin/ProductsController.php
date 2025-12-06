@@ -179,7 +179,8 @@ class ProductsController extends Controller
             $productdata =array();
             $currentStage = 'Sample Trial Stage';
         }
-        return view('admin.products.add-edit-product')->with(compact('title','productdata','currentStage'));
+        $labels = \App\Label::labels();
+        return view('admin.products.add-edit-product')->with(compact('title','productdata','currentStage','labels'));
     }
 
     public function getProductInheritLayout(Request $request){
@@ -268,10 +269,15 @@ class ProductsController extends Controller
                     $product->additional_packing_type_id = $data['additional_packing_type_id'];
                     $product->standard_fill_size = $data['standard_fill_size'];
                     $product->packing_size_id = $data['packing_size_id'];
+                    $product->label_id = $data['label_id'];
                     $product->short_description = $data['short_description'];
                     $product->description = $data['description'];
-                    $packingCost = productPackingCost($data);
-                    $product->packing_cost = $packingCost;
+                    $response = productPackingCost($data);
+                    $product->basic_packing_material_cost = $response['basic_packing_material_cost'];
+                    $product->additional_packing_material_cost = $response['additional_packing_material_cost'];
+                    $product->label_cost = $response['label_cost'];
+                    $product->facilitation_cost = $response['facilitation_cost'];
+                    $product->packing_cost = $response['packing_cost'];
                     //$product->how_to_use = $data['how_to_use'];
                     $product->suggested_dosage = $data['suggested_dosage'];
                     //$product->hsn_code = $data['hsn_code'];
@@ -401,6 +407,7 @@ class ProductsController extends Controller
             }
             if(isset($data['zdhc_certification'])){
                 $product->zdhc_certification = $data['zdhc_certification'];
+                $product->zdhc_pid = $data['zdhc_pid'];
             }else{
                 $product->zdhc_certification = 'No';
             }
@@ -466,6 +473,7 @@ class ProductsController extends Controller
 
         $productdata = Product::with(['raw_materials','pricings','product_stages','weightages','productpacking'])->where('id',$productid)->first();
         $productdata = json_decode(json_encode($productdata),true);
+        //echo "<pre>"; print_r($productdata); die;
         if($request->isMethod('post')){
             $data = $request->all();
             $data['formulation_cost'] = 0;
@@ -473,6 +481,8 @@ class ProductsController extends Controller
             $product->formulation_cost = $data['formulation_cost'];
             //$product->packing_cost = $data['packing_cost'];
             $product->average_dispatch_time = $data['average_dispatch_time'];
+            $product->batch_time = $data['batch_time'];
+            $product->production_loss = $data['production_loss'];
             if($product->formulation_cost >0 && $product->packing_cost >0){
                 $product->total_product_cost = $product->rm_cost + $product->formulation_cost + $product->packing_cost ;
             }
@@ -927,8 +937,13 @@ class ProductsController extends Controller
                     if(isset($data['lab_sample'])){
                         $packingtype->lab_sample = 1;
                     }
-                    if(isset($data['additional_packing'])){
+                    if(isset($data['additional_packing']) && $data['additional_packing'] == 1){
                         $packingtype->additional_packing = 1;
+                        $packingtype->facilitation_cost = $data['facilitation_cost'];
+                        $packingtype->packing_loss = 0;
+                    }else{
+                        $packingtype->facilitation_cost = 0;
+                        $packingtype->packing_loss = $data['packing_loss'];
                     }
                     $packingtype->status = 1;
                     $packingtype->save();
@@ -959,9 +974,14 @@ class ProductsController extends Controller
             $data['additional_packing_type_id'] = $product['additional_packing_type_id'];
             $data['packing_size_id'] = $product['packing_size_id'];
             $data['standard_fill_size'] = $product['standard_fill_size'];
-            $packing_cost = productPackingCost($data);
+            $data['label_id'] = $product['label_id'];
+            $response = productPackingCost($data);
             $info = Product::find($product['id']);
-            $info->packing_cost = $packing_cost;
+            $info->basic_packing_material_cost = $response['basic_packing_material_cost'];
+            $info->additional_packing_material_cost = $response['additional_packing_material_cost'];
+            $info->label_cost = $response['label_cost'];
+            $info->facilitation_cost = $response['facilitation_cost'];
+            $info->packing_cost = $response['packing_cost'];
             $info->save();
         }
     }

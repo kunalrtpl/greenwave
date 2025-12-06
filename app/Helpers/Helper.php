@@ -374,20 +374,87 @@
     }
 
     function productPackingCost($data){
-        $packing_info = PackingType::where('id',$data['packing_type_id'])->first();
-        $packing_info = json_decode(json_encode($packing_info),true);
-        $cost = $packing_info['price'] / $data['standard_fill_size'];
-        $additional_cost = 0;
-        if(!empty($data['additional_packing_type_id'])){
-            $order_size = PackingSize::where('id',$data['packing_size_id'])->first();
-            $order_size = json_decode(json_encode($order_size),true);
-            $additional_packing_info = PackingType::where('id',$data['additional_packing_type_id'])->first();
-            $additional_packing_info = json_decode(json_encode($additional_packing_info),true);
-            $additional_cost = $additional_packing_info['price'] / $order_size['size'];
-        }
-        $packing_cost = $cost + $additional_cost;
-        return $packing_cost; 
-    }
+
+	    // Get main packing type info
+	    $packing_info = PackingType::where('id',$data['packing_type_id'])->first();
+	    $packing_info = json_decode(json_encode($packing_info), true);
+	    if(!empty($packing_info)){
+	    	// Base cost = packing price divided by standard fill size
+		    $cost = $packing_info['price'] / $data['standard_fill_size'];
+
+		    // Get the order size (Packing size)
+		    $order_size = PackingSize::where('id',$data['packing_size_id'])->first();
+		    $order_size = json_decode(json_encode($order_size), true);
+
+		    // Initialize cost variables
+		    $additional_cost = 0;           // Extra packing material cost
+		    $label_cost = 0;                // Cost for label (if any)
+		    $additionalPackingCost = 0;     // Flag used for additional label cost logic
+		    $facilitation_cost = 0;         // Facilitation cost when additional packing = Yes(1)
+
+		    // If an additional packing type is selected
+		    if (!empty($data['additional_packing_type_id'])) {
+
+		        // Get additional packing type info
+		        $additional_packing_info = PackingType::where('id',$data['additional_packing_type_id'])->first();
+		        $additional_packing_info = json_decode(json_encode($additional_packing_info), true);
+
+		        // Additional packing cost = price / order size
+		        $additional_cost = $additional_packing_info['price'] / $order_size['size'];
+
+		        // Used in label calculation
+		        $additionalPackingCost = 1;
+
+		        // If this packing type is marked as "additional packing" (1)
+		        // add facilitation cost
+		        if ($additional_packing_info['additional_packing'] == 1) {
+		            $facilitation_cost = $additional_packing_info['facilitation_cost'];
+		        }
+		    }
+
+		    // Label cost calculation (if label is selected)
+		    if (!empty($data['label_id'])) {
+
+		        // Get label info
+		        $label = \App\Label::where('id',$data['label_id'])->first();
+
+		        // Base label price from DB
+		        $baseCost = $label->price;
+
+		        /*
+		            Label cost formula:
+		            (label price * (size ratio + additionalPackingCostFlag)) / order_size
+		            - sizeRatio = order_size / standard_fill_size
+		            - additionalPackingCostFlag = 1 if additional packing is applied
+		        */
+		        $label_cost = ($baseCost * (($order_size['size'] / $data['standard_fill_size']) + $additionalPackingCost)) / $order_size['size'];
+		    }
+
+		    // Final individual costs
+		    $basic_packing_material_cost = $cost;
+		    $additional_packing_material_cost = $additional_cost;
+
+		    // Total packing cost = base + additional + label + facilitation
+		    $packing_cost = $cost + $additional_cost + $label_cost + $facilitation_cost;
+
+		    // Return everything
+		    return array(
+		        'basic_packing_material_cost'      => $basic_packing_material_cost,
+		        'additional_packing_material_cost' => $additional_packing_material_cost,
+		        'label_cost'      => $label_cost,
+		        'facilitation_cost'  => $facilitation_cost,
+		        'packing_cost'       => $packing_cost
+		    ); 
+	    }else{
+	    	return array(
+		        'basic_packing_material_cost'      =>0,
+		        'additional_packing_material_cost' =>0,
+		        'label_cost'      => 0,
+		        'facilitation_cost'  => 0,
+		        'packing_cost'       => 0
+		    );
+	    }
+	}
 
     function job_card_types(){
         return array('Standard Recipe'=>'Standard Recipe','Conversion'=>'Conversion (Change of Name or Batch No.)','Dilution'=>'Dilution','Reprocess'=>'Reprocess','Batch Merge'=>'Batch Merge');
