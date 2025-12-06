@@ -964,10 +964,14 @@ class ProductsController extends Controller
 
     public function syncProductPackingCost($packing,$type){
         if($type=="packingtype"){
-            $products = Product::where('packing_type_id',$packing->id)->get()->toArray();
+            $products = Product::where('packing_type_id', $packing->id)
+                ->orWhere('additional_packing_type_id', $packing->id)
+                ->get()
+                ->toArray();
         }else{
             $products = Product::where('packing_size_id',$packing->id)->get()->toArray();
         }
+        //echo "<pre>"; print_r($products); die;
         foreach($products as $product){
             $data = array();
             $data['packing_type_id'] = $product['packing_type_id'];
