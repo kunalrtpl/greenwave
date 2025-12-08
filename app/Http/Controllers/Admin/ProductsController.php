@@ -94,11 +94,13 @@ class ProductsController extends Controller
                         $costing_btn = 'red';
                     }
                 }
+                $basic_btn = 'green';
                 if($product['status'] == 0){
                     $costing_btn = "grey";
                     $qc_btn = "grey";
+                    $basic_btn = "grey";
                 }
-                $actionValues = '<a title="Edit Product" class="btn btn-xs green margin-top-10" href="'.url('/admin/add-edit-product/'.$product['id']).'">Basic</a>';
+                $actionValues = '<a title="Edit Product" class="btn btn-xs '.$basic_btn.' margin-top-10" href="'.url('/admin/add-edit-product/'.$product['id']).'">Basic</a>';
 
                 
                 $actionValues .= '<a title="Product QC" class="btn btn-xs '.$qc_btn.' margin-top-10" href="'.url('/admin/product-qc/'.$product['id']).'">QC</a>';
@@ -150,7 +152,7 @@ class ProductsController extends Controller
                 $records["data"][] = array(      
                     '<div style="text-align:center;">'.$num.'</div>',
                     $pro_type,
-                    $product['product_name'],
+                    $product['product_name'] .'<br> <small>Order Size id :'.$product['packing_size_id'].'</small>',
                     '<div style="text-align:right;">'.$dealer_price.'</div>',
                     '<div style="text-align:right;">'.$market_price.'</div>',
                     '<div  id="'.$product['id'].'" rel="products" class="bootstrap-switch  bootstrap-switch-'.$checked.'  bootstrap-switch-wrapper bootstrap-switch-animate toogle_switch">
