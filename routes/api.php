@@ -133,6 +133,10 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::match(['get', 'post'], '/add-sample-submission-feedback','DealerController@addSampleSubsmissionFeedback');
 			Route::match(['get', 'post'], '/close-sample-submission','DealerController@closeSampleSubmission');
 			Route::match(['get', 'post'], '/return-sample-submission','DealerController@returnSampleSubmission');
+
+			Route::match(['get', 'post'], '/masters','DealerController@masters');
+			Route::match(['get', 'post'], '/calculate-product-packing-cost','DealerController@calculateProductPackingCost');
+
 		});
 	});
 

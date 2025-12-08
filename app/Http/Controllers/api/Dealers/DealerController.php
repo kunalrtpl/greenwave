@@ -2615,4 +2615,60 @@ class DealerController extends Controller
         }
     }
 
+
+    public function masters(Request $request){
+        $resp = $this->resp;
+        if($resp['status'] && isset($resp['dealer'])) {
+            $packingTypes = \App\PackingType::where('status',1)->get();
+            $packingSizes = \App\PackingSize::where('status',1)->get();
+            $labels = \App\Label::where('status',1)->get();
+            $result['packing_types'] = $packingTypes;
+            $result['packing_sizes'] = $packingSizes;
+            $result['labels'] = $labels;
+            $message = 'Data has been fetched successfully';
+            return response()->json(apiSuccessResponse($message,$result),200);
+        }
+    }
+
+    public function calculateProductPackingCost(Request $request)
+    {
+        if ($request->isMethod('post')) {
+
+            $resp = $this->resp;
+
+            if ($resp['status'] && isset($resp['dealer'])) {
+
+                $data = $request->all();
+
+                // Required fields
+                $rules = [
+                    "packing_type_id"             => "required|integer",
+                    "standard_fill_size"          => "required|numeric",
+                    "packing_size_id"             => "required|integer",
+                    "additional_packing_type_id"  => "required|integer",
+                    "label_id"                    => "required|integer",
+                ];
+
+                $validator = Validator::make($data, $rules);
+
+                if ($validator->fails()) {
+                    return response()->json(validationResponse($validator), 422);
+                }
+
+                // Call your helper function
+                $packingCost = productPackingCost($data);
+
+                // 🔥 FORMAT ALL VALUES TO 2 DECIMAL PLACES
+                $packingCost = array_map(function($val) {
+                    return number_format((float)$val, 2, '.', '');
+                }, $packingCost);
+
+                $message = "Packing cost calculated successfully";
+
+                return response()->json(apiSuccessResponse($message, $packingCost), 200);
+            }
+        }
+    }
+
+
 }
