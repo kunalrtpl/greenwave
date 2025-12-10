@@ -173,6 +173,11 @@ class PurchaseOrder extends Model
             $createpo->order_placed_by = $data['order_placed_by'];
         }
         $createpo->po_date = $data['po_date'];
+
+        if(isset($data['is_mini_pack_order'])){
+            $createpo->is_mini_pack_order = 1;
+        }
+
         $createpo->save();
         $totalPrice = 0;
         $corporate_discount_per =0;
@@ -213,8 +218,12 @@ class PurchaseOrder extends Model
                 if(isset($item['dealer_special_discount'])){
                     $poitem->dealer_special_discount = $item['dealer_special_discount'];
                 }
+                $poitem->additional_charges = 0;
+                if(isset($item['additional_charges']) && $item['additional_charges'] > 0 ){
+                    $poitem->additional_charges = $item['additional_charges'];
+                }
                 $total_discount  = $poitem->dealer_qty_discount + $poitem->dealer_special_discount;
-                $poitem->net_price = $poitem->product_price - ($poitem->product_price * $total_discount/100);
+                $poitem->net_price = $poitem->product_price - ($poitem->product_price * $total_discount/100) + $poitem->additional_charges ;
             }elseif($data['action'] == 'customer'){
                 $directCustomerDiscount = \App\CustomerDiscount::where('product_id', $productinfo->id)
                     ->where('customer_id', $data['customer_id'])
