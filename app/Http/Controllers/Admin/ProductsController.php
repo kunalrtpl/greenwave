@@ -473,7 +473,7 @@ class ProductsController extends Controller
             return redirect('/admin/dashboard')->with('flash_message_error','You have no right to access this functionality');
         }
 
-        $productdata = Product::with(['raw_materials','pricings','product_stages','weightages','productpacking'])->where('id',$productid)->first();
+        $productdata = Product::with(['raw_materials','pricings','product_stages','weightages','productpacking','packing_type'])->where('id',$productid)->first();
         $productdata = json_decode(json_encode($productdata),true);
         //echo "<pre>"; print_r($productdata); die;
         if($request->isMethod('post')){

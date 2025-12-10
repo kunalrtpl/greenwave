@@ -92,7 +92,12 @@
 
                                         </div>
                                     </div>
-
+                                    <div class="form-group">
+                                        <label class="col-md-3 control-label">Packing Loss (%)</label>
+                                        <div class="col-md-4">
+                                            <p class="form-control">{{(!empty($productdata['packing_type']['packing_loss']))?$productdata['packing_loss']: '0'}}</p>
+                                        </div>
+                                    </div>
                                     <div class="form-group">
                                         <label class="col-md-3 control-label">Batch Time (Hrs.)</label>
                                         <div class="col-md-4">
@@ -107,6 +112,7 @@
                                             <h4 class="text-center text-danger pt-3" style="display: none;" id="Product-production_loss"></h4>
                                         </div>
                                     </div>
+                                    <hr class="bold-hr">
                                     <div class="form-group">
                                         <label class="col-md-3 control-label">MOQ (kg)</label>
                                         <div class="col-md-4">
