@@ -892,6 +892,21 @@ class ExecutiveController extends Controller
                     $dvr->user_scheduler_id = $data['user_scheduler_id'];
                 }
 
+                $dvr->start_time =NULL;
+                if(isset($data['start_time']) && !empty($data['start_time'])){
+                    $dvr->start_time = $data['start_time'];
+                }
+
+                $dvr->end_time =NULL;
+                if(isset($data['end_time']) && !empty($data['end_time'])){
+                    $dvr->end_time = $data['end_time'];
+                }
+
+                $dvr->visit_recorded =NULL;
+                if(isset($data['visit_recorded']) && !empty($data['visit_recorded'])){
+                    $dvr->visit_recorded = $data['visit_recorded'];
+                }
+
                 $dvr->user_id = $resp['user']['id'];
                 $dvr->purpose_of_visit = $data['purpose_of_visit'];
                 $dvr->trial_type = $data['trial_type'];
