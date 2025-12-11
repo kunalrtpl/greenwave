@@ -95,7 +95,7 @@
                                     <div class="form-group">
                                         <label class="col-md-3 control-label">Packing Loss (%)</label>
                                         <div class="col-md-4">
-                                            <p class="form-control">{{(!empty($productdata['packing_type']['packing_loss']))?$productdata['packing_loss']: '0'}}</p>
+                                            <p class="form-control">{{ isset($productdata['packing_type']['packing_loss']) && !empty($productdata['packing_type']['packing_loss']) ? $productdata['packing_type']['packing_loss'] : '0' }}</p>
                                         </div>
                                     </div>
                                     <div class="form-group">
