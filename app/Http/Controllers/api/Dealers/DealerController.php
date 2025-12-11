@@ -2643,6 +2643,8 @@ class DealerController extends Controller
                 // Required fields
                 $rules = [
                     "packing_type_id"             => "required|integer",
+                    "product_id"                  => "required|integer",
+                    "dealer_price"                => "required|numeric",
                     "standard_fill_size"          => "required|numeric",
                     "packing_size_id"             => "required|integer",
                     "additional_packing_type_id"  => "required|integer",
@@ -2655,20 +2657,71 @@ class DealerController extends Controller
                     return response()->json(validationResponse($validator), 422);
                 }
 
-                // Call your helper function
+                // ==============================================
+                // 1️⃣ CALL ORIGINAL PACKING COST CALCULATOR
+                // ==============================================
                 $packingCost = productPackingCost($data);
 
-                // 🔥 FORMAT ALL VALUES TO 2 DECIMAL PLACES
+                // ==============================================
+                // 2️⃣ FETCH REQUIRED PRODUCT & PACKING LOSS DATA
+                // ==============================================
+
+                $product = Product::find($data['product_id']);
+                $selectedPacking = \App\PackingType::find($data['packing_type_id']);
+
+                $selectedLoss = $selectedPacking->packing_loss ?? 0;
+                $productLoss  = $product->packing_type->packing_loss ?? 0;
+                //echo $product->packing_type->packing_loss; die;
+                // ==============================================
+                // 3️⃣ CALCULATE LOSS DIFFERENCE
+                // ==============================================
+
+                $lossDifference = $selectedLoss - $productLoss;  // e.g., 10 - 5 = 5%
+                // ==============================================
+                // 4️⃣ CALCULATE EXTRA COST BASED ON DEALER PRICE
+                // ==============================================
+
+                $extraCost = 0;
+                if ($lossDifference > 0) {
+                    $extraCost = ($data['dealer_price'] * $lossDifference) / 100;
+                }
+                // ==============================================
+                // 5️⃣ CALCULATE FINAL ADJUSTED PACKING COST
+                // ==============================================
+
+                $originalPackingCost = $packingCost['packing_cost'] ?? 0;
+                $productPackingCost  = $product->packing_cost ?? 0;
+
+                //echo $productPackingCost; die;
+                // Formula:
+                // final = (new_packing_cost - old_product_packing_cost) + extra_cost
+                $finalPackingCost = ($originalPackingCost - $productPackingCost) + $extraCost;
+
+                // ==============================================
+                // 6️⃣ FORMAT ALL VALUES TO 2 DECIMALS
+                // ==============================================
+
                 $packingCost = array_map(function($val) {
                     return number_format((float)$val, 2, '.', '');
                 }, $packingCost);
 
-                $message = "Packing cost calculated successfully";
+                // Add new calculated values
+                //$packingCost['loss_difference']       = number_format($lossDifference, 2, '.', '');
+                //$packingCost['extra_loss_cost']       = number_format($extraCost, 2, '.', '');
+                $packingCost['adjusted_packing_cost'] = number_format($finalPackingCost, 2, '.', '');
 
-                return response()->json(apiSuccessResponse($message, $packingCost), 200);
+                // ==============================================
+                // 7️⃣ SEND RESPONSE
+                // ==============================================
+
+                return response()->json(
+                    apiSuccessResponse("Packing cost calculated successfully", $packingCost),
+                    200
+                );
             }
         }
     }
+
 
 
 }
