@@ -39,6 +39,7 @@ use App\FreeSamplingStock;
 use App\SamplingSaleInvoice;
 use App\SampleSubmission;
 use App\DealerPurchaseProjection;
+use PDF;
 class DealerController extends Controller
 {
     //
@@ -2629,6 +2630,61 @@ class DealerController extends Controller
             return response()->json(apiSuccessResponse($message,$result),200);
         }
     }
+
+    public function myProductsPdf(Request $request)
+    {
+        try {
+
+            // Your custom dealer auth check
+            $resp = $this->resp;
+
+            if (!$resp['status'] || !isset($resp['dealer'])) {
+                return response()->json(apiErrorResponse("Unauthorized dealer"), 401);
+            }
+
+            // Dealer details
+            $dealer = $resp['dealer'];          // Full dealer array
+            $dealerId = $dealer['id'];          // Dealer ID
+
+            // ---------------------------------------
+            // VALIDATION
+            // ---------------------------------------
+            $request->validate([
+                'product_category_title' => 'required|string',
+                'columns' => 'required|array',
+                'rows'    => 'required|array',
+            ]);
+
+            // Prepare data for PDF
+            $data = [
+                'product_category_title' => $request->product_category_title,
+                'dealer'  => $dealer,            // If you need dealer name/address in PDF
+                'columns' => $request->columns,
+                'rows'    => $request->rows
+            ];
+
+            ini_set('memory_limit','256M');
+
+            // Unique PDF name per dealer
+            $filename = "Dealer_".$dealerId."_Product_List_".".pdf";
+
+            PDF::loadView('dealer_my_product_pdf', compact('data'))
+                ->setPaper('a4', 'landscape')
+                ->save(public_path('DealerProductPdfs/'.$filename));
+
+            $filepath = url('DealerProductPdfs/'.$filename);
+
+            return response()->json(apiSuccessResponse("PDF generated successfully", [
+                'pdf_url' => $filepath
+            ]), 200);
+
+        } catch (\Exception $e) {
+            return response()->json(apiErrorResponse($e->getMessage()." Line ".$e->getLine()), 423);
+        }
+    }
+
+
+
 
     public function calculateProductPackingCost(Request $request)
     {

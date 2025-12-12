@@ -136,6 +136,7 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 
 			Route::match(['get', 'post'], '/masters','DealerController@masters');
 			Route::match(['get', 'post'], '/calculate-product-packing-cost','DealerController@calculateProductPackingCost');
+			Route::match(['get', 'post'], '/my-products-pdf','DealerController@myProductsPdf');
 
 		});
 	});
