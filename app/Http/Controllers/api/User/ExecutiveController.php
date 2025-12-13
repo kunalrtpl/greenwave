@@ -902,6 +902,16 @@ class ExecutiveController extends Controller
                     $dvr->end_time = $data['end_time'];
                 }
 
+                $dvr->start_lat_long =NULL;
+                if(isset($data['start_lat_long']) && !empty($data['start_lat_long'])){
+                    $dvr->start_lat_long = $data['start_lat_long'];
+                }
+
+                $dvr->end_lat_long =NULL;
+                if(isset($data['end_lat_long']) && !empty($data['end_lat_long'])){
+                    $dvr->end_lat_long = $data['end_lat_long'];
+                }
+
                 $dvr->visit_recorded =NULL;
                 if(isset($data['visit_recorded']) && !empty($data['visit_recorded'])){
                     $dvr->visit_recorded = $data['visit_recorded'];
