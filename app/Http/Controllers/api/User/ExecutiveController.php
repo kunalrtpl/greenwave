@@ -929,7 +929,7 @@ class ExecutiveController extends Controller
                 $dvr->other_purpose = $data['other_purpose'];
                 $dvr->visit_type = $data['visit_type'];
                 $dvr->visit_detail = $data['visit_detail'];
-                if(!empty($data['trial_details'])){
+                if(isset($data['trial_details']) && !empty($data['trial_details'])){
                     /*$trial_details = json_decode($data['trial_details'], true, JSON_UNESCAPED_SLASHES);
                     $trial_details = json_encode($trial_details);
                     $dvr->trial_details = NULL;*/
