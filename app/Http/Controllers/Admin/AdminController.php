@@ -137,7 +137,7 @@ class AdminController extends Controller
         Session::put('otp_' . $request->mobile, $otp);
         Session::put('otp_expire_' . $request->mobile, now()->addMinutes(5));
 
-        \Log::info("OTP for {$request->mobile} is $otp");
+        //\Log::info("OTP for {$request->mobile} is $otp");
 
         return response()->json(['status' => true, 'message' => 'OTP sent successfully.']);
     }
