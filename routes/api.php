@@ -195,8 +195,6 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::match(['get', 'post'], '/update-qcfs-status','ExecutiveController@updateQcfsStatus');
 			Route::match(['get', 'post'], '/feedback-reply','ExecutiveController@feedbackReply');
 			Route::match(['get', 'post'], '/save-dvr','ExecutiveController@saveDvr');
-			//new version
-			Route::match(['get', 'post'], '/submit-dvr','ExecutiveController@saveDvr');
 			Route::match(['get', 'post'], '/upload-dvr-media','ExecutiveController@uploadDvrMedia');
 			Route::match(['get', 'post'], '/dvrs','ExecutiveController@dvrs');
 			Route::match(['get', 'post'], '/dvr/{id}','ExecutiveController@dvrInfo');
