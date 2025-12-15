@@ -918,24 +918,49 @@ class ExecutiveController extends Controller
                 }
 
                 $dvr->user_id = $resp['user']['id'];
-                $dvr->purpose_of_visit = $data['purpose_of_visit'];
-                $dvr->trial_type = $data['trial_type'];
-                $dvr->is_fruitful = $data['is_fruitful'];
+                $dvr->purpose_of_visit =NULL;
+                if(isset($data['purpose_of_visit']) && !empty($data['purpose_of_visit'])){
+                    $dvr->purpose_of_visit = $data['purpose_of_visit'];
+                }
+                $dvr->trial_type =NULL;
+                if(isset($data['trial_type']) && !empty($data['trial_type'])){
+                    $dvr->trial_type = $data['trial_type'];
+                }
+                //$dvr->is_fruitful = $data['is_fruitful'];
                 if(isset($data['remarks'])){
                     $dvr->remarks = $data['remarks'];
                 }
-                $dvr->other      = $data['other'];
-                $dvr->query      = $data['query'];
-                $dvr->other_purpose = $data['other_purpose'];
-                $dvr->visit_type = $data['visit_type'];
-                $dvr->visit_detail = $data['visit_detail'];
+                $dvr->other =NULL;
+                if(isset($data['other']) && !empty($data['other'])){
+                    $dvr->other = $data['other'];
+                }
+                $dvr->query =NULL;
+                if(isset($data['query']) && !empty($data['query'])){
+                    $dvr->query = $data['query'];
+                }
+
+                $dvr->other_purpose =NULL;
+                if(isset($data['other_purpose']) && !empty($data['other_purpose'])){
+                    $dvr->other_purpose = $data['other_purpose'];
+                }
+                $dvr->visit_type =NULL;
+                if(isset($data['visit_type']) && !empty($data['visit_type'])){
+                    $dvr->visit_type = $data['visit_type'];
+                }
+                $dvr->visit_detail =NULL;
+                if(isset($data['visit_detail']) && !empty($data['visit_detail'])){
+                    $dvr->visit_detail = $data['visit_detail'];
+                }
                 if(isset($data['trial_details']) && !empty($data['trial_details'])){
                     /*$trial_details = json_decode($data['trial_details'], true, JSON_UNESCAPED_SLASHES);
                     $trial_details = json_encode($trial_details);
                     $dvr->trial_details = NULL;*/
                     $dvr->trial_details = $data['trial_details'];
                 }
-                $dvr->next_plan = $data['next_plan'];
+                $dvr->next_plan =NULL;
+                if(isset($data['next_plan']) && !empty($data['next_plan'])){
+                    $dvr->next_plan = $data['next_plan'];
+                }
                 if($request->hasFile('trial_report')){
                     if (Input::file('trial_report')->isValid()) {
                         $file = Input::file('trial_report');
