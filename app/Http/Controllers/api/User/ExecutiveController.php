@@ -918,7 +918,7 @@ class ExecutiveController extends Controller
                 }
 
                 $dvr->user_id = $resp['user']['id'];
-                $dvr->purpose_of_visit =NULL;
+                $dvr->purpose_of_visit = NULL;
                 if(isset($data['purpose_of_visit']) && !empty($data['purpose_of_visit'])){
                     $dvr->purpose_of_visit = $data['purpose_of_visit'];
                 }
