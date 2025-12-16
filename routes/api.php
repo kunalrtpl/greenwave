@@ -198,6 +198,8 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::match(['get', 'post'], '/upload-dvr-media','ExecutiveController@uploadDvrMedia');
 			Route::match(['get', 'post'], '/dvrs','ExecutiveController@dvrs');
 			Route::match(['get', 'post'], '/dvr/{id}','ExecutiveController@dvrInfo');
+			Route::match(['get', 'post'], '/latest-dvr','ExecutiveController@latestDvr');
+
 			Route::match(['get', 'post'], '/update-dvr-can-share','ExecutiveController@updateDvrCanShare');
 			Route::match(['get', 'post'], '/delete-dvr/{id}','ExecutiveController@deleteDvr');
 			Route::match(['get', 'post'], 'link-unlink-dvr-scheduler','ExecutiveController@linkUnlinkDvrScheduler');

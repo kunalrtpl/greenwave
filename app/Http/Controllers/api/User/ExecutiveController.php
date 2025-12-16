@@ -1117,6 +1117,21 @@ class ExecutiveController extends Controller
         }
     }
 
+    public function latestDvr(Request $request){
+        if($request->isMethod('get')){
+            $data = $request->all();
+            $resp = $this->resp;
+            if($resp['status'] && isset($resp['user'])){
+                $data = $request->all();
+                $dvr = Dvr::with(['customer','products','customer_register_request','complaint_info','query_info','other_team_member_info','trial_report_info','complaint_sample','market_sample','sample_submission','user_scheduler','trial_reports','customer_contact_info'])->where('user_id',$resp['user']['id'])->orderby('id','DESC')->first();
+                $message = 'Record has ben fetched successfully';
+                $result['report_base_url'] = url('/DvrDocuments/').'/';
+                $result['dvr'] = $dvr;
+                return response()->json(apiSuccessResponse($message,$result),200);
+            }
+        }
+    }
+
 
     public function updateDvrCanShare(Request $request){
         if($request->isMethod('post')){
