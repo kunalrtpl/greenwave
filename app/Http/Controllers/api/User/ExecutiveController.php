@@ -872,57 +872,57 @@ class ExecutiveController extends Controller
                     $dvr->other_team_member_id = $data['other_team_member_id'];
                 }
 
-                $dvr->sample_submission_id =NULL;
+                $dvr->sample_submission_id ="";
                 if(isset($data['sample_submission_id']) && !empty($data['sample_submission_id'])){
                     $dvr->sample_submission_id = $data['sample_submission_id'];
                 }
 
-                $dvr->market_sample_id =NULL;
+                $dvr->market_sample_id ="";
                 if(isset($data['market_sample_id']) && !empty($data['market_sample_id'])){
                     $dvr->market_sample_id = $data['market_sample_id'];
                 }
 
-                $dvr->complaint_sample_id =NULL;
+                $dvr->complaint_sample_id ="";
                 if(isset($data['complaint_sample_id']) && !empty($data['complaint_sample_id'])){
                     $dvr->complaint_sample_id = $data['complaint_sample_id'];
                 }
 
-                $dvr->user_scheduler_id =NULL;
+                $dvr->user_scheduler_id ="";
                 if(isset($data['user_scheduler_id']) && !empty($data['user_scheduler_id'])){
                     $dvr->user_scheduler_id = $data['user_scheduler_id'];
                 }
 
-                $dvr->start_time =NULL;
+                $dvr->start_time ="";
                 if(isset($data['start_time']) && !empty($data['start_time'])){
                     $dvr->start_time = $data['start_time'];
                 }
 
-                $dvr->end_time =NULL;
+                $dvr->end_time ="";
                 if(isset($data['end_time']) && !empty($data['end_time'])){
                     $dvr->end_time = $data['end_time'];
                 }
 
-                $dvr->start_lat_long =NULL;
+                $dvr->start_lat_long ="";
                 if(isset($data['start_lat_long']) && !empty($data['start_lat_long'])){
                     $dvr->start_lat_long = $data['start_lat_long'];
                 }
 
-                $dvr->end_lat_long =NULL;
+                $dvr->end_lat_long ="";
                 if(isset($data['end_lat_long']) && !empty($data['end_lat_long'])){
                     $dvr->end_lat_long = $data['end_lat_long'];
                 }
 
-                $dvr->visit_recorded =NULL;
+                $dvr->visit_recorded ="";
                 if(isset($data['visit_recorded']) && !empty($data['visit_recorded'])){
                     $dvr->visit_recorded = $data['visit_recorded'];
                 }
 
                 $dvr->user_id = $resp['user']['id'];
-                $dvr->purpose_of_visit = NULL;
+                $dvr->purpose_of_visit = "";
                 if(isset($data['purpose_of_visit']) && !empty($data['purpose_of_visit'])){
                     $dvr->purpose_of_visit = $data['purpose_of_visit'];
                 }
-                $dvr->trial_type =NULL;
+                $dvr->trial_type ="";
                 if(isset($data['trial_type']) && !empty($data['trial_type'])){
                     $dvr->trial_type = $data['trial_type'];
                 }
@@ -930,24 +930,24 @@ class ExecutiveController extends Controller
                 if(isset($data['remarks'])){
                     $dvr->remarks = $data['remarks'];
                 }
-                $dvr->other =NULL;
+                $dvr->other ="";
                 if(isset($data['other']) && !empty($data['other'])){
                     $dvr->other = $data['other'];
                 }
-                $dvr->query =NULL;
+                $dvr->query ="";
                 if(isset($data['query']) && !empty($data['query'])){
                     $dvr->query = $data['query'];
                 }
 
-                $dvr->other_purpose =NULL;
+                $dvr->other_purpose ="";
                 if(isset($data['other_purpose']) && !empty($data['other_purpose'])){
                     $dvr->other_purpose = $data['other_purpose'];
                 }
-                $dvr->visit_type =NULL;
+                $dvr->visit_type ="";
                 if(isset($data['visit_type']) && !empty($data['visit_type'])){
                     $dvr->visit_type = $data['visit_type'];
                 }
-                $dvr->visit_detail =NULL;
+                $dvr->visit_detail ="";
                 if(isset($data['visit_detail']) && !empty($data['visit_detail'])){
                     $dvr->visit_detail = $data['visit_detail'];
                 }
@@ -957,7 +957,7 @@ class ExecutiveController extends Controller
                     $dvr->trial_details = NULL;*/
                     $dvr->trial_details = $data['trial_details'];
                 }
-                $dvr->next_plan =NULL;
+                $dvr->next_plan ="";
                 if(isset($data['next_plan']) && !empty($data['next_plan'])){
                     $dvr->next_plan = $data['next_plan'];
                 }
