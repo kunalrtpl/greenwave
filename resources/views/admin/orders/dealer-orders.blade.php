@@ -4,6 +4,41 @@
 .table-scrollable table tbody tr td{
     vertical-align: middle;
 }
+.order-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid transparent;
+}
+
+.order-pill .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+}
+
+.order-pill.mini {
+    background: #fff7e6;
+    color: #8a5b00;
+    border-color: #ffd591;
+}
+.order-pill.mini .dot {
+    background: #fa8c16;
+}
+
+.order-pill.standard {
+    background: #f0f5ff;
+    color: #1d39c4;
+    border-color: #adc6ff;
+}
+.order-pill.standard .dot {
+    background: #2f54eb;
+}
+
 </style>
 <div class="page-content-wrapper">
     <div class="page-content">
@@ -43,6 +78,9 @@
                                         <th>
                                             Dealer
                                         </th>
+                                        <th width="15%">
+                                            Order Type
+                                        </th>
                                         <th>
                                            PO No.
                                         </th>
@@ -64,6 +102,15 @@
                                         <td></td>
                                         <td>
                                             <input type="text" class="form-control form-filter input-sm" name="dealer_info" placeholder="Search By Name">
+                                        </td>
+                                        <td>
+                                            <div class="form-group">
+                                                <select class="form-control form-filter input-sm" name="order_type">
+                                                    <option value="">All</option>
+                                                    <option value="minipack">Mini Pack Order</option>
+                                                    <option value="standard">Standard Order</option>
+                                                </select>
+                                            </div>
                                         </td>
                                         <td></td>
                                         <td></td>

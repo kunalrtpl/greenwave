@@ -83,7 +83,7 @@ jQuery(document).ready(function() {
             $('.filter-submit').trigger('click');
         }
     });
-    $(document).on('change', '[name=product_type], [name=status], [name=business_linking], [name=linked_executive], [name=email_status] , [name=b_card_status]', function(e) {
+    $(document).on('change', '[name=product_type], [name=status], [name=business_linking], [name=linked_executive], [name=email_status] , [name=b_card_status], [name=order_type]', function(e) {
 	    $('.filter-submit').trigger('click');
 	});
 

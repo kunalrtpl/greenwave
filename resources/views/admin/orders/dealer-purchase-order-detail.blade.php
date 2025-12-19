@@ -178,7 +178,7 @@
                             Dealer Price
                         </th>
                         <th>
-                            Discount
+                            Discount / Charges
                         </th>
                         <th>
                             Net Price
@@ -272,6 +272,13 @@
                                     <td><b>{{$orderItemInfo['dealer_qty_discount'] + $orderItemInfo['dealer_special_discount']}}%</b></td>
                                 </tr>
                             </table>
+                            {{-- Additional Charges --}}
+                            @if(!empty($orderItemInfo['additional_charges']) && $orderItemInfo['additional_charges'] > 0)
+                                <div class="d-flex justify-content-between px-2 py-1 bg-light border rounded">
+                                    <span class="text-muted">Additional Charges</span>
+                                    <b>{{ number_format($orderItemInfo['additional_charges'], 2) }}</b>
+                                </div>
+                            @endif
                         </td>
                         <td class="text-center"><b>Rs. {{$orderItemInfo['net_price']}}</b></td>
                         <td>

@@ -292,6 +292,13 @@ class OrdersController extends Controller
             if(!empty($data['id'])){
                 $querys = $querys->where('purchase_orders.po_ref_no_string',$data['id']);
             }
+            if(!empty($data['order_type'])){
+                if($data['order_type'] == "minipack"){
+                    $querys = $querys->where('purchase_orders.is_mini_pack_order',1);
+                }else{
+                    $querys = $querys->where('purchase_orders.is_mini_pack_order',0);
+                }
+            }
             if(!empty($data['status'])){
                 if($data['status'] == "completed"){
                     $querys = $querys->wherein('purchase_orders.po_status',['executed','completed']);
@@ -421,6 +428,10 @@ class OrdersController extends Controller
                 $records["data"][] = array(      
                     date('d M Y',strtotime($dealerpo['created_at'])),
                     $dealerInfo,
+                    $dealerpo['is_mini_pack_order'] == 1
+                    ? '<span class="order-pill mini"><span class="dot"></span> Mini Pack Order</span>'
+                    : '<span class="order-pill standard"><span class="dot"></span> Standard Order</span>',
+
                     $dealerpo['po_ref_no_string'].$is_tradrer,
                     $products,
                     $dealerpo['remarks'],

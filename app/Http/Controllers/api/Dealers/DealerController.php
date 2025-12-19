@@ -553,6 +553,11 @@ class DealerController extends Controller
                         }else{
                             $purchaseOrders = $purchaseOrders->where('trader_po',0);
                         }
+                        //FOR MINI PACK ORDERS
+                        if(isset($_GET['is_mini_pack_order'])){
+                            $purchaseOrders = $purchaseOrders->where('is_mini_pack_order',1);
+                        }
+
                         $purchaseOrders = $purchaseOrders->get()->toArray();
                     }else if(isset($_GET['customer_id'])) {
                         //for specific customers

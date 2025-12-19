@@ -31,7 +31,7 @@ class PurchaseOrder extends Model
     }
 
     public function orderitems(){
-    	return $this->hasMany('App\PurchaseOrderItem')->select('id','purchase_order_id','product_id','qty','actual_qty','inherit_type','batch_out_duration','dealer_markup','market_price','packing_size_id','net_price','product_price','dealer_price','spsod','comments','dealer_qty_discount','dealer_special_discount','is_urgent','item_action','customer_discounts','on_hold_until')->with(['product'=> function($query){
+    	return $this->hasMany('App\PurchaseOrderItem')->select('id','purchase_order_id','product_id','qty','actual_qty','inherit_type','batch_out_duration','dealer_markup','market_price','packing_size_id','net_price','product_price','dealer_price','spsod','comments','dealer_qty_discount','dealer_special_discount','is_urgent','item_action','customer_discounts','on_hold_until','additional_charges')->with(['product'=> function($query){
             $query->with('qty_discounts');
         },'packingsize']);
     }
