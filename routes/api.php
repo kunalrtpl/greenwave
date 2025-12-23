@@ -278,6 +278,26 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::post('customer-contact/verify-otp-existing', 'ExecutiveController@verifyExistingContactOtp');
 			Route::post('customer-contact/list', 'ExecutiveController@getCustomerContacts');
 
+
+			Route::group(['prefix' => 'v2'], function () {
+
+			    Route::get('dvrs', 'DvrController@dvrs');
+
+			    Route::post('dvr/save', 'DvrController@saveDvr');
+
+			    Route::post('dvr/trial/add', 'DvrController@addTrial');
+
+			    Route::post('dvr/contacts/add', 'DvrController@addContacts');
+
+			    Route::post('dvr/attachment/add', 'DvrController@addAttachment');
+
+			    Route::get('dvr/detail/{id}', 'DvrController@dvrDetail');
+
+			    Route::get('dvr/latest', 'DvrController@latestDvr');
+
+			});
+
+
 		});
 	});
 });
