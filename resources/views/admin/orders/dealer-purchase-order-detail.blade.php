@@ -216,8 +216,12 @@
                                 <span class="badge badge-success text">{{$productCounts[$orderItemInfo['product_id']]}}</span>
                             @endif
                             <br><br>
-                            @if(isset($orderItemInfo['packingsize']['size']))
-                                <small>(Pack Size: {{$orderItemInfo['packingsize']['size']}} kg)</small>
+                            @if($poDetail['is_mini_pack_order'] == 1)
+                                <small>(Pack Size: {{$orderItemInfo['mini_pack_size']}}</small>
+                            @else
+                                @if(isset($orderItemInfo['packingsize']['size']))
+                                    <small>(Pack Size: {{$orderItemInfo['packingsize']['size']}} kg)</small>
+                                @endif
                             @endif
                              <hr class="bold-hr">
                             <?php $statuses = array('On Hold','Cancel', 'Urgent'); ?>
