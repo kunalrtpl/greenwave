@@ -211,7 +211,7 @@ class PurchaseOrder extends Model
                 }
                 $poitem->product_price = $poitem->dealer_price;
 
-                if (isset($item['mini_pack_size']) {
+                if (isset($item['mini_pack_size'])) {
 
                     $poitem->mini_pack_size = $item['mini_pack_size'];
                     $poitem->mini_pack_size_remarks = $item['mini_pack_size'];
