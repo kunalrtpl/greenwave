@@ -2901,14 +2901,12 @@ class ExecutiveController extends Controller
             $data = $request->all();
             $resp = $this->resp;
 
-            // ✅ Validation Rules
+            // ✅ Validation Rules (user_dvr_id removed)
             $rules = [
-                'customer_id'                   => 'bail|required_without:customer_register_request_id|numeric',
-                'customer_register_request_id'  => 'bail|required_without:customer_id|numeric',
-                'name'                          => 'bail|required|string',
-                'mobile_number'                 => 'bail|required|numeric|digits:10',
-                'otp'                           => 'bail|required|numeric|digits:6',
-                'dvr_id'                        => 'bail|required|numeric'
+                'customer_id'                  => 'bail|required_without:customer_register_request_id|numeric',
+                'customer_register_request_id' => 'bail|required_without:customer_id|numeric',
+                'name'                         => 'bail|required|string',
+                'mobile_number'                => 'bail|required|numeric|digits:10'
             ];
 
             $validator = Validator::make($data, $rules);
@@ -2922,61 +2920,44 @@ class ExecutiveController extends Controller
                 // ✅ 1. Check if mobile already exists
                 $existing = \App\CustomerContact::where('mobile_number', $data['mobile_number'])->first();
 
-                if ($existing) {
-                    if ($existing->status == 'active') {
-                        return response()->json(apiErrorResponse("This contact number has already been used for another customer"), 400);
-                    }
-                    // inactive → allowed
-                }
-
-                // ✅ 2. Validate OTP
-                $key = 'contact_otp_' . $data['mobile_number'];
-                $storedOtp = \Cache::get($key);
-
-                if (!$storedOtp) {
-                    return response()->json(apiErrorResponse("The OTP you entered is incorrect or has expired."), 400);
-                }
-
-                if ($storedOtp != $data['otp']) {
-                    return response()->json(apiErrorResponse("Invalid OTP."), 400);
+                if ($existing && $existing->status === 'active') {
+                    return response()->json(
+                        apiErrorResponse("This contact number has already been used for another customer"),
+                        400
+                    );
                 }
 
                 // Pick whichever ID is present
                 $customerId = $data['customer_id'] ?? null;
                 $customerRegisterId = $data['customer_register_request_id'] ?? null;
 
-                // ✅ 3. Create Contact
+                // ✅ 2. Create Contact
                 $contact = \App\CustomerContact::create([
-                    'customer_id'                 => $customerId,
-                    'customer_register_request_id'=> $customerRegisterId,
-                    'name'                        => $data['name'],
-                    'designation'                 => $data['designation'] ?? null,
-                    'mobile_number'               => $data['mobile_number'],
-                    'created_by'                  => $resp['user']['id'],
-                    'status'                      => 'active',
+                    'customer_id'                  => $customerId,
+                    'customer_register_request_id' => $customerRegisterId,
+                    'name'                         => $data['name'],
+                    'designation'                  => $data['designation'] ?? null,
+                    'department'                  => $data['department'] ?? null,
+                    'mobile_number'                => $data['mobile_number'],
+                    'created_by'                   => $resp['user']['id'],
+                    'status'                       => 'active',
                 ]);
 
-                // delete OTP
-                \Cache::forget($key);
-
-                // 4. Update DVR table
-                $dvr = \App\Dvr::find($data['dvr_id']);
-
-                if (!$dvr) {
-                    return response()->json(apiErrorResponse("Invalid DVR ID"), 400);
-                }
-
-                $dvr->customer_contact_id = $contact->id;
-                $dvr->dvr_verified_date_time = date('Y-m-d H:i:s');
-                $dvr->save();
-
-                return response()->json(apiSuccessResponse("Customer contact created and DVR updated successfully", [
-                    'contact' => $contact,
-                    'dvr'     => $dvr
-                ]), 200);
+                return response()->json(
+                    apiSuccessResponse(
+                        "Customer contact created successfully",
+                        ['contact' => $contact]
+                    ),
+                    200
+                );
             }
+
+            return response()->json(apiErrorResponse('Unauthorized'), 401);
         }
+
+        return response()->json(apiErrorResponse('Invalid request method'), 405);
     }
+
 
 
 
@@ -2990,7 +2971,7 @@ class ExecutiveController extends Controller
             $rules = [
                 'contact_id' => 'bail|required|numeric',
                 'otp'        => 'bail|required|numeric|digits:6',
-                'dvr_id'     => 'bail|required|numeric'
+                'user_dvr_id'     => 'bail|required|numeric'
             ];
             $validator = Validator::make($data, $rules);
 
@@ -3022,7 +3003,7 @@ class ExecutiveController extends Controller
                 }
 
                 // ✅ OTP Success — Now update DVR
-                $dvr = \App\Dvr::find($data['dvr_id']);
+                $dvr = \App\UserDvr::find($data['user_dvr_id']);
 
                 if (!$dvr) {
                     return response()->json(apiErrorResponse("Invalid DVR ID"), 400);
