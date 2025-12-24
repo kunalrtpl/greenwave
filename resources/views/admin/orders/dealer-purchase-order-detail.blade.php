@@ -217,7 +217,7 @@
                             @endif
                             <br><br>
                             @if($poDetail['is_mini_pack_order'] == 1)
-                                <small>(Pack Size: {{$orderItemInfo['mini_pack_size']}}</small>
+                                <small>Pack Size: {{$orderItemInfo['mini_pack_size']}}</small>
                             @else
                                 @if(isset($orderItemInfo['packingsize']['size']))
                                     <small>(Pack Size: {{$orderItemInfo['packingsize']['size']}} kg)</small>
