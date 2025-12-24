@@ -2769,7 +2769,13 @@ class DealerController extends Controller
                 // Add new calculated values
                 //$packingCost['loss_difference']       = number_format($lossDifference, 2, '.', '');
                 //$packingCost['extra_loss_cost']       = number_format($extraCost, 2, '.', '');
-                $packingCost['adjusted_packing_cost'] = number_format($finalPackingCost, 2, '.', '');
+                // Custom rounding for adjusted packing cost
+                $intPart = floor($finalPackingCost);
+                $decimal = $finalPackingCost - $intPart;
+
+                $packingCost['adjusted_packing_cost'] = ($decimal >= 0.30)
+                    ? $intPart + 1
+                    : $intPart;
 
                 // ==============================================
                 // 7️⃣ SEND RESPONSE
