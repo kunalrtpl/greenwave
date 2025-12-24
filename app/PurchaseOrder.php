@@ -210,6 +210,13 @@ class PurchaseOrder extends Model
                     $poitem->dealer_price = $productinfo->dealer_price;
                 }
                 $poitem->product_price = $poitem->dealer_price;
+
+                if (isset($item['mini_pack_size']) {
+
+                    $poitem->mini_pack_size = $item['mini_pack_size'];
+                    $poitem->mini_pack_size_remarks = $item['mini_pack_size'];
+                }
+
                 $poitem->dealer_qty_discount = 0;
                 if(isset($item['dealer_qty_discount'])){
                     $poitem->dealer_qty_discount = $item['dealer_qty_discount'];
@@ -218,12 +225,38 @@ class PurchaseOrder extends Model
                 if(isset($item['dealer_special_discount'])){
                     $poitem->dealer_special_discount = $item['dealer_special_discount'];
                 }
+                // Default additional charges
                 $poitem->additional_charges = 0;
-                if(isset($item['additional_charges']) && $item['additional_charges'] > 0 ){
-                    $poitem->additional_charges = $item['additional_charges'];
+
+                if (isset($item['additional_charges']) && $item['additional_charges'] > 0) {
+
+                    $rawAdditional = $item['additional_charges'];
+
+                    // Custom rounding for additional charges
+                    $intPart = floor($rawAdditional);
+                    $decimal = $rawAdditional - $intPart;
+
+                    $poitem->additional_charges = ($decimal >= 0.30)
+                        ? $intPart + 1
+                        : $intPart;
                 }
-                $total_discount  = $poitem->dealer_qty_discount + $poitem->dealer_special_discount;
-                $poitem->net_price = $poitem->product_price - ($poitem->product_price * $total_discount/100) + $poitem->additional_charges ;
+
+                // Total discount
+                $total_discount = $poitem->dealer_qty_discount + $poitem->dealer_special_discount;
+
+                // Calculate raw net price
+                $rawNetPrice = $poitem->product_price
+                    - ($poitem->product_price * $total_discount / 100)
+                    + $poitem->additional_charges;
+
+                // Custom rounding for net price
+                $intPart = floor($rawNetPrice);
+                $decimal = $rawNetPrice - $intPart;
+
+                $poitem->net_price = ($decimal >= 0.30)
+                    ? $intPart + 1
+                    : $intPart;
+
             }elseif($data['action'] == 'customer'){
                 $directCustomerDiscount = \App\CustomerDiscount::where('product_id', $productinfo->id)
                     ->where('customer_id', $data['customer_id'])

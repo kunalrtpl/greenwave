@@ -273,24 +273,39 @@
                                 </tr>
                             </table>
                             {{-- Additional Charges --}}
-                            @if(!empty($orderItemInfo['additional_charges']) && $orderItemInfo['additional_charges'] > 0)
-                                <div class="d-flex justify-content-between px-2 py-1 bg-light border rounded">
-                                    <span class="text-muted">Additional Charges</span>
-                                    <b>{{ number_format($orderItemInfo['additional_charges'], 2) }}</b>
-                                </div>
+                            @if($poDetail['is_mini_pack_order'] == 1)
+                                @if(!empty($orderItemInfo['additional_charges']) && $orderItemInfo['additional_charges'] > 0)
+                                    <table class="table  table-bordered">
+                                        <tr>
+                                            <td>Add. Charges</td>
+                                            <td>Rs. {{ $orderItemInfo['additional_charges'] }}</td>
+                                        </tr>
+                                    </table>
+                                @else
+                                    <table class="table  table-bordered">
+                                        <tr>
+                                            <td>Add. Charges</td>
+                                            <td>Rs. 0</td>
+                                        </tr>
+                                    </table>
+                                @endif
                             @endif
                         </td>
                         <td class="text-center"><b>Rs. {{$orderItemInfo['net_price']}}</b></td>
                         <td>
-                            @if($orderItemInfo['qty'] < $orderItemInfo['product']['moq'])
-                                <b><p style="color:red">{{$orderItemInfo['qty']}} kg</p></b>
+                            @if($poDetail['is_mini_pack_order'] == 1)
+                                <b><p>{{$orderItemInfo['qty']}} kg</p></b>
                             @else
-                               <b>{{$orderItemInfo['qty']}} kg</b>
-                            @endif
-                            <hr class="bold-hr">
-                            <p>MOQ : {{!empty($orderItemInfo['product']['moq'])? $orderItemInfo['product']['moq'] :0}} kg</p>
-                            @if($orderItemInfo['qty'] < $orderItemInfo['product']['moq'])
-                                <p style="color:red"><b>Ordered Qty is less then MOQ</b></p>
+                                @if($orderItemInfo['qty'] < $orderItemInfo['product']['moq'])
+                                    <b><p style="color:red">{{$orderItemInfo['qty']}} kg</p></b>
+                                @else
+                                   <b>{{$orderItemInfo['qty']}} kg</b>
+                                @endif
+                                <hr class="bold-hr">
+                                <p>MOQ : {{!empty($orderItemInfo['product']['moq'])? $orderItemInfo['product']['moq'] :0}} kg</p>
+                                @if($orderItemInfo['qty'] < $orderItemInfo['product']['moq'])
+                                    <p style="color:red"><b>Ordered Qty is less then MOQ</b></p>
+                                @endif
                             @endif
                         </td>
                         <td>
