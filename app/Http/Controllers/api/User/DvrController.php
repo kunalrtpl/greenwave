@@ -249,9 +249,9 @@ class DvrController extends Controller
         $data = $request->all();
 
         $rules = [
-            'user_dvr_id' => 'required|integer',
-            'customer_contact_ids' => 'required|array',
-            'customer_contact_ids.*' => 'required|integer'
+            'user_dvr_id'              => 'required|integer',
+            'customer_contact_ids'    => 'required|array|min:1',
+            'customer_contact_ids.*'  => 'required|integer'
         ];
 
         $validator = Validator::make($data, $rules);
@@ -259,15 +259,34 @@ class DvrController extends Controller
             return response()->json(validationResponse($validator), 422);
         }
 
-        foreach ($data['customer_contact_ids'] as $contactId) {
+        // ✅ Get already existing contact IDs for this DVR
+        $existingContactIds = UserDvrCustomerContact::where(
+            'user_dvr_id',
+            $data['user_dvr_id']
+        )->pluck('customer_contact_id')->toArray();
+
+        // ✅ Filter only new contact IDs
+        $newContactIds = array_diff(
+            $data['customer_contact_ids'],
+            $existingContactIds
+        );
+
+        // ✅ Insert only non-duplicate records
+        foreach ($newContactIds as $contactId) {
             UserDvrCustomerContact::create([
-                'user_dvr_id' => $data['user_dvr_id'],
+                'user_dvr_id'          => $data['user_dvr_id'],
                 'customer_contact_id' => $contactId
             ]);
         }
 
         return response()->json(
-            apiSuccessResponse('Contacts added successfully', []),
+            apiSuccessResponse(
+                'Contacts added successfully',
+                [
+                    'added_count' => count($newContactIds),
+                    'skipped'     => count($existingContactIds)
+                ]
+            ),
             200
         );
     }
