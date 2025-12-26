@@ -241,17 +241,18 @@ class DvrController extends Controller
     }
 
     /**
-     * 5️⃣ ADD MULTIPLE CONTACT PERSONS
+     * 5️⃣ ADD / REPLACE MULTIPLE CONTACT PERSONS
      * POST /api/user/dvr/contacts/add
      */
     public function addContacts(Request $request)
     {
         $data = $request->all();
 
+        // ✅ Validation Rules
         $rules = [
-            'user_dvr_id'              => 'required|integer',
-            'customer_contact_ids'    => 'required|array|min:1',
-            'customer_contact_ids.*'  => 'required|integer'
+            'user_dvr_id'             => 'required|integer',
+            'customer_contact_ids'   => 'nullable|array',
+            'customer_contact_ids.*' => 'integer',
         ];
 
         $validator = Validator::make($data, $rules);
@@ -259,37 +260,53 @@ class DvrController extends Controller
             return response()->json(validationResponse($validator), 422);
         }
 
-        // ✅ Get already existing contact IDs for this DVR
-        $existingContactIds = UserDvrCustomerContact::where(
-            'user_dvr_id',
-            $data['user_dvr_id']
-        )->pluck('customer_contact_id')->toArray();
+        DB::beginTransaction();
 
-        // ✅ Filter only new contact IDs
-        $newContactIds = array_diff(
-            $data['customer_contact_ids'],
-            $existingContactIds
-        );
+        try {
+            // ✅ 1. Always delete existing contacts for this DVR
+            UserDvrCustomerContact::where(
+                'user_dvr_id',
+                $data['user_dvr_id']
+            )->delete();
 
-        // ✅ Insert only non-duplicate records
-        foreach ($newContactIds as $contactId) {
-            UserDvrCustomerContact::create([
-                'user_dvr_id'          => $data['user_dvr_id'],
-                'customer_contact_id' => $contactId
-            ]);
+            // ✅ 2. If contact IDs are provided, insert them
+            if (!empty($data['customer_contact_ids'])) {
+
+                $insertData = [];
+
+                foreach (array_unique($data['customer_contact_ids']) as $contactId) {
+                    $insertData[] = [
+                        'user_dvr_id'          => $data['user_dvr_id'],
+                        'customer_contact_id' => $contactId,
+                        'created_at'           => now(),
+                        'updated_at'           => now(),
+                    ];
+                }
+
+                UserDvrCustomerContact::insert($insertData);
+            }
+
+            DB::commit();
+
+            return response()->json(
+                apiSuccessResponse('Contacts updated successfully', []),
+                200
+            );
+
+        } catch (\Exception $e) {
+
+            DB::rollBack();
+
+            return response()->json(
+                apiErrorResponse('Failed to update contacts', [
+                    'error' => $e->getMessage()
+                ]),
+                500
+            );
         }
-
-        return response()->json(
-            apiSuccessResponse(
-                'Contacts added successfully',
-                [
-                    'added_count' => count($newContactIds),
-                    'skipped'     => count($existingContactIds)
-                ]
-            ),
-            200
-        );
     }
+
+
 
 	/**
 	 * ADD SINGLE ATTACHMENT (FILE UPLOAD)
