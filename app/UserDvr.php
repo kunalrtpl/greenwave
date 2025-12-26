@@ -9,6 +9,18 @@ class UserDvr extends Model
     protected $table = 'user_dvrs';
     protected $guarded = [];
 
+    public function customer(){
+        return $this->belongsto('App\Customer','customer_id','id');
+    } 
+
+    public function user(){
+        return $this->belongsto('App\User','user_id','id');
+    }
+
+    public function customer_register_request(){
+        return $this->belongsto('App\CustomerRegisterRequest','customer_register_request_id','id')->with(['dealer','linkedExecutive']);
+    }
+
     public function trials()
     {
         return $this->hasMany(UserDvrTrial::class)->with(['complaint_info','other_team_member_info']);

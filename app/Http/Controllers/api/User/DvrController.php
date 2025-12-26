@@ -41,6 +41,8 @@ class DvrController extends Controller
     protected function baseDvrQuery()
     {
         return UserDvr::with([
+            'customer',
+            'customer_register_request',
             'products',
             'trials',
             'customerContacts',
