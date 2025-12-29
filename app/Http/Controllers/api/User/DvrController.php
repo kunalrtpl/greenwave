@@ -14,6 +14,7 @@ use Validator;
 use DB;
 use Illuminate\Support\Facades\Input;
 use Carbon\Carbon;
+
 /**
  * Class DvrController
  *
@@ -215,7 +216,7 @@ class DvrController extends Controller
     }
 
     /**
-     * 4️⃣ ADD SINGLE TRIAL
+     * 4️⃣ ADD SINGLE TRIAL WITH PRODUCTS
      * POST /api/user/dvr/trial/add
      */
     public function addTrial(Request $request)
@@ -223,22 +224,147 @@ class DvrController extends Controller
         $data = $request->all();
 
         $rules = [
-            'user_dvr_id' => 'required|integer',
-            //'trial_type' => 'required|string'
+            'user_dvr_id' => 'required|integer|exists:user_dvrs,id',
+            'products'   => 'nullable|array',
+            'products.*' => 'integer|exists:products,id'
         ];
 
         $validator = Validator::make($data, $rules);
+
         if ($validator->fails()) {
             return response()->json(validationResponse($validator), 422);
         }
 
-        $trial = UserDvrTrial::create($data);
+        DB::beginTransaction();
 
-        return response()->json(
-            apiSuccessResponse('Trial added', ['trial' => $trial]),
-            200
-        );
+        try {
+
+            // ✅ Extract products and REMOVE from main data
+            $products = $data['products'] ?? [];
+            unset($data['products']);
+
+            // ✅ Create trial safely
+            $trial = UserDvrTrial::create($data);
+
+            // ✅ Insert products mapping
+            if (!empty($products)) {
+
+                $rows = [];
+
+                foreach ($products as $productId) {
+                    $rows[] = [
+                        'user_dvr_id'       => $data['user_dvr_id'],
+                        'user_dvr_trial_id' => $trial->id,
+                        'product_id'        => $productId,
+                        'created_at'        => now(),
+                        'updated_at'        => now(),
+                    ];
+                }
+
+                UserDvrProduct::insert($rows);
+            }
+
+            DB::commit();
+
+            return response()->json(
+                apiSuccessResponse('Trial added successfully', [
+                    'trial'    => $trial,
+                    'products' => $products
+                ]),
+                200
+            );
+
+        } catch (\Exception $e) {
+
+            DB::rollBack();
+
+            return response()->json([
+                'status'  => false,
+                'message' => 'Something went wrong',
+                'error'   => $e->getMessage()
+            ], 500);
+        }
     }
+
+    /**
+     * 5️⃣ UPDATE SINGLE TRIAL WITH PRODUCTS
+     * POST /api/user/dvr/trial/update
+     */
+    public function updateTrial(Request $request)
+    {
+        $data = $request->all();
+
+        $rules = [
+            'id'          => 'required|integer|exists:user_dvr_trials,id',
+            'user_dvr_id' => 'required|integer|exists:user_dvrs,id',
+            'products'   => 'nullable|array',
+            'products.*' => 'integer|exists:products,id'
+        ];
+
+        $validator = Validator::make($data, $rules);
+
+        if ($validator->fails()) {
+            return response()->json(validationResponse($validator), 422);
+        }
+
+        DB::beginTransaction();
+
+        try {
+
+            // ✅ Fetch Trial
+            $trial = UserDvrTrial::findOrFail($data['id']);
+
+            // ✅ Extract products & remove from update data
+            $products = $data['products'] ?? [];
+            unset($data['products'], $data['id']);
+
+            // ✅ Update trial
+            $trial->update($data);
+
+            // ✅ Delete old product mappings for this trial
+            UserDvrProduct::where('user_dvr_trial_id', $trial->id)->delete();
+
+            // ✅ Re-insert products
+            if (!empty($products)) {
+
+                $rows = [];
+
+                foreach ($products as $productId) {
+                    $rows[] = [
+                        'user_dvr_id'       => $data['user_dvr_id'],
+                        'user_dvr_trial_id' => $trial->id,
+                        'product_id'        => $productId,
+                        'created_at'        => now(),
+                        'updated_at'        => now(),
+                    ];
+                }
+
+                UserDvrProduct::insert($rows);
+            }
+
+            DB::commit();
+
+            return response()->json(
+                apiSuccessResponse('Trial updated successfully', [
+                    'trial'    => $trial->fresh(),
+                    'products' => $products
+                ]),
+                200
+            );
+
+        } catch (\Exception $e) {
+
+            DB::rollBack();
+
+            return response()->json([
+                'status'  => false,
+                'message' => 'Something went wrong',
+                'error'   => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
 
     /**
      * 5️⃣ ADD / REPLACE MULTIPLE CONTACT PERSONS

@@ -14,6 +14,11 @@ class UserDvrTrial extends Model
         return $this->belongsTo(UserDvr::class, 'user_dvr_id');
     }
 
+    public function products()
+    {
+        return $this->hasMany(UserDvrProduct::class)->with('productinfo')->whereNotNull('user_dvr_trial_id');
+    }
+
     public function attachments()
     {
         return $this->hasMany(UserDvrAttachment::class);

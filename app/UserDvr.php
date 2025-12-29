@@ -23,7 +23,7 @@ class UserDvr extends Model
 
     public function trials()
     {
-        return $this->hasMany(UserDvrTrial::class)->with(['complaint_info','other_team_member_info']);
+        return $this->hasMany(UserDvrTrial::class)->with(['complaint_info','other_team_member_info','products']);
     }
 
     public function attachments()
@@ -33,7 +33,7 @@ class UserDvr extends Model
 
     public function products()
     {
-        return $this->hasMany(UserDvrProduct::class)->with('productinfo');
+        return $this->hasMany(UserDvrProduct::class)->with('productinfo')->whereNull('user_dvr_trial_id');
     }
 
     public function customerContacts()
