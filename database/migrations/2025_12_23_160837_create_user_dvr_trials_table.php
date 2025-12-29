@@ -20,7 +20,7 @@ class CreateUserDvrTrialsTable extends Migration
 
             $table->text('objective')->nullable();
 
-            $table->tinyInteger('trail_done')->default(0);
+            $table->tinyInteger('trial_done')->default(0);
             $table->tinyInteger('is_jointly')->default(0);
 
             $table->string('other_team_member_name')->nullable();
