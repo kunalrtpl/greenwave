@@ -488,4 +488,87 @@ class DvrController extends Controller
 	        200
 	    );
 	}
+
+    /**
+     * 6️⃣ DELETE DVR
+     * POST /api/user/v2/dvr/delete
+     */
+    public function deleteDvr(Request $request)
+    {
+        if (!$this->resp['status'] || !isset($this->resp['user'])) {
+            return response()->json(apiErrorResponse('Unauthorized'), 401);
+        }
+
+        $data = $request->all();
+
+        $rules = [
+            'id' => 'required|integer|exists:user_dvrs,id',
+        ];
+
+        $validator = Validator::make($data, $rules);
+        if ($validator->fails()) {
+            return response()->json(validationResponse($validator), 422);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $userId = $this->resp['user']['id'];
+
+            // ✅ Fetch DVR belonging to logged-in user
+            $dvr = UserDvr::where('id', $data['id'])
+                          ->where('user_id', $userId)
+                          ->first();
+
+            if (!$dvr) {
+                return response()->json(apiErrorResponse('DVR not found'), 404);
+            }
+
+            /**
+             * IMPORTANT:
+             * - Trials, products, contacts, attachments
+             * - Will be auto-deleted if FK cascade exists
+             * - Otherwise we clean manually (safe)
+             */
+
+            // 🔥 Delete attachments files from storage
+            foreach ($dvr->attachments as $attachment) {
+                $filePath = public_path(
+                    'DvrAttachments/' . $dvr->id . '/' . $attachment->file
+                );
+
+                if ($attachment->file && file_exists($filePath)) {
+                    @unlink($filePath);
+                }
+            }
+
+            // 🧹 Manual cleanup (safe even if cascade exists)
+            UserDvrProduct::where('user_dvr_id', $dvr->id)->delete();
+            UserDvrTrial::where('user_dvr_id', $dvr->id)->delete();
+            UserDvrCustomerContact::where('user_dvr_id', $dvr->id)->delete();
+            UserDvrAttachment::where('user_dvr_id', $dvr->id)->delete();
+
+            // ✅ Finally delete DVR
+            $dvr->delete();
+
+            DB::commit();
+
+            return response()->json(
+                apiSuccessResponse('DVR deleted successfully'),
+                200
+            );
+
+        } catch (\Exception $e) {
+
+            DB::rollBack();
+
+            return response()->json(
+                apiErrorResponse('Failed to delete DVR', [
+                    'error' => $e->getMessage()
+                ]),
+                500
+            );
+        }
+    }
+
 }
