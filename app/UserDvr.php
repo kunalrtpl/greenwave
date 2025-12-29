@@ -60,4 +60,8 @@ class UserDvr extends Model
     public function customer_contact_info(){
         return $this->belongsto('App\CustomerContact','customer_contact_id','id')->select('id','name','designation','mobile_number');
     }
+
+    public function query_info(){
+        return $this->belongsto('App\Feedback','query','id')->with(['customer','customer_employee','product','replies']);
+    }
 }

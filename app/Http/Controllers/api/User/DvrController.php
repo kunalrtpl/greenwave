@@ -52,7 +52,8 @@ class DvrController extends Controller
             'market_sample',
             'sample_submission',
             'user_scheduler',
-            'customer_contact_info'
+            'customer_contact_info',
+            'query_info'
         ]);
     }
 
