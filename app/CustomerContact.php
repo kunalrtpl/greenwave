@@ -15,6 +15,7 @@ class CustomerContact extends Model
         'designation',
         'mobile_number',
         'created_by',
+        'department',
         'status'
     ];
 
