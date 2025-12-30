@@ -292,6 +292,8 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			    Route::post('dvr/contacts/add', 'DvrController@addContacts');
 
 			    Route::post('dvr/attachment/add', 'DvrController@addAttachment');
+			    
+			    Route::post('dvr/attachment/delete', 'DvrController@deleteAttachment');
 
 			    Route::post('dvr/delete', 'DvrController@deleteDvr'); 
 

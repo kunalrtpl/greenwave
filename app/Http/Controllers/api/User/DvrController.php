@@ -572,4 +572,70 @@ class DvrController extends Controller
         }
     }
 
+
+    /**
+     * 7️⃣ DELETE SINGLE ATTACHMENT
+     * POST /api/user/dvr/attachment/delete
+     */
+    public function deleteAttachment(Request $request)
+    {
+        if (!$this->resp['status'] || !isset($this->resp['user'])) {
+            return response()->json(apiErrorResponse('Unauthorized'), 401);
+        }
+
+        $rules = [
+            'id' => 'required|integer|exists:user_dvr_attachments,id',
+        ];
+
+        $validator = Validator::make($request->all(), $rules);
+        if ($validator->fails()) {
+            return response()->json(validationResponse($validator), 422);
+        }
+
+        try {
+            $userId = $this->resp['user']['id'];
+
+            // 🔍 Fetch attachment with DVR ownership check
+            $attachment = UserDvrAttachment::with('dvr')
+                ->where('id', $request->id)
+                ->first();
+
+            if (
+                !$attachment ||
+                !$attachment->dvr ||
+                $attachment->dvr->user_id !== $userId
+            ) {
+                return response()->json(apiErrorResponse('Attachment not found'), 404);
+            }
+
+            // 🧹 Delete physical file
+            if ($attachment->file) {
+                $filePath = public_path(
+                    'DvrAttachments/' .
+                    $attachment->user_dvr_id . '/' .
+                    $attachment->file
+                );
+
+                if (file_exists($filePath)) {
+                    @unlink($filePath);
+                }
+            }
+
+            // 🗑️ Delete DB record
+            $attachment->delete();
+
+            return response()->json(
+                apiSuccessResponse('Attachment deleted successfully'),
+                200
+            );
+
+        } catch (\Exception $e) {
+            return response()->json(
+                apiErrorResponse('Failed to delete attachment', [
+                    'error' => $e->getMessage()
+                ]),
+                500
+            );
+        }
+    }
 }
