@@ -1,21 +1,25 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
 
-class CreateUserDvrTrialsTable extends Migration
+class CreateTrialsTable extends Migration
 {
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
     public function up()
     {
-        Schema::create('user_dvr_trials', function (Blueprint $table) {
+        Schema::create('trials', function (Blueprint $table) {
             $table->bigIncrements('id');
 
-            $table->unsignedBigInteger('user_dvr_id')->index();
             $table->unsignedBigInteger('trial_report_id')->nullable()->index();
-
             $table->string('trial_type')->nullable();
-            $table->integer('complaint_id')->nullable()->index();
+
+            $table->unsignedBigInteger('complaint_id')->nullable()->index();
             $table->unsignedBigInteger('other_team_member_id')->nullable()->index();
 
             $table->text('objective')->nullable();
@@ -27,16 +31,16 @@ class CreateUserDvrTrialsTable extends Migration
             $table->string('status')->nullable();
 
             $table->timestamps();
-
-            $table->foreign('user_dvr_id')
-                ->references('id')
-                ->on('user_dvrs')
-                ->onDelete('cascade');
         });
     }
 
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
     public function down()
     {
-        Schema::dropIfExists('user_dvr_trials');
+        Schema::dropIfExists('trials');
     }
 }

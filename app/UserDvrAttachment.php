@@ -16,7 +16,7 @@ class UserDvrAttachment extends Model
 
     public function trial()
     {
-        return $this->belongsTo(UserDvrTrial::class, 'user_dvr_trial_id');
+        return $this->belongsTo(UserDvrTrial::class, 'trial_id');
     }
 
     // ✅ Append file_url in API response

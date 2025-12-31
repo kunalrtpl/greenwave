@@ -11,7 +11,7 @@ class CreateUserDvrProductsTable extends Migration
         Schema::create('user_dvr_products', function (Blueprint $table) {
             $table->bigIncrements('id');
 
-            $table->unsignedBigInteger('user_dvr_id')->index();
+            $table->unsignedBigInteger('user_dvr_id')->nullable()->index();
             $table->unsignedBigInteger('product_id')->index();
 
             $table->timestamps();

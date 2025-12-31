@@ -10,15 +10,15 @@ class AddUserDvrTrialIdToUserDvrProductsTable extends Migration
     {
         Schema::table('user_dvr_products', function (Blueprint $table) {
             // Add nullable column
-            $table->unsignedBigInteger('user_dvr_trial_id')
+            $table->unsignedBigInteger('trial_id')
                   ->nullable()
                   ->after('user_dvr_id')
                   ->index();
 
             // Add foreign key reference
-            $table->foreign('user_dvr_trial_id')
+            $table->foreign('trial_id')
                   ->references('id')
-                  ->on('user_dvr_trials')
+                  ->on('trials')
                   ->onDelete('set null');
         });
     }
@@ -27,10 +27,10 @@ class AddUserDvrTrialIdToUserDvrProductsTable extends Migration
     {
         Schema::table('user_dvr_products', function (Blueprint $table) {
             // Drop FK first
-            $table->dropForeign(['user_dvr_trial_id']);
+            $table->dropForeign(['trial_id']);
 
             // Drop column
-            $table->dropColumn('user_dvr_trial_id');
+            $table->dropColumn('trial_id');
         });
     }
 }

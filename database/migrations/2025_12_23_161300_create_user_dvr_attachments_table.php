@@ -12,7 +12,7 @@ class CreateUserDvrAttachmentsTable extends Migration
             $table->bigIncrements('id');
 
             $table->unsignedBigInteger('user_dvr_id')->index();
-            $table->unsignedBigInteger('user_dvr_trial_id')->nullable()->index();
+            $table->unsignedBigInteger('trial_id')->nullable()->index();
 
             $table->string('type')->nullable();
             $table->string('label')->nullable();
@@ -27,9 +27,9 @@ class CreateUserDvrAttachmentsTable extends Migration
                 ->on('user_dvrs')
                 ->onDelete('cascade');
 
-            $table->foreign('user_dvr_trial_id')
+            $table->foreign('trial_id')
                 ->references('id')
-                ->on('user_dvr_trials')
+                ->on('trials')
                 ->onDelete('cascade');
         });
     }

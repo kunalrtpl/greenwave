@@ -7,7 +7,8 @@ use App\Http\Controllers\Controller;
 use App\AuthToken;
 use App\UserDvr;
 use App\UserDvrProduct;
-use App\UserDvrTrial;
+use App\Trial;
+use App\UserDvrTrialLink;
 use App\UserDvrCustomerContact;
 use App\UserDvrAttachment;
 use Validator;
@@ -45,7 +46,9 @@ class DvrController extends Controller
             'customer',
             'customer_register_request',
             'products',
-            'trials',
+              // Trials + their own data
+            'trials.products',
+            'trials.attachments',
             'customerContacts',
             'attachments',
             'complaint_sample',
@@ -165,9 +168,11 @@ class DvrController extends Controller
         $data = $request->all();
 
         $rules = [
-            'dvr_date' => 'required|date',
-            //'products' => 'required|array',
-            //'products.*' => 'required|integer'
+            'dvr_date'   => 'required|date',
+            'trial_ids'  => 'nullable|array',
+            'trial_ids.*'=> 'integer|exists:trials,id',
+            'products'   => 'nullable|array',
+            'products.*' => 'integer|exists:products,id'
         ];
 
         $validator = Validator::make($data, $rules);
@@ -178,40 +183,71 @@ class DvrController extends Controller
         DB::beginTransaction();
 
         try {
+
             $userId = $this->resp['user']['id'];
 
-            $dvr = isset($data['id'])
-                ? UserDvr::where('id', $data['id'])->where('user_id', $userId)->first()
-                : new UserDvr();
+            $isNew = empty($data['id']);
+
+            // 🔹 CREATE OR FETCH DVR
+            $dvr = $isNew
+                ? new UserDvr()
+                : UserDvr::where('id', $data['id'])
+                    ->where('user_id', $userId)
+                    ->first();
 
             if (!$dvr) {
                 return response()->json(apiErrorResponse('DVR not found'), 404);
             }
 
-            $dvr->fill($request->except(['products']));
+            // 🔹 SAVE DVR
+            $dvr->fill($request->except(['products','trial_ids','id']));
             $dvr->user_id = $userId;
             $dvr->save();
 
-            // Save products
-            if(isset($data['products'])){
-            	UserDvrProduct::where('user_dvr_id', $dvr->id)->delete();
-	            foreach ($data['products'] as $productId) {
-	                UserDvrProduct::create([
-	                    'user_dvr_id' => $dvr->id,
-	                    'product_id' => $productId
-	                ]);
-	            }
+            // 🔹 DVR PRODUCTS (DVR LEVEL ONLY)
+            if (isset($data['products'])) {
+
+                UserDvrProduct::where('user_dvr_id', $dvr->id)
+                    ->whereNull('trial_id')
+                    ->delete();
+
+                foreach ($data['products'] as $productId) {
+                    UserDvrProduct::create([
+                        'user_dvr_id' => $dvr->id,
+                        'product_id'  => $productId
+                    ]);
+                }
+            }
+
+            // 🔥 LINK TRIALS (ONLY FOR NEW DVR)
+            if ($isNew && !empty($data['trial_ids'])) {
+
+                $rows = [];
+
+                foreach (array_unique($data['trial_ids']) as $trialId) {
+                    $rows[] = [
+                        'user_dvr_id' => $dvr->id,
+                        'trial_id'    => $trialId,
+                        'created_at'  => now(),
+                        'updated_at'  => now(),
+                    ];
+                }
+
+                DB::table('user_dvr_trial_links')->insert($rows);
             }
 
             DB::commit();
 
             return response()->json(
-                apiSuccessResponse('DVR saved successfully', ['dvr' => $dvr]),
+                apiSuccessResponse(
+                    $isNew ? 'DVR created successfully' : 'DVR updated successfully',
+                    ['dvr' => $dvr->load('trials')]
+                ),
                 200
             );
 
         } catch (\Exception $e) {
-            DB::rollback();
+            DB::rollBack();
             return response()->json(apiErrorResponse($e->getMessage()), 500);
         }
     }
@@ -222,16 +258,13 @@ class DvrController extends Controller
      */
     public function addTrial(Request $request)
     {
-        $data = $request->all();
-
         $rules = [
             'user_dvr_id' => 'required|integer|exists:user_dvrs,id',
-            'products'   => 'nullable|array',
-            'products.*' => 'integer|exists:products,id'
+            'products'    => 'nullable|array',
+            'products.*'  => 'integer|exists:products,id'
         ];
 
-        $validator = Validator::make($data, $rules);
-
+        $validator = Validator::make($request->all(), $rules);
         if ($validator->fails()) {
             return response()->json(validationResponse($validator), 422);
         }
@@ -240,50 +273,38 @@ class DvrController extends Controller
 
         try {
 
-            // ✅ Extract products and REMOVE from main data
-            $products = $data['products'] ?? [];
-            unset($data['products']);
+            // 1️⃣ Create Trial
+            $trial = Trial::create(
+                $request->except(['products', 'user_dvr_id'])
+            );
 
-            // ✅ Create trial safely
-            $trial = UserDvrTrial::create($data);
+            // 2️⃣ Link DVR ↔ Trial
+            DB::table('user_dvr_trial_links')->insert([
+                'user_dvr_id' => $request->user_dvr_id,
+                'trial_id'    => $trial->id,
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ]);
 
-            // ✅ Insert products mapping
-            if (!empty($products)) {
-
-                $rows = [];
-
-                foreach ($products as $productId) {
-                    $rows[] = [
-                        'user_dvr_id'       => $data['user_dvr_id'],
-                        'user_dvr_trial_id' => $trial->id,
-                        'product_id'        => $productId,
-                        'created_at'        => now(),
-                        'updated_at'        => now(),
-                    ];
-                }
-
-                UserDvrProduct::insert($rows);
+            // 3️⃣ Attach products
+            foreach ($request->products ?? [] as $productId) {
+                UserDvrProduct::create([
+                    'user_dvr_id'       => null,
+                    'trial_id' => $trial->id,
+                    'product_id'        => $productId
+                ]);
             }
 
             DB::commit();
 
             return response()->json(
-                apiSuccessResponse('Trial added successfully', [
-                    'trial'    => $trial,
-                    'products' => $products
-                ]),
+                apiSuccessResponse('Trial added successfully', $trial),
                 200
             );
 
         } catch (\Exception $e) {
-
             DB::rollBack();
-
-            return response()->json([
-                'status'  => false,
-                'message' => 'Something went wrong',
-                'error'   => $e->getMessage()
-            ], 500);
+            return response()->json(apiErrorResponse($e->getMessage()), 500);
         }
     }
 
@@ -293,17 +314,12 @@ class DvrController extends Controller
      */
     public function updateTrial(Request $request)
     {
-        $data = $request->all();
-
         $rules = [
-            'id'          => 'required|integer|exists:user_dvr_trials,id',
-            'user_dvr_id' => 'required|integer|exists:user_dvrs,id',
-            'products'   => 'nullable|array',
-            'products.*' => 'integer|exists:products,id'
+            'id'          => 'required|integer|exists:trials,id',
+            'products'    => 'nullable|array'
         ];
 
-        $validator = Validator::make($data, $rules);
-
+        $validator = Validator::make($request->all(), $rules);
         if ($validator->fails()) {
             return response()->json(validationResponse($validator), 422);
         }
@@ -312,59 +328,29 @@ class DvrController extends Controller
 
         try {
 
-            // ✅ Fetch Trial
-            $trial = UserDvrTrial::findOrFail($data['id']);
+            $trial = Trial::findOrFail($request->id);
 
-            // ✅ Extract products & remove from update data
-            $products = $data['products'] ?? [];
-            unset($data['products'], $data['id']);
+            UserDvrProduct::where('trial_id', $trial->id)->delete();
 
-            // ✅ Update trial
-            $trial->update($data);
-
-            // ✅ Delete old product mappings for this trial
-            UserDvrProduct::where('user_dvr_trial_id', $trial->id)->delete();
-
-            // ✅ Re-insert products
-            if (!empty($products)) {
-
-                $rows = [];
-
-                foreach ($products as $productId) {
-                    $rows[] = [
-                        'user_dvr_id'       => $data['user_dvr_id'],
-                        'user_dvr_trial_id' => $trial->id,
-                        'product_id'        => $productId,
-                        'created_at'        => now(),
-                        'updated_at'        => now(),
-                    ];
-                }
-
-                UserDvrProduct::insert($rows);
+            foreach ($request->products ?? [] as $productId) {
+                UserDvrProduct::create([
+                    'trial_id' => $trial->id,
+                    'product_id'        => $productId
+                ]);
             }
 
             DB::commit();
 
             return response()->json(
-                apiSuccessResponse('Trial updated successfully', [
-                    'trial'    => $trial->fresh(),
-                    'products' => $products
-                ]),
+                apiSuccessResponse('Trial updated successfully', $trial->fresh()),
                 200
             );
 
         } catch (\Exception $e) {
-
             DB::rollBack();
-
-            return response()->json([
-                'status'  => false,
-                'message' => 'Something went wrong',
-                'error'   => $e->getMessage()
-            ], 500);
+            return response()->json(apiErrorResponse($e->getMessage()), 500);
         }
     }
-
 
 
     /**
@@ -443,8 +429,8 @@ class DvrController extends Controller
 	    $data = $request->all();
 
 	    $rules = [
-	        'user_dvr_id' => 'required|integer',
-	        'user_dvr_trial_id' => 'nullable|integer',
+	        'user_dvr_id' => 'nullable|integer',
+	        'trial_id' => 'nullable|integer',
 	        'file' => 'required|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:5120'
 	    ];
 
@@ -477,7 +463,7 @@ class DvrController extends Controller
 
 	    $attachment = UserDvrAttachment::create([
 	        'user_dvr_id'       => $request->user_dvr_id,
-	        'user_dvr_trial_id' => $request->user_dvr_trial_id ?? null,
+	        'trial_id' => $request->trial_id ?? null,
 	        'type'              => $request->type ?? null,
 	        'label'             => $request->label ?? null,
 	        'file'              => $fileName,
