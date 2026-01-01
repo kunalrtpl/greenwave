@@ -398,3 +398,7 @@ Route::get('/enquiry', 'IndexController@enquiry');
 Route::post('/save-quick-enquiry', 'IndexController@saveQuickEnquiry');
 Route::post('/save-dealership-enquiry', 'IndexController@saveDealershipEnquiry');
 Route::post('/save-job-enquiry', 'IndexController@saveJobEnquiry');
+// routes/web.php OR routes/api.php
+Route::prefix('/export')->namespace('Export')->group(function(){
+	Route::get('dvrs/csv', 'DvrExportController@exportCsv');
+});
