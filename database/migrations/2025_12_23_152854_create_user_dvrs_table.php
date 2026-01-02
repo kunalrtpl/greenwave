@@ -53,6 +53,7 @@ class CreateUserDvrsTable extends Migration
             $table->dateTime('dvr_verified_date_time')->nullable();
             $table->tinyInteger('have_you_met')->nullable();
             $table->tinyInteger('ongoing_visit')->nullable();
+            $table->tinyInteger('is_submitted')->nullable();
 
             $table->foreign('customer_id')
                 ->references('id')
