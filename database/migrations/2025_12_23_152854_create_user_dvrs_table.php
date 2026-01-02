@@ -41,6 +41,7 @@ class CreateUserDvrsTable extends Migration
             $table->text('remarks')->nullable();
             $table->text('next_plan')->nullable();
             $table->string('verify_later_reason')->nullable();
+            $table->string('site_type')->nullable();
 
             $table->unsignedBigInteger('sample_submission_id')->nullable()->index();
             $table->unsignedBigInteger('market_sample_id')->nullable()->index();
