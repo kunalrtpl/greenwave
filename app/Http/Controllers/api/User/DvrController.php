@@ -393,7 +393,7 @@ class DvrController extends Controller
         $fromDate = Carbon::today()->subDays($days - 1)->startOfDay();
 
         // 🔍 Fetch trials
-        $trials = Trial::where('user_id', $userId)
+        $trials = Trial::with(['products','attachments','complaint_info','other_team_member_info'])->where('user_id', $userId)
             ->whereBetween('created_at', [$fromDate, $toDate])
             ->orderBy('created_at', 'desc')
             ->get();
