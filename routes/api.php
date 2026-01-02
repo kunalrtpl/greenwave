@@ -301,6 +301,8 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 
 			    Route::get('dvr/latest', 'DvrController@latestDvr');
 
+			    Route::post('trials/by-days', 'DvrController@trialsByDays');
+
 			});
 
 

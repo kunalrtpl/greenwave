@@ -258,6 +258,10 @@ class DvrController extends Controller
      */
     public function addTrial(Request $request)
     {
+        if (!$this->resp['status'] || !isset($this->resp['user'])) {
+            return response()->json(apiErrorResponse('Unauthorized'), 401);
+        }
+
         $rules = [
             'user_dvr_id' => 'required|integer|exists:user_dvrs,id',
             'products'    => 'nullable|array',
@@ -272,10 +276,14 @@ class DvrController extends Controller
         DB::beginTransaction();
 
         try {
+           $userId = $this->resp['user']['id'];
 
             // 1️⃣ Create Trial
             $trial = Trial::create(
-                $request->except(['products', 'user_dvr_id'])
+                array_merge(
+                    $request->except(['products', 'user_dvr_id']),
+                    ['user_id' => $userId]
+                )
             );
 
             // 2️⃣ Link DVR ↔ Trial
@@ -354,6 +362,59 @@ class DvrController extends Controller
 
 
     /**
+     * 8️⃣ GET USER TRIALS BY LAST N DAYS
+     * POST /api/user/trials/by-days
+     */
+    public function trialsByDays(Request $request)
+    {
+        if (!$this->resp['status'] || !isset($this->resp['user'])) {
+            return response()->json(apiErrorResponse('Unauthorized'), 401);
+        }
+
+        // ✅ Validation (days optional)
+        $validator = Validator::make($request->all(), [
+            'days' => 'nullable|integer|min:1|max:365'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(validationResponse($validator), 422);
+        }
+
+        $userId = $this->resp['user']['id'];
+
+        // 🔁 Fallback to 30 days if not provided or empty
+        $days = (int) ($request->days ?? 30);
+        if ($days <= 0) {
+            $days = 30;
+        }
+
+        // 📅 Date range
+        $toDate   = Carbon::today()->endOfDay();
+        $fromDate = Carbon::today()->subDays($days - 1)->startOfDay();
+
+        // 🔍 Fetch trials
+        $trials = Trial::where('user_id', $userId)
+            ->whereBetween('created_at', [$fromDate, $toDate])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json(
+            apiSuccessResponse(
+                'Trials fetched successfully',
+                [
+                    'from_date'    => $fromDate->toDateString(),
+                    'to_date'      => $toDate->toDateString(),
+                    'days'         => $days,
+                    'total_trials' => $trials->count(),
+                    'trials'       => $trials
+                ]
+            ),
+            200
+        );
+    }
+
+
+    /**
      * 5️⃣ ADD / REPLACE MULTIPLE CONTACT PERSONS
      * POST /api/user/dvr/contacts/add
      */
@@ -426,6 +487,10 @@ class DvrController extends Controller
 	 */
 	public function addAttachment(Request $request)
 	{
+        if (!$this->resp['status'] || !isset($this->resp['user'])) {
+            return response()->json(apiErrorResponse('Unauthorized'), 401);
+        }
+
 	    $data = $request->all();
 
 	    $rules = [
@@ -461,8 +526,11 @@ class DvrController extends Controller
 	        }
 	    }
 
+        $userId = $this->resp['user']['id'];
+
 	    $attachment = UserDvrAttachment::create([
-	        'user_dvr_id'       => $request->user_dvr_id,
+	        'user_id'           => $userId,
+            'user_dvr_id'       => $request->user_dvr_id,
 	        'trial_id' => $request->trial_id ?? null,
 	        'type'              => $request->type ?? null,
 	        'label'             => $request->label ?? null,
