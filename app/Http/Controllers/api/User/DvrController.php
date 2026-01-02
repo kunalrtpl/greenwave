@@ -49,6 +49,8 @@ class DvrController extends Controller
               // Trials + their own data
             'trials.products',
             'trials.attachments',
+            'trials.complaint_info',
+            'trials.other_team_member_info',
             'customerContacts',
             'attachments',
             'complaint_sample',
