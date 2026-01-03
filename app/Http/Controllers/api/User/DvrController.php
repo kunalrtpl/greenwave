@@ -319,14 +319,19 @@ class DvrController extends Controller
     }
 
     /**
-     * 5️⃣ UPDATE SINGLE TRIAL WITH PRODUCTS
+     * 5️⃣ UPDATE TRIAL WITH PRODUCTS
      * POST /api/user/dvr/trial/update
      */
     public function updateTrial(Request $request)
     {
+        if (!$this->resp['status'] || !isset($this->resp['user'])) {
+            return response()->json(apiErrorResponse('Unauthorized'), 401);
+        }
+
         $rules = [
             'id'          => 'required|integer|exists:trials,id',
-            'products'    => 'nullable|array'
+            'products'    => 'nullable|array',
+            'products.*'  => 'integer|exists:products,id',
         ];
 
         $validator = Validator::make($request->all(), $rules);
@@ -337,15 +342,40 @@ class DvrController extends Controller
         DB::beginTransaction();
 
         try {
+            $userId = $this->resp['user']['id'];
 
-            $trial = Trial::findOrFail($request->id);
+            /** 1️⃣ Fetch Trial */
+            $trial = Trial::where('id', $request->id)
+                          ->where('user_id', $userId)
+                          ->firstOrFail();
 
+            /** 2️⃣ Update Trial Fields */
+            $trial->update(
+                $request->except(['id', 'products'])
+            );
+
+            /** 3️⃣ Update DVR ↔ Trial Link (if sent) */
+            if ($request->filled('user_dvr_id')) {
+                DB::table('user_dvr_trial_links')
+                    ->updateOrInsert(
+                        ['trial_id' => $trial->id],
+                        [
+                            'user_dvr_id' => $request->user_dvr_id,
+                            'updated_at'  => now(),
+                            'created_at'  => now(),
+                        ]
+                    );
+            }
+
+            /** 4️⃣ Remove old products */
             UserDvrProduct::where('trial_id', $trial->id)->delete();
 
+            /** 5️⃣ Attach new products */
             foreach ($request->products ?? [] as $productId) {
                 UserDvrProduct::create([
-                    'trial_id' => $trial->id,
-                    'product_id'        => $productId
+                    'user_dvr_id' => null,
+                    'trial_id'    => $trial->id,
+                    'product_id'  => $productId
                 ]);
             }
 
@@ -361,6 +391,7 @@ class DvrController extends Controller
             return response()->json(apiErrorResponse($e->getMessage()), 500);
         }
     }
+
 
 
     /**
