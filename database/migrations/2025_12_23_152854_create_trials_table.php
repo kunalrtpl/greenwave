@@ -28,6 +28,7 @@ class CreateTrialsTable extends Migration
             $table->tinyInteger('is_jointly')->default(0);
 
             $table->string('other_team_member_name')->nullable();
+            $table->text('remarks')->nullable();
             $table->string('status')->nullable();
 
             $table->timestamps();

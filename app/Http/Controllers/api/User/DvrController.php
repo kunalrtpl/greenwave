@@ -354,19 +354,6 @@ class DvrController extends Controller
                 $request->except(['id', 'products'])
             );
 
-            /** 3️⃣ Update DVR ↔ Trial Link (if sent) */
-            if ($request->filled('user_dvr_id')) {
-                DB::table('user_dvr_trial_links')
-                    ->updateOrInsert(
-                        ['trial_id' => $trial->id],
-                        [
-                            'user_dvr_id' => $request->user_dvr_id,
-                            'updated_at'  => now(),
-                            'created_at'  => now(),
-                        ]
-                    );
-            }
-
             /** 4️⃣ Remove old products */
             UserDvrProduct::where('trial_id', $trial->id)->delete();
 
