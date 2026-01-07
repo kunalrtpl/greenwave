@@ -386,7 +386,7 @@ class ProductsController extends Controller
                     $product->version = 'v' . ($current + 1);
                 } else {
                     if (empty($product->version)) {
-                        $product->version = 'v1';
+                        //$product->version = 'v1';
                     }
                 }
 
