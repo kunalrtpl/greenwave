@@ -152,7 +152,9 @@ class ProductsController extends Controller
                 $records["data"][] = array(      
                     '<div style="text-align:center;">'.$num.'</div>',
                     $pro_type,
-                    $product['product_name'] .'<br> <small>Order Size id :'.$product['packing_size_id'].'</small>',
+                    $product['product_name']
+                    . '<br><small>Order Size id: ' . $product['packing_size_id'] . '</small>',
+                    (!empty($product['version']) ?  $product['version'] : ''),
                     '<div style="text-align:right;">'.$dealer_price.'</div>',
                     '<div style="text-align:right;">'.$market_price.'</div>',
                     '<div  id="'.$product['id'].'" rel="products" class="bootstrap-switch  bootstrap-switch-'.$checked.'  bootstrap-switch-wrapper bootstrap-switch-animate toogle_switch">
@@ -194,7 +196,257 @@ class ProductsController extends Controller
         }
     }
 
-    public function saveProduct(Request $request){
+
+    public function saveProduct(Request $request)
+    {
+        try {
+            if ($request->ajax()) {
+
+                $data = $request->all();
+
+                /* =====================================================
+                 | ADD / UPDATE MODE
+                 ===================================================== */
+                if ($data['productid'] == "") {
+                    $type = "add";
+                } else {
+                    $type = "update";
+                }
+
+                /* =====================================================
+                 | CHECK IF EDITING A VERSIONED PRODUCT
+                 ===================================================== */
+                $editingHasVersion = false;
+                $existingProduct = null;
+
+                if ($type === 'update') {
+                    $existingProduct = Product::find($data['productid']);
+                    if ($existingProduct && !empty($existingProduct->version)) {
+                        $editingHasVersion = true;
+                    }
+                }
+
+                /* =====================================================
+                 | VERSION MODE CHECK (ONLY FOR ADD)
+                 ===================================================== */
+                $isVersion = (
+                    $type === 'add' &&
+                    isset($data['product_creation_type']) &&
+                    $data['product_creation_type'] === 'version' &&
+                    !empty($data['old_product_id'])
+                );
+
+                $oldProduct = null;
+
+                if ($isVersion) {
+                    $oldProduct = Product::where('id', $data['old_product_id'])
+                        ->where('status', 1)
+                        ->first();
+
+                    if (!$oldProduct) {
+                        return response()->json([
+                            'status' => false,
+                            'errors' => ['old_product_id' => 'Invalid old product selected']
+                        ]);
+                    }
+
+                    // 🔒 FORCE SAME NAME & CODE AS OLD PRODUCT
+                    $data['product_name'] = $oldProduct->product_name;
+                    $data['product_code'] = $oldProduct->product_code;
+                }
+
+                /* =====================================================
+                 | UNIQUE RULES (FIXED FOR VERSIONING & EDIT)
+                 ===================================================== */
+                if ($type === 'update') {
+
+                    if ($editingHasVersion) {
+                        // Editing a versioned product → allow same name/code
+                        $productcodeUniq = '';
+                        $productNameUniq = '';
+                    } else {
+                        // Normal edit
+                        $productcodeUniq = "unique:products,product_code," . $data['productid'];
+                        $productNameUniq = "unique:products,product_name," . $data['productid'];
+                    }
+
+                } else {
+                    // ADD MODE
+                    if ($isVersion) {
+                        // New version → allow same name/code
+                        $productcodeUniq = '';
+                        $productNameUniq = '';
+                    } else {
+                        // Normal add
+                        $productcodeUniq = "unique:products,product_code";
+                        $productNameUniq = "unique:products,product_name";
+                    }
+                }
+
+                /* =====================================================
+                 | VALIDATION
+                 ===================================================== */
+                if ($data['is_trader_product'] == "0") {
+                    $validator = Validator::make($request->all(), [
+                        'is_trader_product' => 'required',
+                        'product_code' => 'required|' . $productcodeUniq,
+                        'product_name' => 'required|' . $productNameUniq,
+                        'product_detail_id' => 'required',
+                        'lab_recipe_number' => 'required',
+                        'short_description' => 'required',
+                        'suggested_dosage' => 'required',
+                        'packing_type_id' => 'required',
+                        'packing_size_id' => 'required',
+                        'standard_fill_size' => 'required|regex:/^\d+(\.\d{1,2})?$/',
+                        'shelf_life' => 'required|integer',
+                        'product_introduced_on' => 'required|date_format:Y-m-d'
+                    ]);
+                } else {
+                    $validator = Validator::make($request->all(), [
+                        'is_trader_product' => 'required',
+                        'product_code' => 'required|' . $productcodeUniq,
+                        'product_name' => 'required|' . $productNameUniq,
+                        'product_detail_id' => 'required',
+                        'short_description' => 'required',
+                        'packing_type_id' => 'required',
+                        'packing_size_id' => 'required',
+                        'standard_fill_size' => 'required|regex:/^\d+(\.\d{1,2})?$/',
+                        'shelf_life' => 'required|integer'
+                    ]);
+                }
+
+                if (!$validator->passes()) {
+                    return response()->json([
+                        'status' => false,
+                        'errors' => $validator->messages()
+                    ]);
+                }
+
+                /* =====================================================
+                 | RAW MATERIAL VALIDATION
+                 ===================================================== */
+                $totalPercentage = array_sum($data['percentage']);
+                if ($totalPercentage != 100) {
+                    return response()->json([
+                        'status' => false,
+                        'errors' => ['raw_materials' => 'Raw Material Percentage must be 100%']
+                    ]);
+                }
+
+                if (array_has_dupes($data['raw_material_ids']) > 0) {
+                    return response()->json([
+                        'status' => false,
+                        'errors' => ['raw_materials' => 'Duplicate Raw materials found']
+                    ]);
+                }
+
+                $data['rm_cost'] = ClacRMcost($data);
+
+                /* =====================================================
+                 | SAVE PRODUCT
+                 ===================================================== */
+                DB::beginTransaction();
+
+                $product = ($type === 'add')
+                    ? new Product
+                    : Product::findOrFail($data['productid']);
+
+                $product->lab_recipe_number = $data['lab_recipe_number'];
+                $product->product_name = $data['product_name'];
+                $product->product_code = $data['product_code'];
+                $product->physical_form = $data['physical_form'];
+                $product->product_detail_id = $data['product_detail_id'];
+                $product->product_detail_info = getProductDetailLevel($data['product_detail_id']);
+                $product->packing_type_id = $data['packing_type_id'];
+                $product->additional_packing_type_id = $data['additional_packing_type_id'] ?? null;
+                $product->standard_fill_size = $data['standard_fill_size'];
+                $product->packing_size_id = $data['packing_size_id'];
+                $product->label_id = $data['label_id'] ?? null;
+                $product->short_description = $data['short_description'];
+                $product->description = $data['description'] ?? null;
+                $product->suggested_dosage = $data['suggested_dosage'];
+                $product->keywords = $data['keywords'] ?? null;
+                $product->remarks = $data['remarks'] ?? null;
+                $product->product_introduced_on = $data['product_introduced_on'] ?? null;
+                $product->inherit_type = $data['inherit_type'];
+                $product->status = $data['status'];
+                $product->rm_cost = $data['rm_cost'];
+                $product->shelf_life = $data['shelf_life'];
+                $product->is_trader_product = $data['is_trader_product'];
+                $product->product_price = $data['product_price'] ?? 0;
+
+                /* =====================================================
+                 | VERSIONING
+                 ===================================================== */
+                if ($isVersion) {
+                    if (empty($oldProduct->version)) {
+                        $oldProduct->version = 'v1';
+                    }
+                    $current = (int) str_replace('v', '', $oldProduct->version);
+                    $product->version = 'v' . ($current + 1);
+                } else {
+                    if (empty($product->version)) {
+                        $product->version = 'v1';
+                    }
+                }
+
+                $product->save();
+
+                /* =====================================================
+                 | DEACTIVATE OLD PRODUCT
+                 ===================================================== */
+                if ($isVersion) {
+                    $oldProduct->status = 0;
+                    $oldProduct->save();
+                }
+
+                /* =====================================================
+                 | RAW MATERIAL SAVE (QUERY BUILDER)
+                 ===================================================== */
+                DB::table('product_raw_materials')
+                    ->where('product_id', $product->id)
+                    ->delete();
+
+                if ($data['inherit_type'] == "Inhouse") {
+
+                    $insertData = [];
+
+                    foreach ($data['raw_material_ids'] as $k => $rm) {
+                        $insertData[] = [
+                            'product_id' => $product->id,
+                            'raw_material_id' => $rm,
+                            'percentage_included' => $data['percentage'][$k],
+                            'created_at' => now(),
+                            'updated_at' => now()
+                        ];
+                    }
+
+                    if (!empty($insertData)) {
+                        DB::table('product_raw_materials')->insert($insertData);
+                    }
+                }
+
+                DB::commit();
+
+                return response()->json([
+                    'status' => true,
+                    'url' => url('/admin/products?s')
+                ]);
+            }
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'status' => false,
+                'errors' => [
+                    'error' => $e->getMessage() . ' Line:' . $e->getLine()
+                ]
+            ]);
+        }
+    }
+
+
+    
+    public function saveProduct_OLD(Request $request){
         try{
             if($request->ajax()){
                 $data = $request->all();

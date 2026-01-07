@@ -38,6 +38,57 @@
                                         </select>
                                     </div>
                                 </div>
+                                {{-- PRODUCT CREATION TYPE (ONLY WHEN ADDING PRODUCT) --}}
+                                @if(empty($productdata))
+
+                                <div class="form-group">
+                                    <label class="col-md-3 control-label">Product Creation Type</label>
+                                    <div class="col-md-4" style="margin-top:8px;">
+                                        <label>
+                                            <input type="radio" name="product_creation_type" value="new" checked>
+                                            New Product
+                                        </label>
+                                        &nbsp;&nbsp;
+                                        <label>
+                                            <input type="radio" name="product_creation_type" value="version">
+                                            New Version of Old Product
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="form-group" id="oldProductDiv" style="display:none;">
+                                <label class="col-md-3 control-label">Select Old Product</label>
+                                <div class="col-md-4">
+                                    <select class="form-control select2" name="old_product_id">
+                                        <option value="">Please Select</option>
+
+                                        @foreach(\App\Product::where('status',1)->orderBy('product_name')->get() as $p)
+                                            <option value="{{ $p->id }}"
+                                                data-product_code="{{ $p->product_code }}"
+                                                data-product_name="{{ e($p->product_name) }}"
+                                                data-physical_form="{{ $p->physical_form }}"
+                                                data-product_detail_id="{{ $p->product_detail_id }}"
+                                                data-short_description="{{ e($p->short_description) }}"
+                                                data-description="{{ e($p->description) }}"
+                                                data-suggested_dosage="{{ e($p->suggested_dosage) }}"
+                                                data-packing_type_id="{{ $p->packing_type_id }}"
+                                                data-additional_packing_type_id="{{ $p->additional_packing_type_id }}"
+                                                data-standard_fill_size="{{ $p->standard_fill_size }}"
+                                                data-packing_size_id="{{ $p->packing_size_id }}"
+                                                data-label_id="{{ $p->label_id }}"
+                                                data-shelf_life="{{ $p->shelf_life }}"
+                                            >
+                                                {{ $p->product_name }} ({{ $p->product_code }})
+                                            </option>
+                                        @endforeach
+
+                                    </select>
+                                    <h4 class="text-danger pt-3" id="Product-old_product_id" style="display:none;"></h4>
+                                </div>
+                            </div>
+
+                                @endif
+
                                 <div class="form-group">
                                     <label class="col-md-3 control-label"> Physical Form <span class="asteric">*</span></label>
                                     <div class="col-md-4">
@@ -597,4 +648,58 @@
     });
     $('[name=product_detail_id]').trigger("change");
 </script>
+@if(empty($productdata))
+<script type="text/javascript">
+
+/* SHOW / HIDE OLD PRODUCT DROPDOWN */
+$(document).on('change','[name=product_creation_type]',function(){
+
+    if ($(this).val() === 'version') {
+
+        $('#oldProductDiv').slideDown(function () {
+            $('[name=old_product_id]').select2('destroy');
+            $('[name=old_product_id]').select2({ width: '100%' });
+        });
+
+    } else {
+
+        $('#oldProductDiv').slideUp();
+        $('[name=old_product_id]').val('').trigger('change');
+
+    }
+});
+
+
+/* AUTO-FILL ALL FIELDS FROM OLD PRODUCT */
+$(document).on('change','[name=old_product_id]', function () {
+
+    let opt = $(this).find('option:selected');
+    if (!opt.val()) return;
+
+    /* PRODUCT CODE & NAME */
+    $('[name=product_code]').val(opt.data('product_code'));
+    $('[name=product_name]').val(opt.data('product_name'));
+
+    /* TEXT / TEXTAREA */
+    $('[name=short_description]').val(opt.data('short_description'));
+    $('[name=description]').val(opt.data('description'));
+    $('[name=suggested_dosage]').val(opt.data('suggested_dosage'));
+    $('[name=standard_fill_size]').val(opt.data('standard_fill_size'));
+    $('[name=shelf_life]').val(opt.data('shelf_life'));
+
+    /* SELECT FIELDS */
+    $('[name=physical_form]').val(opt.data('physical_form')).trigger('change');
+    $('[name=product_detail_id]').val(opt.data('product_detail_id')).trigger('change');
+    $('[name=packing_type_id]').val(opt.data('packing_type_id')).trigger('change');
+    $('[name=additional_packing_type_id]').val(opt.data('additional_packing_type_id')).trigger('change');
+    $('[name=packing_size_id]').val(opt.data('packing_size_id')).trigger('change');
+    $('[name=label_id]').val(opt.data('label_id')).trigger('change');
+
+    /* REFRESH SELECT2 */
+    $('.select2').select2({ width: '100%' });
+});
+
+</script>
+@endif
+
 @endsection

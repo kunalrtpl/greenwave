@@ -55,6 +55,9 @@
                                         <th>
                                             Product Name
                                         </th>
+                                         <th>
+                                            Version
+                                        </th>
                                        <!--  <th>
                                             Dealer Markup (%)
                                         </th> -->
@@ -86,6 +89,7 @@
                                         <td>
                                             <input type="text" class="form-control form-filter input-sm" name="product_name" placeholder="Product Name">
                                         </td>
+                                        <td></td>
                                         <td></td>
                                         <td></td>
                                         <td>
