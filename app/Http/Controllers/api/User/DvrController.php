@@ -280,11 +280,19 @@ class DvrController extends Controller
         try {
            $userId = $this->resp['user']['id'];
 
+            // 🔢 Get next trial number for this user
+            $lastTrialNumber = Trial::where('user_id', $userId)->max('trial_number');
+            $nextTrialNumber = ($lastTrialNumber ?? 0) + 1;
+
+
             // 1️⃣ Create Trial
             $trial = Trial::create(
                 array_merge(
                     $request->except(['products', 'user_dvr_id']),
-                    ['user_id' => $userId]
+                    [
+                        'user_id'       => $userId,
+                        'trial_number'  => $nextTrialNumber
+                    ]
                 )
             );
 
