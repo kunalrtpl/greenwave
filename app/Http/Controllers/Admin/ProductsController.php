@@ -375,6 +375,13 @@ class ProductsController extends Controller
                 $product->is_trader_product = $data['is_trader_product'];
                 $product->product_price = $data['product_price'] ?? 0;
 
+                $response = productPackingCost($data);
+                $product->basic_packing_material_cost = $response['basic_packing_material_cost'];
+                $product->additional_packing_material_cost = $response['additional_packing_material_cost'];
+                $product->label_cost = $response['label_cost'];
+                $product->facilitation_cost = $response['facilitation_cost'];
+                $product->packing_cost = $response['packing_cost'];
+
                 /* =====================================================
                  | VERSIONING
                  ===================================================== */
