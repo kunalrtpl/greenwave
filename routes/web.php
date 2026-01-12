@@ -207,6 +207,19 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 		Route::match(['get', 'post'], '/calculate-rm-cost', 'ProductsController@calculateRMCost');
 		/*Product Routes Ends*/
 
+
+		Route::get(
+		    'additional-cost',
+		    'AdditionalCostController@index'
+		)->name('admin.additional-cost.index');
+
+		// Page 2 – preview (GET with product id)
+		Route::get(
+		    'additional-cost/preview/{product}',
+		    'AdditionalCostController@preview'
+		)->name('admin.additional-cost.preview');
+
+
 		Route::match(['get', 'post'], '/product-discounts', 'ProductsController@productDiscounts');
 		Route::match(['get', 'post'], '/add-edit-product-discount/{id?}', 'ProductsController@addEditProductDiscount');
 		Route::match(['get', 'post'], '/save-product-discount', 'ProductsController@saveProductDiscount');
