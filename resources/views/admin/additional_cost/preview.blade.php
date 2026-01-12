@@ -219,7 +219,7 @@
 <div class="module-box">
     <div class="section-header">
         Mini Pack Cost (per kg)
-        <span class="pack-size">(1kg × 10)</span>
+        <span class="pack-size">({{$miniPack1kg10['pack_label']}})</span>
         <div style="clear: both;"></div>
     </div>
 
@@ -300,7 +300,7 @@
 <div class="module-box">
     <div class="section-header">
         Mini Pack Cost (per kg)
-        <span class="pack-size">(1kg × 10)</span>
+        <span class="pack-size">({{$miniPack5kg2['pack_label']}})</span>
         <div style="clear: both;"></div>
     </div>
 
@@ -376,5 +376,86 @@
 </div>
 @endif
 
+
+@if(isset($miniPack1kg12))
+{{-- ================= MINI PACK ================= --}}
+<div class="module-box">
+    <div class="section-header">
+        Mini Pack Cost (per kg)
+        <span class="pack-size">({{$miniPack1kg12['pack_label']}})</span>
+        <div style="clear: both;"></div>
+    </div>
+
+    <table>
+        <colgroup>
+            <col style="width:5%">
+            <col style="width:22%">
+            <col style="width:23%">
+            <col style="width:10%">
+            <col style="width:13%">
+            <col style="width:12%">
+            <col style="width:15%">
+        </colgroup>
+
+        <thead>
+        <tr>
+            <th style="font-size: 11px;">S.No</th>
+            <th>Description</th>
+            <th>Details</th>
+            <th>No. of <br> Units</th>
+            <th>Unit Price <br>(Rs.)</th>
+            <th>Order Size <br>(kg)</th>
+            <th>Cost <br>(Rs. per kg)</th>
+        </tr>
+        </thead>
+
+        <tbody>
+        @foreach($miniPack1kg12['rows'] as $i => $row)
+        <tr class="data-row">
+            <td>{{ $i+1 }}</td>
+            <td>{{ $row['description'] }}</td>
+            <td>{{ $row['details'] }}</td>
+            <td>{{ $row['units'] }}</td>
+            <td>{{ $row['unit_price'] }}</td>
+            <td>{{ $row['order_size'] }}</td>
+            <td>{{ $row['cost_per_kg'] }}</td>
+        </tr>
+        @endforeach
+
+        <tr class="total-row">
+            <td colspan="6">Packing Cost (per kg)</td>
+            <td>{{ $miniPack1kg12['packing_cost_per_kg'] }}</td>
+        </tr>
+        </tbody>
+    </table>
+    <div class="packing-loss">
+        Packing Loss {{ $miniPack1kg12['packing_loss'] }}
+    </div>
+    <table class="summary-box">
+        <tr>
+            <td>Packing Loss Difference</td>
+            <td>{{ $miniPack1kg12['loss_difference'] }}</td>
+        </tr>
+        <tr>
+            <td>Dealer Price</td>
+            <td>{{ $miniPack1kg12['dealer_price'] }}</td>
+        </tr>
+        <tr>
+            <td>Packing Loss (per kg)</td>
+            <td>{{ $miniPack1kg12['packing_loss_cost'] }}</td>
+        </tr>
+        <tr>
+            <td>Total Mini Pack Cost (per kg)</td>
+            <td>{{ $miniPack1kg12['total_mini_pack_cost'] }}</td>
+        </tr>
+        <tr class="additional-cost">
+            <td>Additional Cost</td>
+            <td>{{ $miniPack1kg12['additional_cost'] }}</td>
+        </tr>
+    </table>
+
+    <div style="clear: both;"></div>
+</div>
+@endif
 </body>
 </html>

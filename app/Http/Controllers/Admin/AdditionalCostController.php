@@ -30,16 +30,24 @@ class AdditionalCostController extends Controller
     {
         // MODULE 1
         $standardPack = $this->standardPackingCostCalculation($product);
+        if($product->physical_form == "Liquid"){
+            $miniPack1kg10 = $this->MiniPackCost1kg10($product);
+            $miniPack5kg2 = $this->MiniPackCost5kg2($product);
+            return view('admin.additional_cost.preview', compact(
+                'product',
+                'standardPack',
+                'miniPack1kg10',
+                'miniPack5kg2',
+            ));
 
-        $miniPack1kg10 = $this->MiniPackCost1kg10($product);
-        $miniPack5kg2 = $this->MiniPackCost5kg2($product);
-
-        return view('admin.additional_cost.preview', compact(
-            'product',
-            'standardPack',
-            'miniPack1kg10',
-            'miniPack5kg2',
-        ));
+        }else if($product->physical_form == "Powder"){
+            $miniPack1kg12 = $this->MiniPackCost1kg12($product);
+            return view('admin.additional_cost.preview', compact(
+                'product',
+                'standardPack',
+                'miniPack1kg12',
+            ));
+        }
     }
 
 
@@ -173,6 +181,20 @@ class AdditionalCostController extends Controller
             'order_size_kg'              => 10,
             'label_id'                   => 2,
             'pack_label'                 => '5kg × 2',
+        ]);
+    }
+
+
+    private function MiniPackCost1kg12(Product $product)
+    {
+        return $this->calculateMiniPackCost($product, [
+            'basic_packing_type_id'      => 14,
+            'additional_packing_type_id' => 13,
+            'standard_fill_size'         => 1,
+            'units'                      => 12,
+            'order_size_kg'              => 12,
+            'label_id'                   => 2,
+            'pack_label'                 => '1kg × 12',
         ]);
     }
 
