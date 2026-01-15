@@ -16,6 +16,7 @@ class AdditionalCostController extends Controller
      */
     public function index()
     {
+        Session::put('active','additionalCost');
         $title = 'Additional Cost';
         $products = Product::where('status', 1)->orderBy('product_name')->get();
 
