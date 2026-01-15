@@ -9,11 +9,20 @@
             font-size: 14px;
             background: #ffffff;
             color: #000;
+            margin: 0;
         }
 
+        /* ===== A4 PAGE ===== */
         @page {
             size: A4;
             margin: 10mm;
+        }
+
+        /* ===== MAIN WRAPPER (LEFT & RIGHT SPACE FIX) ===== */
+        .page-wrapper {
+            width: 100%;
+            padding: 0 80mm;
+            box-sizing: border-box;
         }
 
         /* ================= HEADERS ================= */
@@ -36,8 +45,13 @@
         .module-box {
             border: 2px solid #000;
             padding: 12px;
-            margin-top: 20px;
+
+            margin: 10mm 0 12mm 0;
+
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
+
 
         .section-header {
             font-size: 16px;
@@ -56,16 +70,20 @@
         /* ================= TABLE ================= */
         table {
             width: 100%;
+            max-width: 100%;
             border-collapse: collapse;
-            table-layout: fixed; /* 🔥 CRITICAL */
+            table-layout: fixed;
+            page-break-inside: avoid;
         }
 
         th, td {
             border: 1px solid #000;
             padding: 6px;
             text-align: center;
-            white-space: nowrap;   /* 🔥 NO WRAP */
+            white-space: nowrap;
             font-size: 13px;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         th {
@@ -95,6 +113,7 @@
             width: 55%;
             float: right;
             border-collapse: collapse;
+            page-break-inside: avoid;
         }
 
         .summary-box td {
@@ -125,13 +144,24 @@
             margin-bottom: 10px;
         }
 
+        /* ================= PRINT FIX ================= */
         @media print {
             body {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
+
             .pdf-btn {
                 display: none !important;
+            }
+
+            .page-wrapper {
+                padding: 0 15mm;
+            }
+
+            table,
+            .module-box {
+                page-break-inside: avoid;
             }
         }
     </style>
@@ -153,7 +183,7 @@
 </div>
 
 <div style="clear: both;"></div>
-
+<div class="page-wrapper">
 <div class="main-title">Additional Cost (Mini Pack Order)</div>
 
 <div class="product-name">{{ $product->product_name }}</div>
@@ -457,5 +487,6 @@
     <div style="clear: both;"></div>
 </div>
 @endif
+</div>
 </body>
 </html>
