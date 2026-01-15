@@ -7,7 +7,7 @@ use App\Product;
 use App\PackingSize;
 use App\PackingType;
 use App\Label;
-
+use Session;
 class AdditionalCostController extends Controller
 {
     /**
