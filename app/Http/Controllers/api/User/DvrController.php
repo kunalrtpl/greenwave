@@ -67,35 +67,58 @@ class DvrController extends Controller
 	 * GET /api/user/dvrs?month={m}&year={y}
 	 */
 	public function dvrs(Request $request)
-	{
-	    if (!$this->resp['status'] || !isset($this->resp['user'])) {
-	        return response()->json(apiErrorResponse('Unauthorized'), 401);
-	    }
+    {
+        if (!$this->resp['status'] || !isset($this->resp['user'])) {
+            return response()->json(apiErrorResponse('Unauthorized'), 401);
+        }
 
-	    $userId = $this->resp['user']['id'];
+        $resp = $this->resp;
 
-	    // ✅ Month & Year fallback
-	    $month = $request->query('month', now()->month);
-	    $year  = $request->query('year', now()->year);
+        // ✅ Month & Year fallback
+        $month = $request->query('month', now()->month);
+        $year  = $request->query('year', now()->year);
 
-	    // ✅ Validate month/year
-	    if ($month < 1 || $month > 12 || $year < 2000) {
-	        return response()->json(apiErrorResponse('Invalid month or year'), 422);
-	    }
+        // ✅ Validate month/year
+        if ($month < 1 || $month > 12 || $year < 2000) {
+            return response()->json(apiErrorResponse('Invalid month or year'), 422);
+        }
 
-	    $dvrs = $this->baseDvrQuery()
-	        ->where('user_id', $userId)
-	        ->whereMonth('dvr_date', $month)
-	        ->whereYear('dvr_date', $year)
-	        ->orderBy('dvr_date', 'desc')
-	        ->get();
+        // ✅ Base DVR Query
+        $dvrs = $this->baseDvrQuery()
+            ->whereMonth('dvr_date', $month)
+            ->whereYear('dvr_date', $year);
 
-	    return response()->json(
-	        apiSuccessResponse('DVR list fetched', ['dvrs' => $dvrs]),
-	        200
-	    );
-	}
+        // ✅ Employee Filter (IMPORTANT – missed earlier)
+        if ($request->filled('employee_id')) {
+            $dvrs->where('user_id', $request->employee_id);
+        } else {
+            $dvrs->where('user_id', $resp['user']['id']);
+        }
 
+        // ✅ Customer Filters
+        if ($request->filled('customer_id')) {
+            $dvrs->where('customer_id', $request->customer_id);
+        }
+
+        if ($request->filled('customer_register_request_id')) {
+            $dvrs->where('customer_register_request_id', $request->customer_register_request_id);
+        }
+
+        // ✅ DVR Date (Exact)
+        if ($request->filled('dvr_date')) {
+            $dvrs->whereDate('dvr_date', $request->dvr_date);
+        }
+
+        // ✅ Final Result
+        $dvrs = $dvrs
+            ->orderBy('dvr_date', 'desc')
+            ->get();
+
+        return response()->json(
+            apiSuccessResponse('DVR list fetched', ['dvrs' => $dvrs]),
+            200
+        );
+    }
 
     /**
      * DVR DETAIL API
