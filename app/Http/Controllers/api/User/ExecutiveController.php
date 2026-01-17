@@ -3025,6 +3025,46 @@ class ExecutiveController extends Controller
     }
 
 
+    public function deactivateCustomerContact(Request $request)
+    {
+        if ($request->isMethod('post')) {
+
+            $data = $request->all();
+
+            // ✅ Validation
+            $rules = [
+                'contact_id' => 'bail|required|numeric'
+            ];
+
+            $validator = Validator::make($data, $rules);
+
+            if ($validator->fails()) {
+                return response()->json(validationResponse($validator), 422);
+            }
+
+            // ✅ Find Contact
+            $contact = \App\CustomerContact::find($data['contact_id']);
+
+            if (!$contact) {
+                return response()->json(apiErrorResponse("Invalid contact ID"), 400);
+            }
+
+            // ✅ Check already inactive
+            if ($contact->status === 'inactive') {
+                return response()->json(apiSuccessResponse("Contact is already inactive"), 200);
+            }
+
+            // ✅ Mark inactive
+            $contact->status = 'inactive';
+            $contact->save();
+
+            return response()->json(apiSuccessResponse("Customer contact marked as inactive successfully"), 200);
+        }
+
+        return response()->json(apiErrorResponse("Invalid request method"), 405);
+    }
+
+
     public function getCustomerContacts(Request $request)
     {
         if ($request->isMethod('post')) {
@@ -3068,7 +3108,7 @@ class ExecutiveController extends Controller
                 ]), 200);
             }
         }
-}
+    }
 
 
 }
