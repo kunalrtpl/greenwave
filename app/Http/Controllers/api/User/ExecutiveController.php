@@ -2903,12 +2903,12 @@ class ExecutiveController extends Controller
             $data = $request->all();
             $resp = $this->resp;
 
-            // ✅ Validation Rules (user_dvr_id removed)
+            // ✅ Validation Rules (mobile_number NOT mandatory)
             $rules = [
                 'customer_id'                  => 'bail|required_without:customer_register_request_id|numeric',
                 'customer_register_request_id' => 'bail|required_without:customer_id|numeric',
                 'name'                         => 'bail|required|string',
-                'mobile_number'                => 'bail|required|numeric|digits:10'
+                'mobile_number'                => 'nullable|numeric|digits:10',
             ];
 
             $validator = Validator::make($data, $rules);
@@ -2919,28 +2919,27 @@ class ExecutiveController extends Controller
 
             if ($resp['status'] && isset($resp['user'])) {
 
-                // ✅ 1. Check if mobile already exists
-                $existing = \App\CustomerContact::where('mobile_number', $data['mobile_number'])->first();
+                // ✅ Mobile uniqueness check ONLY if mobile is provided
+                if (!empty($data['mobile_number'])) {
+                    $existing = \App\CustomerContact::where('mobile_number', $data['mobile_number'])
+                        ->where('status', 'active')
+                        ->first();
 
-                if ($existing && $existing->status === 'active') {
-                    return response()->json(
-                        apiErrorResponse("This contact number has already been used for another customer"),
-                        400
-                    );
+                    if ($existing) {
+                        return response()->json(
+                            apiErrorResponse("This contact number has already been used for another customer"),
+                            400
+                        );
+                    }
                 }
 
-                // Pick whichever ID is present
-                $customerId = $data['customer_id'] ?? null;
-                $customerRegisterId = $data['customer_register_request_id'] ?? null;
-
-                // ✅ 2. Create Contact
                 $contact = \App\CustomerContact::create([
-                    'customer_id'                  => $customerId,
-                    'customer_register_request_id' => $customerRegisterId,
+                    'customer_id'                  => $data['customer_id'] ?? null,
+                    'customer_register_request_id' => $data['customer_register_request_id'] ?? null,
                     'name'                         => $data['name'],
                     'designation'                  => $data['designation'] ?? null,
-                    'department'                  => $data['department'] ?? null,
-                    'mobile_number'                => $data['mobile_number'],
+                    'department'                   => $data['department'] ?? null,
+                    'mobile_number'                => $data['mobile_number'] ?? null,
                     'created_by'                   => $resp['user']['id'],
                     'status'                       => 'active',
                 ]);
@@ -2960,6 +2959,7 @@ class ExecutiveController extends Controller
         return response()->json(apiErrorResponse('Invalid request method'), 405);
     }
 
+
     public function updateCustomerContact(Request $request)
     {
         if (!$request->isMethod('post')) {
@@ -2969,11 +2969,11 @@ class ExecutiveController extends Controller
         $data = $request->all();
         $resp = $this->resp;
 
-        //  Validation
+        // ✅ Validation (mobile NOT mandatory)
         $rules = [
             'id'            => 'bail|required|numeric|exists:customer_contacts,id',
             'name'          => 'bail|required|string',
-            'mobile_number' => 'bail|required|numeric|digits:10',
+            'mobile_number' => 'nullable|numeric|digits:10',
             'designation'   => 'nullable|string',
             'department'    => 'nullable|string',
         ];
@@ -2988,14 +2988,10 @@ class ExecutiveController extends Controller
             return response()->json(apiErrorResponse('Unauthorized'), 401);
         }
 
-        //  Fetch contact
         $contact = \App\CustomerContact::where('id', $data['id'])->first();
 
         if (!$contact) {
-            return response()->json(
-                apiErrorResponse('Customer contact not found'),
-                404
-            );
+            return response()->json(apiErrorResponse('Customer contact not found'), 404);
         }
 
         if ($contact->status !== 'active') {
@@ -3005,23 +3001,25 @@ class ExecutiveController extends Controller
             );
         }
 
-        //  Mobile uniqueness check (ignore same record)
-        $mobileExists = \App\CustomerContact::where('mobile_number', $data['mobile_number'])
-            ->where('id', '!=', $data['id'])
-            ->where('status', 'active')
-            ->exists();
+        // ✅ Mobile uniqueness check ONLY if mobile is provided
+        if (!empty($data['mobile_number'])) {
+            $mobileExists = \App\CustomerContact::where('mobile_number', $data['mobile_number'])
+                ->where('id', '!=', $data['id'])
+                ->where('status', 'active')
+                ->exists();
 
-        if ($mobileExists) {
-            return response()->json(
-                apiErrorResponse('This mobile number is already used by another customer'),
-                400
-            );
+            if ($mobileExists) {
+                return response()->json(
+                    apiErrorResponse('This mobile number is already used by another customer'),
+                    400
+                );
+            }
         }
 
-        //  Update contact
+        // ✅ Update contact
         $contact->update([
             'name'          => $data['name'],
-            'mobile_number' => $data['mobile_number'],
+            'mobile_number' => $data['mobile_number'] ?? null,
             'designation'   => $data['designation'] ?? $contact->designation,
             'department'    => $data['department'] ?? $contact->department,
         ]);
@@ -3034,6 +3032,7 @@ class ExecutiveController extends Controller
             200
         );
     }
+
 
     public function verifyExistingContactOtp(Request $request)
     {
