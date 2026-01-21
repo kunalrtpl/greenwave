@@ -316,6 +316,7 @@ class CustomerController extends Controller
                     $customer->name = $data['name'];
                     $customer->contact_person_name = $data['contact_person_name'];
                     $customer->designation = $data['designation'];
+                    $customer->department = getDepartmentByDesignation($data['designation']);
                     //$customer->category = $data['category'];
                     $customer->business_model = $data['business_model'];
                     $customer->address = $data['address'];

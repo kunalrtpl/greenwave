@@ -530,4 +530,27 @@
 
     	return false;
     }
-?>
+
+   function getDepartmentByDesignation(?string $designation): ?string
+	{
+	    if (!$designation) {
+	        return null;
+	    }
+
+	    switch ($designation) {
+	        case 'Owner':
+	        case 'G.M.':
+	            return 'Management / Administrator';
+
+	        case 'Purchase In-charge':
+	            return 'Purchase';
+
+	        case 'Production In-Charge':
+	            return 'Production';
+
+	        default:
+	            return null;
+	    }
+	}
+
+

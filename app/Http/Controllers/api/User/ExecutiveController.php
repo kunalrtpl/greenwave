@@ -1338,6 +1338,7 @@ class ExecutiveController extends Controller
                 $requestModel->contact_person_name = $data['contact_person_name'];
                 $requestModel->cities = $data['cities'];
                 $requestModel->designation = $data['designation'];
+                $requestModel->department = getDepartmentByDesignation($data['designation']);
                 $requestModel->activity = $data['activity'];
                 $requestModel->business_model = $data['business_model'];
                 $requestModel->linked_executive = $data['linked_executive'];
