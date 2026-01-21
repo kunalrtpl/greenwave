@@ -616,7 +616,7 @@ class ExecutiveController extends Controller
                     'items'          =>   'bail|required|array|min:1',
                     'items.*.product_id' => 'required|exists:products,id',
                     'items.*.qty' => 'required|numeric',
-                    'gst'    => 'bail|required|numeric',
+                    //'gst'    => 'bail|required|numeric',
                 ];
                 $customMessages = [];
                 $validator = Validator::make($data,$rules,$customMessages);
@@ -628,7 +628,7 @@ class ExecutiveController extends Controller
                     $data['action'] = 'user';
                     $data['sample_date'] = date('Y-m-d');
                     $data['request_type'] = 'On Request';
-                    Sampling::createSample($data,$resp);
+                    Sampling::createFreeSample($data,$resp);
                     DB::commit();
                     $message ="Sample has been created successfully";
                     return response()->json(apiSuccessResponse($message),200);
@@ -2960,8 +2960,80 @@ class ExecutiveController extends Controller
         return response()->json(apiErrorResponse('Invalid request method'), 405);
     }
 
+    public function updateCustomerContact(Request $request)
+    {
+        if (!$request->isMethod('post')) {
+            return response()->json(apiErrorResponse('Invalid request method'), 405);
+        }
 
+        $data = $request->all();
+        $resp = $this->resp;
 
+        //  Validation
+        $rules = [
+            'id'            => 'bail|required|numeric|exists:customer_contacts,id',
+            'name'          => 'bail|required|string',
+            'mobile_number' => 'bail|required|numeric|digits:10',
+            'designation'   => 'nullable|string',
+            'department'    => 'nullable|string',
+        ];
+
+        $validator = Validator::make($data, $rules);
+
+        if ($validator->fails()) {
+            return response()->json(validationResponse($validator), 422);
+        }
+
+        if (!($resp['status'] && isset($resp['user']))) {
+            return response()->json(apiErrorResponse('Unauthorized'), 401);
+        }
+
+        //  Fetch contact
+        $contact = \App\CustomerContact::where('id', $data['id'])->first();
+
+        if (!$contact) {
+            return response()->json(
+                apiErrorResponse('Customer contact not found'),
+                404
+            );
+        }
+
+        if ($contact->status !== 'active') {
+            return response()->json(
+                apiErrorResponse('Only active contacts can be updated'),
+                400
+            );
+        }
+
+        //  Mobile uniqueness check (ignore same record)
+        $mobileExists = \App\CustomerContact::where('mobile_number', $data['mobile_number'])
+            ->where('id', '!=', $data['id'])
+            ->where('status', 'active')
+            ->exists();
+
+        if ($mobileExists) {
+            return response()->json(
+                apiErrorResponse('This mobile number is already used by another customer'),
+                400
+            );
+        }
+
+        //  Update contact
+        $contact->update([
+            'name'          => $data['name'],
+            'mobile_number' => $data['mobile_number'],
+            'designation'   => $data['designation'] ?? $contact->designation,
+            'department'    => $data['department'] ?? $contact->department,
+        ]);
+
+        return response()->json(
+            apiSuccessResponse(
+                'Customer contact updated successfully',
+                ['contact' => $contact]
+            ),
+            200
+        );
+    }
 
     public function verifyExistingContactOtp(Request $request)
     {

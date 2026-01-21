@@ -402,6 +402,8 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 	    Route::get('attendance/view','AttendanceViewController@index');
 	    Route::post('attendance/update-status','AttendanceViewController@updateStatus');
 
+	    Route::get('/dvrs', 'UserDvrController@index');
+		Route::get('/dvrs/{id}', 'UserDvrController@show');
 
 	});
 });

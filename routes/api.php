@@ -275,6 +275,7 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 
 			Route::post('customer-contact/send-otp', 'ExecutiveController@sendOtpForCustomerContact');
 			Route::post('customer-contact/create', 'ExecutiveController@createCustomerContact');
+			Route::post('customer-contact/update', 'ExecutiveController@updateCustomerContact');
 			Route::post('customer-contact/verify-otp-existing', 'ExecutiveController@verifyExistingContactOtp');
 			Route::post('customer-contact/list', 'ExecutiveController@getCustomerContacts');
 			Route::post('deactivate-customer-contact', 'ExecutiveController@deactivateCustomerContact');

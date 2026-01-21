@@ -160,4 +160,94 @@ class Sampling extends Model
         }
         return $createsample->id;
     }
+
+    public static function createFreeSample($data, $resp)
+    {
+        $sample = new Sampling();
+
+        /* ===============================
+           BASIC INFO
+        ================================ */
+
+        $sample->financial_year = financialYear();
+        $sample->sample_type = 'free';
+        $sample->action = 'user';
+        $sample->user_id = $resp['user']['id'];
+        $sample->sample_status = 'pending';
+        $sample->sampling_date = $data['sample_date'];
+
+        $sample->required_through = $data['required_through'] ?? '';
+        $sample->request_type = $data['request_type'] ?? '';
+        $sample->remarks = $data['remarks'] ?? '';
+
+        if (!empty($data['customer_id'])) {
+            $sample->customer_id = $data['customer_id'];
+        }
+
+        /* ===============================
+           NEW SAMPLING COLUMNS 
+        ================================ */
+
+        $sample->is_specific_customer = $data['is_specific_customer'] ?? 0;
+        $sample->product_known = $data['product_known'] ?? 0;
+        $sample->target_competitor = $data['target_competitor'] ?? 0;
+
+        $sample->competitor_category = $data['competitor_category'] ?? '';
+        $sample->competitor_product_name = $data['competitor_product_name'] ?? '';
+        $sample->competitor_make = $data['competitor_make'] ?? '';
+        $sample->competitor_dealer_price = $data['competitor_dealer_price'] ?? '';
+        $sample->competitor_customer_price = $data['competitor_customer_price'] ?? '';
+        $sample->competitor_dosage = $data['competitor_dosage'] ?? '';
+        $sample->competitor_monthly_requirement_kg = $data['competitor_monthly_requirement_kg'] ?? '';
+        $sample->competitor_specialty = $data['competitor_specialty'] ?? '';
+        $sample->competitor_application_details = $data['competitor_application_details'] ?? '';
+        $sample->competitor_expectation = $data['competitor_expectation'] ?? '';
+
+        $sample->purpose_reason_for_request = $data['purpose_reason_for_request'] ?? '';
+        $sample->application_plan = $data['application_plan'] ?? '';
+        $sample->dispatch_to = $data['dispatch_to'] ?? '';
+        $sample->dispatch_address = $data['dispatch_address'] ?? '';
+
+        /* ===============================
+           SAMPLE REF NO
+        ================================ */
+
+        $lastRef = Sampling::where('user_id', $resp['user']['id'])
+            ->where('sample_type', 'free')
+            ->where('financial_year', financialYear())
+            ->orderBy('sample_ref_no', 'DESC')
+            ->first();
+
+        $refNo = $lastRef ? $lastRef->sample_ref_no + 1 : 1;
+
+        $sample->sample_ref_no = $refNo;
+        $sample->sample_ref_no_string = "FS-" . $refNo . "/" . financialYear();
+
+        $sample->save();
+
+        /* ===============================
+           SAMPLE ITEMS
+        ================================ */
+
+        foreach ($data['items'] as $item) {
+
+            $sampleItem = new SamplingItem();
+            $sampleItem->sampling_id = $sample->id;
+            $sampleItem->product_id = $item['product_id'];
+
+            $sampleItem->pack_size_info = $item['pack_size_info'] ?? '';
+            $sampleItem->pack_size = $item['pack_size'] ?? '';
+            $sampleItem->actual_pack_size = $item['pack_size'] ?? '';
+            $sampleItem->no_of_packs = $item['no_of_packs'] ?? '';
+            $sampleItem->actual_no_of_packs = $item['no_of_packs'] ?? '';
+            $sampleItem->qty = $item['qty'];
+            $sampleItem->actual_qty = $item['qty'];
+            $sampleItem->remarks = $item['remarks'] ?? '';
+
+            $sampleItem->save();
+        }
+
+        return $sample->id;
+    }
+
 }
