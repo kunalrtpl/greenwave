@@ -11,6 +11,7 @@ use App\Http\Requests;
 use DB;
 use Session;
 use App\RawMaterial;
+use App\Label;
 use App\Product;
 use App\ProductDiscount;
 use App\PackingType;
@@ -733,6 +734,7 @@ class ProductsController extends Controller
         }
 
         $productdata = Product::with(['raw_materials','pricings','product_stages','weightages','productpacking','packing_type'])->where('id',$productid)->first();
+        $standardPack = $this->standardPackingCostCalculation($productdata);
         $productdata = json_decode(json_encode($productdata),true);
         //echo "<pre>"; print_r($productdata); die;
         if($request->isMethod('post')){
@@ -802,9 +804,10 @@ class ProductsController extends Controller
             }
             return redirect()->back()->with('flash_message_success','Information has been updated successfully');
         }
+
         //echo "<pre>"; print_r($productdata); die;
         $title = "Product Costing (".$productdata['product_name'].")";
-        return view('admin.products.product-costing')->with(compact('title','productdata','productid'));
+        return view('admin.products.product-costing')->with(compact('title','productdata','productid','standardPack'));
     }
 
     public function addMoreRawMaterial(Request $request){
@@ -1353,5 +1356,112 @@ class ProductsController extends Controller
     public function deleteProductDocument($type,$proid){
         Product::where('id',$proid)->update([$type=>'']);
         return redirect()->back();
+    }
+
+
+     /**
+     * STANDARD PACK COST (PER KG)
+     * Dedicated function ✔
+     */
+    private function standardPackingCostCalculation(Product $product)
+    {
+        // Order Size (kg)
+        $packingSize = PackingSize::find($product->packing_size_id);
+        $orderSizeKg = $packingSize ? (float) $packingSize->size : null;
+
+        // Related master data
+        $basicPackingType      = PackingType::find($product->packing_type_id);
+        $additionalPackingType = PackingType::find($product->additional_packing_type_id);
+        $label                 = Label::find($product->label_id);
+
+        $rows = [];
+        $totalPerKg = 0;
+
+        /**
+         * Number formatting rule:
+         * 320      -> 320
+         * 320.00   -> 320
+         * 320.5    -> 320.50
+         * 320.25   -> 320.25
+         * null     -> null (blank in view)
+         */
+        $nf = function ($value) {
+            if (!is_numeric($value)) {
+                return null;
+            }
+
+            $value = (float) $value;
+
+            // Whole number → no decimals
+            if (floor($value) == $value) {
+                return (string) (int) $value;
+            }
+
+            // Decimal exists → force 2 decimals
+            return number_format($value, 2, '.', '');
+        };
+
+        /* =========================
+           1. BASIC PACKING
+        ==========================*/
+        $rows[] = [
+            'description' => 'Basic Packing',
+            'details'     => $basicPackingType->name ?? null,
+            'units'       => 1,
+            'unit_price'  => $nf($basicPackingType->price ?? null),
+            'order_size'  => $orderSizeKg,
+            'cost_per_kg' => $nf($product->basic_packing_material_cost ?? null),
+        ];
+
+        $totalPerKg += (float) ($product->basic_packing_material_cost ?? 0);
+
+        /* =========================
+           2. ADDITIONAL PACKING
+        ==========================*/
+        $rows[] = [
+            'description' => 'Additional Packing',
+            'details'     => $additionalPackingType->name ?? null,
+            'units'       => $product->additional_packing_type_id ? 1 : null,
+            'unit_price'  => $nf($additionalPackingType->price ?? null),
+            'order_size'  => $product->additional_packing_type_id ? $orderSizeKg : null,
+            'cost_per_kg' => $nf($product->additional_packing_material_cost ?? null),
+        ];
+
+        $totalPerKg += (float) ($product->additional_packing_material_cost ?? 0);
+
+        /* =========================
+           3. PACKING LABEL
+        ==========================*/
+        $rows[] = [
+            'description' => 'Packing Label',
+            'details'     => $label->name ?? null,
+            'units'       => $product->label_id ? 1 : null,
+            'unit_price'  => $nf($label->price ?? null),
+            'order_size'  => $product->label_id ? $orderSizeKg : null,
+            'cost_per_kg' => $nf($product->label_cost ?? null),
+        ];
+
+        $totalPerKg += (float) ($product->label_cost ?? 0);
+
+        /* =========================
+           4. PACKING FACILITATION
+        ==========================*/
+        $rows[] = [
+            'description' => 'Packing Facilitation',
+            'details'     => null,
+            'units'       => null,
+            'unit_price'  => null,
+            'order_size'  => null,
+            'cost_per_kg' => $nf($product->facilitation_cost ?? null),
+        ];
+
+        $totalPerKg += (float) ($product->facilitation_cost ?? 0);
+
+        return [
+            'standardPackKg' => $orderSizeKg,
+            'rows'           => $rows,
+            'totalPerKg'     => $nf($totalPerKg),
+            'packing_loss'     => $nf($basicPackingType->packing_loss ?? 0),
+        ];
     }
 }

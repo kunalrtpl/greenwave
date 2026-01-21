@@ -49,9 +49,57 @@
                                     <div class="form-group">
                                         <label class="col-md-3 control-label">Packing Cost (per kg)</label>
 
-                                        <div class="col-md-7">
+                                        <div class="col-md-9">
+                                            <div class="table-responsive">
+    <table class="table table-bordered table-hover table-packaging">
+        <colgroup>
+            <col style="width:5%">
+            <col style="width:22%">
+            <col style="width:23%">
+            <col style="width:10%">
+            <col style="width:13%">
+            <col style="width:12%">
+            <col style="width:15%">
+        </colgroup>
 
-                                            <table class="table table-bordered" style="background:#fff;">
+        <thead>
+        <tr>
+            <th class="text-center">S.No</th>
+            <th>Description</th>
+            <th>Details</th>
+            <th class="text-center">No. of<br>Units</th>
+            <th class="text-right">Unit Price<br>(Rs.)</th>
+            <th class="text-center">Order Size<br>(kg)</th>
+            <th class="text-right">Cost<br>(Rs./kg)</th>
+        </tr>
+        </thead>
+
+        <tbody>
+        @foreach($standardPack['rows'] as $i => $row)
+        <tr>
+            <td class="text-center">{{ $i+1 }}</td>
+            <td><strong>{{ $row['description'] }}</strong></td>
+            <td class="text-muted">{{ $row['details'] }}</td>
+            <td class="text-center">{{ $row['units'] }}</td>
+            <td class="text-right">{{ number_format($row['unit_price'], 2) }}</td>
+            <td class="text-center">{{ $row['order_size'] }}</td>
+            <td class="text-right">{{ number_format($row['cost_per_kg'], 2) }}</td>
+        </tr>
+        @endforeach
+
+        <tr class="total-row">
+            <td colspan="6" class="text-right">
+                <strong>Packing Cost (per kg)</strong>
+            </td>
+            <td class="text-right">
+                <strong>{{ number_format($standardPack['totalPerKg'], 2) }}</strong>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+                                            <!-- <table class="table table-bordered" style="background:#fff;">
                                                 <thead style="background:#f5f5f5;">
                                                     <tr>
                                                         <th style="width:50%">Description</th>
@@ -88,7 +136,7 @@
                                                     </tr>
 
                                                 </tbody>
-                                            </table>
+                                            </table> -->
 
                                         </div>
                                     </div>
