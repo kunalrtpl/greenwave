@@ -1191,9 +1191,11 @@ class ExecutiveController extends Controller
                 $activites = activities();
                 $cities = DB::table('cities')->orderby('city_name','ASC')->pluck('city_name');
                 $designations = array('Owner','G.M.','Production In-Charge','Purchase In-charge'); 
+                $new_designations = getDesignations(); 
                 $message = 'Record has ben fetched successfully';
                 $result['activites'] = $activites;
                 $result['designations'] = $designations;
+                $result['new_designations'] = $new_designations;
                 $result['cities']    = $cities;
                 return response()->json(apiSuccessResponse($message,$result),200);
             }
@@ -2928,7 +2930,7 @@ class ExecutiveController extends Controller
 
                     if ($existing) {
                         return response()->json(
-                            apiErrorResponse("This contact number has already been used for another customer"),
+                            apiErrorResponse(getMobileAlreadyUsedMessage($existing)),
                             400
                         );
                     }
@@ -3009,9 +3011,9 @@ class ExecutiveController extends Controller
                 ->where('status', 'active')
                 ->exists();
 
-            if ($mobileExists) {
+            if ($existing) {
                 return response()->json(
-                    apiErrorResponse('This mobile number is already used by another customer'),
+                    apiErrorResponse(getMobileAlreadyUsedMessage($existing)),
                     400
                 );
             }

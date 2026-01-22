@@ -98,12 +98,11 @@
                                 </div>
                                 <div class="form-group">
                                     <label class="col-md-3 control-label">Designation </label>
-                                    <?php $designationsArr = array('Owner','G.M.','Production In-Charge','Purchase In-charge') ?>
                                     <div class="col-md-4">
                                         <select class="form-control" name="designation">
                                             <option value="">Please Select</option>
-                                            @foreach($designationsArr as $designation)
-                                                <option value="{{$designation}}" @if(!empty($customerdata['designation']) && $customerdata['designation']==$designation) selected @endif>{{$designation}}</option>
+                                            @foreach(getDesignations() as $dkey=>  $designation)
+                                                <option value="{{$dkey}}" @if(!empty($customerdata['designation']) && $customerdata['designation']==$dkey) selected @endif>{{$designation}}</option>
                                             @endforeach
                                         </select>
                                         <h4 class="text-center text-danger pt-3" style="display: none;" id="Customer-designation"></h4>
@@ -138,7 +137,6 @@
                 <!-- <th>Password</th> -->
                 <th>Actions</th>
             </tr>
-            <?php $designationsArr = array('Owner','G.M.','Production In-Charge','Purchase In-charge') ?>
             @if(!empty($customerdata) && !empty($customerdata['employees']))
                 @foreach($customerdata['employees'] as $custekey=> $custEmp)
                     <input type="hidden" name="cust_emp_id[]" value="{{$custEmp['id']}}">
@@ -146,8 +144,8 @@
                         <td>
                            <select class="form-control" name="designations[]" required>
                                 <option value="">Please Select</option>
-                           @foreach($designationsArr as $designation)
-                            <option value="{{$designation}}" @if($custEmp['designation']== $designation) selected @endif>{{$designation}}</option>
+                           @foreach(getDesignations() as  $dkey=> $designation)
+                            <option value="{{$dkey}}" @if($custEmp['designation']== $dkey) selected @endif>{{$designation}}</option>
                            @endforeach
                             </select> 
                         </td>
@@ -350,8 +348,8 @@
             <td>
                 <select class="form-control" name="designations[]" required>
                 <option value="">Please Select</option>
-                    @foreach($designationsArr as $designation)
-                        <option value="{{$designation}}">{{$designation}}</option>
+                    @foreach(getDesignations() as $dkey => $designation)
+                        <option value="{{$dkey}}">{{$designation}}</option>
                    @endforeach
                 </select>
             </td>

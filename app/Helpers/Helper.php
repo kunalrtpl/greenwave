@@ -553,4 +553,66 @@
 	    }
 	}
 
+	function getDesignations(): array
+    {
+        return [
+            'Owner'      => 'Owner / Director / Proprietor / Partner',
+            'G.M.'         => 'General Manager',
+            'Production In-Charge' => 'Production Head / In-Charge',
+            'Purchase In-charge'   => 'Purchase Head / In-Charge',
+        ];
+    }
+
+
+	function getMobileAlreadyUsedMessage($existingContact): string
+	{
+	    // Case 1: Linked with existing customer
+	    if (!empty($existingContact->customer_id)) {
+
+	        $customer = \App\Customer::find($existingContact->customer_id);
+
+	        // Get user who added/shared this customer
+	        $shared = \App\UserCustomerShare::where('customer_id', $existingContact->customer_id)
+	            ->first();
+
+	        $user = $shared ? \App\User::find($shared->user_id) : null;
+
+	        $customerName = $customer && !empty($customer->name)
+	            ? $customer->name
+	            : 'another customer';
+
+	        $userName = $user && !empty($user->name)
+	            ? $user->name
+	            : 'another user';
+
+	        return "This mobile number is already added for customer {$customerName} by {$userName}. "
+	             . "Please ask them to edit or delete the mobile number before using it again.";
+	    }
+
+	    // Case 2: Linked with customer register request
+	    if (!empty($existingContact->customer_register_request_id)) {
+
+	        $request = \App\CustomerRegisterRequest::find(
+	            $existingContact->customer_register_request_id
+	        );
+
+	        $user = ($request && !empty($request->created_by))
+	            ? \App\User::find($request->created_by)
+	            : null;
+
+	        $requestName = $request && !empty($request->name)
+	            ? $request->name
+	            : 'another request';
+
+	        $userName = $user && !empty($user->name)
+	            ? $user->name
+	            : 'another user';
+
+	        return "This mobile number is already linked with the customer request {$requestName}, "
+	             . "created by {$userName}. Please use a different mobile number as this number is already associated with an existing request.";
+	    }
+
+	    // Fallback message
+	    return "This mobile number is already in use. Please use a different mobile number.";
+	}
 
