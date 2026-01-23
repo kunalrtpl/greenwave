@@ -14,6 +14,10 @@ class Sampling extends Model
         return $this->belongsTo('App\Dealer');
     }
 
+    public function customer(){
+        return $this->belongsTo('App\Customer');
+    }
+
     public function created_by_dealer_info(){
         return $this->belongsTo('App\Dealer','created_by_dealer','id');
     }

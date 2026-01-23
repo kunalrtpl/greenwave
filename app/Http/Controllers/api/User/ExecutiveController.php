@@ -646,7 +646,7 @@ class ExecutiveController extends Controller
     public function samplings(){
         $resp = $this->resp;
         if($resp['status'] && isset($resp['user'])){
-            $samplings = Sampling::with('sampling_items','sampling_invoice_items')->where('user_id',$resp['user']['id'])->get();
+            $samplings = Sampling::with('sampling_items','sampling_invoice_items','customer')->where('user_id',$resp['user']['id'])->get();
             $message = "Fetched successfully";
             $result['samplings'] = $samplings;
             return response()->json(apiSuccessResponse($message,$result),200);
