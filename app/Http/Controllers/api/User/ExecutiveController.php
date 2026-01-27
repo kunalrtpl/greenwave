@@ -2287,7 +2287,7 @@ class ExecutiveController extends Controller
                 ->where('status', 1)
                 ->get();
 
-            $dealerIds = DealerOperatingCity::whereIn('city', $reporting_resp['cities'])->pluck('dealer_id');
+            $dealerIds = \App\DealerOperatingCity::whereIn('city', $reporting_resp['cities'])->pluck('dealer_id');
 
             $dealers =  \DB::table('dealers')->select('id','business_name','owner_name','address','city','city','office_phone','owner_mobile')/*->whereNotin('id',[1,5,7])*/->whereNULL('parent_id')->wherein('id',$dealerIds)->where('status',1)->get();
             $message = "Fetched successfully";
