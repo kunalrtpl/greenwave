@@ -82,6 +82,24 @@
                                     </div>
                                 </div>
                                 <div class="form-group">
+                                    <label class="col-md-3 control-label">
+                                        Area of Operations <span class="asteric">*</span>
+                                    </label>
+                                    <div class="col-md-4">
+                                        <select class="form-control select2" name="operating_cities[]" multiple required>
+                                            @foreach(getcities() as $city)
+                                                <option value="{{ $city['city_name'] }}"
+                                                    {{ (!empty($operatingCities) && in_array($city['city_name'], $operatingCities)) ? 'selected' : '' }}>
+                                                    {{ $city['city_name'] }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+
+                                        <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-operating_cities"></h4>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
                                     <label class="col-md-3 control-label">Office Phone (if any) </label>
                                     <div class="col-md-4">
                                         <input  type="text" placeholder="Owner Mobile" name="office_phone" style="color:gray" class="form-control" value="{{(!empty($dealerdata['office_phone']))?$dealerdata['office_phone']: '' }}"/>

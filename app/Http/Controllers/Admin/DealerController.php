@@ -11,6 +11,7 @@ use App\Http\Requests;
 use DB;
 use Session;
 use App\Dealer;
+use App\DealerOperatingCity;
 use App\MarketProductInfo;
 use App\DealerAtod;
 use App\PurchaseOrder;
@@ -117,6 +118,10 @@ class DealerController extends Controller
             //echo "<pre>"; print_r($selProductTypes); die;
     		$title ="Edit Dealer";
             $ignoreDealer = $dealerdata['id'];
+
+            $operatingCities = DealerOperatingCity::where('dealer_id', $dealerdata['id'])
+                        ->pluck('city')
+                        ->toArray();
     	}else{
     		$title ="Add Dealer";
 	    	$dealerdata =array();
@@ -124,10 +129,11 @@ class DealerController extends Controller
             $selLinkedProids = array();
             $selProductTypes = array();
             $linkedCustomers = array();
+            $operatingCities = array();
     	}
         $otherDealers = Dealer::where('id','!=',$ignoreDealer)->get()->toArray();
         //echo "<pre>"; print_r($dealerdata); die;
-    	return view('admin.dealers.add-edit-dealer')->with(compact('title','dealerdata','otherDealers','selLinkedProids','selProductTypes','selAppRoles','linkedCustomers'));
+    	return view('admin.dealers.add-edit-dealer')->with(compact('title','dealerdata','otherDealers','selLinkedProids','selProductTypes','selAppRoles','linkedCustomers','operatingCities'));
     }
 
     public function saveDealer(Request $request){
@@ -216,12 +222,31 @@ class DealerController extends Controller
                     /*if(!empty($data['password'])){
                         $data['password'] = bcrypt($data['password']);
                     }*/
+                    $operatingCities = [];
+
+                    if (isset($data['operating_cities'])) {
+                        $operatingCities = $data['operating_cities'];
+                        unset($data['operating_cities']); // IMPORTANT
+                    }
                     foreach($data as $dkey=> $dealerinfo){
                         $dealer->$dkey = $dealerinfo;
                     }
                     $dealer->linked_dealers = $linked_dealers;
                     $dealer->app_roles = implode(',',$data['app_roles']);
                     $dealer->save();
+                    // 🔥 DEALER OPERATING CITIES (COMMON ADD + UPDATE LOGIC)
+                    // remove old cities (important for update)
+                    DealerOperatingCity::where('dealer_id', $dealer->id)->delete();
+
+                    // insert new cities
+                    if (!empty($operatingCities)) {
+                        foreach ($operatingCities as $city) {
+                            $dealerCity = new DealerOperatingCity;
+                            $dealerCity->dealer_id = $dealer->id;
+                            $dealerCity->city = $city;
+                            $dealerCity->save();
+                        }
+                    }
                     /*DealerContactPerson::where('dealer_id',$dealer->id)->delete();
                     if(!empty($contact_persons)){
                         foreach ($contact_persons['names'] as $nkey => $contact_person) {
