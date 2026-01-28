@@ -17,6 +17,8 @@ use App\UserFreeSampleStock;
 use App\Product;
 use Session;
 use DB;
+use PDF;
+use Carbon\Carbon;
 class SamplingController extends Controller
 {
     //
@@ -73,7 +75,9 @@ class SamplingController extends Controller
             $i=$iDisplayStart;
             $querys=json_decode( json_encode($querys), true);
             foreach($querys as $sampleReq){ 
-                $actionValues='<a target="_blank" title="View Details" class="btn btn-sm green margin-top-10" href="'.url('admin/free-sampling-detail/'.$sampleReq['id']).'"> View
+                $actionValues='
+                <a href=' .route('sampling.download.pdf', $sampleReq['id']).' class="btn btn-success">Download PDF</a>
+                <a target="_blank" title="View Details" class="btn btn-sm green margin-top-10" href="'.url('admin/free-sampling-detail/'.$sampleReq['id']).'"> View
                     </a>';
                 $userInfo = "";
                 if(!empty($sampleReq['business_name'])){
@@ -145,9 +149,7 @@ class SamplingController extends Controller
                 $records["data"][] = array( 
                 	$sampleReq['sample_ref_no_string'].'<br><small>('.
                     date('d M Y',strtotime($sampleReq['created_at'])).')</small>',
-                    ucwords($sampleReq['action']),
                     $userInfo,
-                    $sampleReq['request_type'],
                     $sampleReq['customer_name'],
                     $products,
                     $sampleReq['remarks'],
@@ -161,8 +163,43 @@ class SamplingController extends Controller
             return response()->json($records);
         }
         $title = "Free Sample Requests";
-        return View::make('admin.samplings.free-sampling')->with(compact('title'));
+        return View::make('admin.samplings.free.index')->with(compact('title'));
     }
+
+    public function viewSampling($id)
+    {
+        $sampleDetails = Sampling::with([
+            'customer',
+            'user',
+            'sampleitems.requested_product',
+            'sampleitems.product'
+        ])->findOrFail($id);
+        //echo "<pre>"; print_r($sampleDetails->toArray()); die;
+        /* 
+         | Load ONLY ACTIVE products
+         | Along with their LATEST dealer price (no future)
+        */
+        $products = Product::where('status', 1)
+            ->with(['pricings' => function ($q) {
+                $q->whereDate('price_date', '<=', Carbon::today())
+                  ->orderBy('price_date', 'desc');
+            }])
+            ->orderByDesc('id')
+            ->get();
+
+        /*
+         | Attach dealer_price to each product (computed attribute)
+        */
+        $products->each(function ($product) {
+            $product->dealer_price = optional($product->pricings->first())->dealer_price ?? 0;
+        });
+
+        return view('admin.samplings.free.show', compact(
+            'sampleDetails',
+            'products'
+        ));
+    }
+
 
     public function paidSampling(Request $Request){
         Session::put('active','paidSampling'); 
@@ -752,5 +789,21 @@ class SamplingController extends Controller
             $users = $users->groupby('sampling_sale_invoices.invoice_no')->simplePaginate(500);
         //echo "<pre>"; print_r(json_decode(json_encode($users),true)); die;
         return view('admin.samplings.sample-dispatched-material')->with(compact('title','users','data'));
+    }
+
+    public function downloadPdf($id)
+    {
+        $sampling = Sampling::with([
+            'sampleitems',
+            'customer',
+            'user'      // executive
+        ])->findOrFail($id);
+
+        $pdf = PDF::loadView('admin.samplings.free.pdf', compact('sampling'))
+            ->setPaper('A4', 'portrait');
+
+        return $pdf->download(
+            'Sampling-' . $sampling->sample_ref_no_string . '.pdf'
+        );
     }
 }

@@ -365,8 +365,13 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 
 		//Sampling routes
 		Route::match(['get', 'post'], '/free-sampling', 'SamplingController@freeSampling');
+		Route::get('sampling/{id}/download-pdf', 'SamplingController@downloadPdf')->name('sampling.download.pdf');
 		Route::match(['get', 'post'], '/paid-sampling', 'SamplingController@paidSampling');
+		//deperaceate
 		Route::match(['get', 'post'], '/free-sampling-detail/{id}', 'SamplingController@freeSamplingDetail');
+
+		Route::get('view-sampling/{id}', 'SamplingController@viewSampling');
+
 		Route::match(['get', 'post'], '/paid-sampling-detail/{id}', 'SamplingController@paidSamplingDetail');
 		Route::match(['get', 'post'], '/mark-urgent-sample-item', 'SamplingController@markUrgentSampleItem');
 		Route::match(['get', 'post'], '/update-sampling-status', 'SamplingController@updateSamplingStatus');

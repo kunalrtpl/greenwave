@@ -623,13 +623,13 @@ class ExecutiveController extends Controller
                 if ($validator->fails()) {
                     return response()->json(validationResponse($validator),422); 
                 }else{
-                    DB::beginTransaction();
+                    //DB::beginTransaction();
                     $data['user'] = $resp['user']['id'];
                     $data['action'] = 'user';
                     $data['sample_date'] = date('Y-m-d');
                     $data['request_type'] = 'On Request';
-                    Sampling::createFreeSample($data,$resp);
-                    DB::commit();
+                    Sampling::createOrEditFreeSample($data,$resp);
+                    //DB::commit();
                     $message ="Sample has been created successfully";
                     return response()->json(apiSuccessResponse($message),200);
                 }
@@ -643,6 +643,81 @@ class ExecutiveController extends Controller
         }
     }
 
+    public function deleteSampleRequest(Request $request)
+    {
+        if ($request->isMethod('post')) {
+
+            $resp = $this->resp;
+
+            if ($resp['status'] && isset($resp['user'])) {
+
+                $data = $request->all();
+
+                $rules = [
+                    'id' => 'required|numeric|exists:samplings,id'
+                ];
+
+                $validator = Validator::make($data, $rules);
+
+                if ($validator->fails()) {
+                    return response()->json(validationResponse($validator), 422);
+                }
+
+                DB::beginTransaction();
+
+                try {
+
+                    $sample = Sampling::where('id', $data['id'])
+                        ->where('user_id', $resp['user']['id'])
+                        ->first();
+
+                    if (!$sample) {
+                        return response()->json(
+                            apiErrorResponse('Sample not found or access denied'),
+                            403
+                        );
+                    }
+
+                    // Delete items first
+                    SamplingItem::where('sampling_id', $sample->id)->delete();
+
+                    // Delete sample
+                    $sample->delete();
+
+                    DB::commit();
+
+                    return response()->json(
+                        apiSuccessResponse('Sample deleted successfully'),
+                        200
+                    );
+
+                } catch (\Exception $e) {
+
+                    DB::rollBack();
+
+                    return response()->json(
+                        apiErrorResponse($e->getMessage()),
+                        500
+                    );
+                }
+
+            } else {
+                return response()->json(
+                    apiErrorResponse('Unable to fetch user. Please try again later'),
+                    422
+                );
+            }
+
+        } else {
+            return response()->json(
+                apiErrorResponse('GET not supported for this route'),
+                422
+            );
+        }
+    }
+
+
+    
     public function samplings(){
         $resp = $this->resp;
         if($resp['status'] && isset($resp['user'])){

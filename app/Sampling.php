@@ -28,7 +28,7 @@ class Sampling extends Model
     }
 
     public function sampleitems(){
-        return $this->hasMany('App\SamplingItem')->with(['product','sale_invoice_items']);
+        return $this->hasMany('App\SamplingItem')->with(['requested_product','product','sale_invoice_items']);
     }
 
     public function sampling_items(){
@@ -165,21 +165,44 @@ class Sampling extends Model
         return $createsample->id;
     }
 
-    public static function createFreeSample($data, $resp)
+    public static function createOrEditFreeSample($data, $resp)
     {
-        $sample = new Sampling();
+        /* ===============================
+           CREATE OR EDIT SAMPLE
+        ================================ */
+
+        if (!empty($data['id']) && is_numeric($data['id'])) {
+            // EDIT
+            $sample = Sampling::findOrFail($data['id']);
+        } else {
+            // CREATE
+            $sample = new Sampling();
+            $sample->financial_year = financialYear();
+            $sample->sample_type = 'free';
+            $sample->action = 'user';
+            $sample->user_id = $resp['user']['id'];
+            $sample->sample_status = 'pending';
+
+            /* ===============================
+               SAMPLE REF NO (ONLY ON CREATE)
+            ================================ */
+            $lastRef = Sampling::where('user_id', $resp['user']['id'])
+                ->where('sample_type', 'free')
+                ->where('financial_year', financialYear())
+                ->orderBy('sample_ref_no', 'DESC')
+                ->first();
+
+            $refNo = $lastRef ? $lastRef->sample_ref_no + 1 : 1;
+
+            $sample->sample_ref_no = $refNo;
+            $sample->sample_ref_no_string = "FS-" . $refNo . "/" . financialYear();
+        }
 
         /* ===============================
            BASIC INFO
         ================================ */
 
-        $sample->financial_year = financialYear();
-        $sample->sample_type = 'free';
-        $sample->action = 'user';
-        $sample->user_id = $resp['user']['id'];
-        $sample->sample_status = 'pending';
         $sample->sampling_date = $data['sample_date'];
-
         $sample->required_through = $data['required_through'] ?? '';
         $sample->request_type = $data['request_type'] ?? '';
         $sample->remarks = $data['remarks'] ?? '';
@@ -189,7 +212,7 @@ class Sampling extends Model
         }
 
         /* ===============================
-           NEW SAMPLING COLUMNS 
+           NEW SAMPLING COLUMNS
         ================================ */
 
         $sample->is_specific_customer = $data['is_specific_customer'] ?? 0;
@@ -212,46 +235,59 @@ class Sampling extends Model
         $sample->dispatch_to = $data['dispatch_to'] ?? '';
         $sample->dispatch_address = $data['dispatch_address'] ?? '';
 
-        /* ===============================
-           SAMPLE REF NO
-        ================================ */
-
-        $lastRef = Sampling::where('user_id', $resp['user']['id'])
-            ->where('sample_type', 'free')
-            ->where('financial_year', financialYear())
-            ->orderBy('sample_ref_no', 'DESC')
-            ->first();
-
-        $refNo = $lastRef ? $lastRef->sample_ref_no + 1 : 1;
-
-        $sample->sample_ref_no = $refNo;
-        $sample->sample_ref_no_string = "FS-" . $refNo . "/" . financialYear();
-
         $sample->save();
 
         /* ===============================
            SAMPLE ITEMS
         ================================ */
 
-        foreach ($data['items'] as $item) {
+        if (!empty($data['items'])) {
 
-            $sampleItem = new SamplingItem();
-            $sampleItem->sampling_id = $sample->id;
-            $sampleItem->product_id = $item['product_id'];
+            foreach ($data['items'] as $item) {
 
-            $sampleItem->pack_size_info = $item['pack_size_info'] ?? '';
-            $sampleItem->pack_size = $item['pack_size'] ?? '';
-            $sampleItem->actual_pack_size = $item['pack_size'] ?? '';
-            $sampleItem->no_of_packs = $item['no_of_packs'] ?? '';
-            $sampleItem->actual_no_of_packs = $item['no_of_packs'] ?? '';
-            $sampleItem->qty = $item['qty'];
-            $sampleItem->actual_qty = $item['qty'];
-            $sampleItem->remarks = $item['remarks'] ?? '';
+                /* ===============================
+                   DELETE ITEM
+                ================================ */
+                if (!empty($item['is_delete']) && $item['is_delete'] == 1 && !empty($item['item_id'])) {
+                    SamplingItem::where('id', $item['item_id'])
+                        ->where('sampling_id', $sample->id)
+                        ->delete();
+                    continue;
+                }
 
-            $sampleItem->save();
+                /* ===============================
+                   CREATE OR UPDATE ITEM
+                ================================ */
+                if (!empty($item['item_id'])) {
+                    $sampleItem = SamplingItem::where('id', $item['item_id'])
+                        ->where('sampling_id', $sample->id)
+                        ->first();
+
+                    if (!$sampleItem) {
+                        continue;
+                    }
+                } else {
+                    $sampleItem = new SamplingItem();
+                    $sampleItem->sampling_id = $sample->id;
+                }
+
+                $sampleItem->requested_product_id = $item['product_id'];
+                $sampleItem->product_id = $item['product_id'];
+                $sampleItem->product_detail_id = $item['product_id'];
+
+                $sampleItem->pack_size_info = $item['pack_size_info'] ?? '';
+                $sampleItem->pack_size = $item['pack_size'] ?? '';
+                $sampleItem->actual_pack_size = $item['pack_size'] ?? '';
+                $sampleItem->no_of_packs = $item['no_of_packs'] ?? '';
+                $sampleItem->actual_no_of_packs = $item['no_of_packs'] ?? '';
+                $sampleItem->qty = $item['qty'];
+                $sampleItem->actual_qty = $item['qty'];
+                $sampleItem->remarks = $item['remarks'] ?? '';
+
+                $sampleItem->save();
+            }
         }
 
         return $sample->id;
     }
-
 }

@@ -40,14 +40,8 @@
                                         <th width="12%">
                                             Ref No.
                                         </th>
-                                        <th width="8%">
-                                            Type
-                                        </th>
                                         <th>
                                            Name
-                                        </th>
-                                        <th>
-                                           Reason
                                         </th>
                                         <th>
                                            Customer
@@ -68,16 +62,8 @@
                                     <tr role="row" class="filter">
                                         <td></td>
                                         <td>
-                                            <select class="form-control form-filter input-sm" name="user_type">
-                                                <option value="">All</option>
-                                                <option value="Dealer">Dealer</option>
-                                                <option value="user">Executive</option>
-                                            </select>
-                                        </td>
-                                        <td>
                                             <input type="text" class="form-control form-filter input-sm" name="dealer_info" placeholder="Search By Dealer">
                                         </td>
-                                        <td></td>
                                         <td></td>
                                         <td></td>
                                         <td></td>

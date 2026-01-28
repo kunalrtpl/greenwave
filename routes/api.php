@@ -184,6 +184,9 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::match(['get', 'post'], '/purchase-orders','ExecutiveController@purchaseorderListing');
 
 			Route::match(['get', 'post'], '/create-sample-request','ExecutiveController@createSampleRequest');
+			
+			Route::match(['get', 'post'], '/delete-sample-request','ExecutiveController@deleteSampleRequest');
+
 			Route::match(['get', 'post'], '/samplings','ExecutiveController@samplings'); 
 
 			Route::match(['get', 'post'], '/market-products-info','ExecutiveController@marketProductsInfo');
