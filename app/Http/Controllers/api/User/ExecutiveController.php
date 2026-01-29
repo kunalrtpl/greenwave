@@ -3242,7 +3242,9 @@ class ExecutiveController extends Controller
                 $customerRegisterId = $data['customer_register_request_id'] ?? null;
 
                 // Build query
-                $query = \App\CustomerContact::where('status', 'active');
+                $query = \App\CustomerContact::with(['creator'=>function($query){
+                    $query->select('id','name','designation','mobile');
+                }])->where('status', 'active');
 
                 if ($customerId) {
                     $query->where('customer_id', $customerId);
