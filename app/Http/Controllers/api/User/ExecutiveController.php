@@ -679,7 +679,7 @@ class ExecutiveController extends Controller
                     }
 
                     // Delete items first
-                    SamplingItem::where('sampling_id', $sample->id)->delete();
+                    \App\SamplingItem::where('sampling_id', $sample->id)->delete();
 
                     // Delete sample
                     $sample->delete();
