@@ -244,7 +244,7 @@ class Sampling extends Model
         if (!empty($data['items'])) {
 
             foreach ($data['items'] as $item) {
-
+                $productinfo = Product::with('raw_materials')->where('id',$item['product_id'])->first();
                 /* ===============================
                    DELETE ITEM
                 ================================ */
@@ -273,7 +273,7 @@ class Sampling extends Model
 
                 $sampleItem->requested_product_id = $item['product_id'];
                 $sampleItem->product_id = $item['product_id'];
-                $sampleItem->product_detail_id = $item['product_id'];
+                $sampleItem->product_detail_id = $productinfo->product_detail_id;
 
                 $sampleItem->pack_size_info = $item['pack_size_info'] ?? '';
                 $sampleItem->pack_size = $item['pack_size'] ?? '';
