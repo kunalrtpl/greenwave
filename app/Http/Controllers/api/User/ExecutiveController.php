@@ -2352,7 +2352,7 @@ class ExecutiveController extends Controller
         if($resp['status'] && isset($resp['user'])){
             $reporting_resp = User::getReportingUsers($resp['user']['id']);
             $userids = \DB::table('user_departments')->where('department_id',2)->pluck('user_id')->toArray();
-            //$userIds = \App\UserDepartmentRegion::wherein('sub_region_id',$reporting_resp['sub_region_ids'])->pluck('user_id')->toArray();
+            $userids = \App\UserDepartmentRegion::wherein('sub_region_id',$reporting_resp['sub_region_ids'])->pluck('user_id')->toArray();
            // $users  = \DB::table('users')->wherein('id',$userIds)->get();
             $users = \DB::table('users')
                 ->select('id', 'name', 'mobile', 'designation', 'email', 'image')
