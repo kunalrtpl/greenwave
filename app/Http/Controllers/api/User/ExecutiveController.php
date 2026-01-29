@@ -613,11 +613,11 @@ class ExecutiveController extends Controller
             if($resp['status'] && isset($resp['user'])) {
                 $data = $request->all();
                 $rules = [
-                    'items'          =>   'bail|required|array|min:1',
-                    'items.*.product_id' => 'required|exists:products,id',
-                    'items.*.qty' => 'required|numeric',
-                    //'gst'    => 'bail|required|numeric',
+                    'items'               => 'bail|sometimes|array|min:1',
+                    'items.*.product_id'  => 'required_with:items|exists:products,id',
+                    'items.*.qty'         => 'required_with:items|numeric',
                 ];
+
                 $customMessages = [];
                 $validator = Validator::make($data,$rules,$customMessages);
                 if ($validator->fails()) {
