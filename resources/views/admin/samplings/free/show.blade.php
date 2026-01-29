@@ -81,7 +81,9 @@
                 </div>
             </div>
         </div>
+        <?php /*
         @include('admin.samplings.free.partials.product_section')
+        */?>
     </div>
 </div>
 <!-- ================= STATUS MODAL ================= -->
