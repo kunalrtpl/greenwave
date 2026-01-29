@@ -108,6 +108,7 @@ class SamplingController extends Controller
                         }
                     }
                 }
+                $products = '';
                 if($sampleReq['sampleitems']){
                     $products =  '<table class="table table-bordered">
                                     <tr>
