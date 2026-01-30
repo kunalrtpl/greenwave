@@ -62,7 +62,7 @@
                                     <tr role="row" class="filter">
                                         <td></td>
                                         <td>
-                                            <input type="text" class="form-control form-filter input-sm" name="dealer_info" placeholder="Search By Dealer">
+                                            <input type="text" class="form-control form-filter input-sm" name="employee_info" placeholder="Search By Executive">
                                         </td>
                                         <td></td>
                                         <td></td>
