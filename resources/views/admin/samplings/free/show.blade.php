@@ -14,7 +14,7 @@
                 <i class="fa fa-circle"></i>
             </li>
             <li>
-                <span>Sampling #{{ $sampleDetails->id }}</span>
+                <a href="{{url('admin/free-sampling')}}">Sampling #{{ $sampleDetails->id }} </a>
             </li>
         </ul>
         <!-- ================= TOP INFO ================= -->
@@ -23,6 +23,13 @@
                 <div class="portlet light bordered">
                     <div class="portlet-title">
                         <div class="caption font-blue bold">Sample Request Information</div>
+                    </div>
+                    <div class="actions">
+                        <a href="{{ route('sampling.download.pdf', $sampleDetails->id) }}"
+                           class="btn btn-sm blue"
+                           target="_blank">
+                            <i class="fa fa-file-pdf-o"></i> PDF
+                        </a>
                     </div>
                     <div class="portlet-body">
                         <p><b>Sample ID:</b> {{ $sampleDetails->id }}</p>
@@ -81,9 +88,7 @@
                 </div>
             </div>
         </div>
-        <?php /*
         @include('admin.samplings.free.partials.product_section')
-        */?>
     </div>
 </div>
 <!-- ================= STATUS MODAL ================= -->
@@ -179,6 +184,7 @@ $(document).on('change', '.approved-product', function () {
     let selected = $(this).find(':selected');
 
     row.find('.dealer-price').text(selected.data('price') || 0);
+    row.find('.hiddenDealerPrice').val(selected.data('price') || 0);
     row.find('.actual-pack-size').data('selected', null);
 
     setPackSizes(row);
@@ -188,6 +194,34 @@ $(document).on('change', '.approved-product', function () {
 /* PACK SIZE / PACK COUNT CHANGE */
 $(document).on('input change', '.actual-pack-size, .actual-packs', function () {
     calculateRow($(this).closest('tr'));
+});
+</script>
+<script>
+$(document).on('change', '.add-product-select', function () {
+
+    let form = $(this).find(':selected').data('form');
+    let pack = $('.add-pack-size');
+
+    pack.empty();
+
+    if (form === 'liquid') {
+        pack.append('<option value="1">1 Kg</option>');
+        pack.append('<option value="5">5 Kg</option>');
+    } else {
+        pack.append('<option value="1">1 Kg</option>');
+    }
+});
+</script>
+<script>
+$(document).ready(function () {
+
+    $('#addProductModal').on('shown.bs.modal', function () {
+        $(this).find('.select2').select2({
+            dropdownParent: $('#addProductModal'),
+            width: '100%'
+        });
+    });
+
 });
 </script>
 

@@ -372,6 +372,8 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 
 		Route::get('view-sampling/{id}', 'SamplingController@viewSampling');
 
+		Route::post('sampling/add-item','SamplingController@addSamplingItem')->name('admin.sampling.addItem');
+
 		Route::match(['get', 'post'], '/paid-sampling-detail/{id}', 'SamplingController@paidSamplingDetail');
 		Route::match(['get', 'post'], '/mark-urgent-sample-item', 'SamplingController@markUrgentSampleItem');
 		Route::match(['get', 'post'], '/update-sampling-status', 'SamplingController@updateSamplingStatus');

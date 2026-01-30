@@ -76,8 +76,10 @@ class SamplingController extends Controller
             $querys=json_decode( json_encode($querys), true);
             foreach($querys as $sampleReq){ 
                 $actionValues='
-                <a href=' .route('sampling.download.pdf', $sampleReq['id']).' class="btn btn-success">Download PDF</a>
+                <a href=' .route('sampling.download.pdf', $sampleReq['id']).' class="btn btn-sm blue">PDF</a>
                 <a target="_blank" title="View Details" class="btn btn-sm green margin-top-10" href="'.url('admin/free-sampling-detail/'.$sampleReq['id']).'"> View
+                    </a>
+                <a style="display:none;" target="_blank" title="View Details" class="btn btn-sm yellow margin-top-10" href="'.url('admin/view-sampling/'.$sampleReq['id']).'"> View
                     </a>';
                 $userInfo = "";
                 if(!empty($sampleReq['business_name'])){
@@ -194,10 +196,11 @@ class SamplingController extends Controller
         $products->each(function ($product) {
             $product->dealer_price = optional($product->pricings->first())->dealer_price ?? 0;
         });
-
+        $title = "View Sampling";
         return view('admin.samplings.free.show', compact(
             'sampleDetails',
-            'products'
+            'products',
+            'title'
         ));
     }
 
@@ -362,7 +365,10 @@ class SamplingController extends Controller
         }
     }
 
-    public function updateSamplingQty(Request $request){
+
+    // we are not using below function anymore now
+
+    public function updateSamplingQty_DEPRECETAED(Request $request){
         if($request->isMethod('post')){
             $data = $request->all();
             $sampleDetails = Sampling::with(['dealer','user','sampleitems'])->where('id',$data['sampling_id'])->first();
@@ -390,7 +396,7 @@ class SamplingController extends Controller
                 }
             }
             //echo "<pre>"; print_r($data); die;
-            DB::beginTransaction();
+            //DB::beginTransaction();
             foreach($data['item_ids'] as $ikey=> $itemid){
                 $itemDetails = SamplingItem::find($itemid);
                 $itemDetails->actual_qty = $data['actual_qtys'][$ikey];
@@ -447,7 +453,7 @@ class SamplingController extends Controller
                 $updateSampling->required_through = $data['required_through'];
             }
             $updateSampling->save();
-            DB::commit();
+            //DB::commit();
             if(isset($data['source'])){
                 return redirect::to('/admin/paid-sampling')->with('flash_message_success','Qty has been updates successfully');
             }else{
@@ -455,6 +461,182 @@ class SamplingController extends Controller
             }
         }
     }
+
+    public function updateSamplingQty(Request $request)
+    {
+        if (!$request->isMethod('post')) {
+            return redirect()->back();
+        }
+
+        DB::beginTransaction();
+
+        try {
+
+            $data = $request->all();
+
+            $sampleDetails = Sampling::with(['dealer','user','sampleitems'])
+                ->where('id', $data['sampling_id'])
+                ->first();
+
+            if (!$sampleDetails || $sampleDetails->sample_type !== 'free') {
+                return redirect()->back()->with('flash_message_error', 'Invalid sampling request');
+            }
+
+            $subtotal = 0;
+
+            /* ----------------------------
+             | VALIDATION FOR FREE SAMPLE
+             |---------------------------- */
+            foreach ($data['item_ids'] as $ikey => $itemid) {
+
+                $itemDetails = SamplingItem::find($itemid);
+
+                if (!$itemDetails) {
+                    return redirect()->back()->with('flash_message_error', 'Invalid item');
+                }
+
+                /*
+                if ($data['actual_qtys'][$ikey] > $itemDetails->qty) {
+                    return redirect()->back()->with('flash_message_error', 'You have entered wrong qty');
+                }
+                */
+            }
+
+            /* ----------------------------
+             | UPDATE ITEMS + FREE STOCK
+             |---------------------------- */
+            foreach ($data['item_ids'] as $ikey => $itemid) {
+
+                $itemDetails = SamplingItem::find($itemid);
+
+                $itemDetails->product_id            = $data['product_ids'][$ikey];
+                $itemDetails->actual_qty            = $data['actual_qtys'][$ikey];
+                $itemDetails->actual_pack_size      = $data['actual_pack_sizes'][$ikey];
+                $itemDetails->actual_no_of_packs    = $data['actual_no_of_packs'][$ikey];
+                $itemDetails->comments              = $data['comments'][$ikey];
+                $itemDetails->dispatched_qty        = 0;
+                $itemDetails->required_through = $data['required_through'][$ikey];
+                $itemDetails->dealer_price = $data['dealer_prices'][$ikey];
+                $itemDetails->final_value = $itemDetails->dealer_price * $itemDetails->actual_qty;
+                $itemDetails->save();
+
+                $subtotal += $itemDetails->net_price * $data['actual_qtys'][$ikey];
+
+                /* FREE SAMPLING STOCK UPDATE */
+                $freeStockQuery = DB::table('free_sampling_stocks')
+                    ->where('product_id', $itemDetails->product_id)
+                    ->where('user_id', $sampleDetails->user_id);
+
+                $freeSamplingStock = $freeStockQuery->first();
+
+                if ($freeSamplingStock) {
+                    $sampleProd = FreeSamplingStock::find($freeSamplingStock->id);
+                    $pendingOrders = $freeSamplingStock->pending_orders;
+                } else {
+                    $sampleProd = new FreeSamplingStock;
+                    $sampleProd->user_id     = $sampleDetails->user_id;
+                    $sampleProd->customer_id = $sampleDetails->customer_id;
+                    $sampleProd->product_id  = $itemDetails->product_id;
+                    $pendingOrders = 0;
+                }
+
+                $sampleProd->pending_orders = $pendingOrders + $data['actual_qtys'][$ikey];
+                $sampleProd->save();
+            }
+
+            /* ----------------------------
+             | UPDATE SAMPLING MASTER
+             |---------------------------- */
+            $updateSampling = Sampling::find($data['sampling_id']);
+            $updateSampling->subtotal       = $subtotal;
+            $updateSampling->gst            = 0;
+            $updateSampling->grand_total    = 0;
+            $updateSampling->sample_edited  = 'yes';
+            $updateSampling->sample_status  = 'approved';
+
+            /*if (isset($data['required_through'])) {
+                $updateSampling->required_through = $data['required_through'];
+            }*/
+
+            $updateSampling->save();
+
+            DB::commit();
+
+            return redirect('/admin/free-sampling')
+                ->with('flash_message_success', 'Free sample qty updated successfully');
+
+        } catch (\Exception $e) {
+
+            DB::rollBack();
+
+            \Log::error('Free Sampling Update Failed', [
+                'message' => $e->getMessage(),
+                'file'    => $e->getFile(),
+                'line'    => $e->getLine(),
+                'trace'   => $e->getTraceAsString(), // optional but very useful
+                'request' => $request->all(),
+            ]);
+
+
+            return redirect()->back()
+                ->with('flash_message_error', 'Something went wrong. Please try again.');
+        }
+    }
+
+
+    public function addSamplingItem(Request $request)
+    {
+        $request->validate([
+            'sampling_id' => 'required|exists:samplings,id',
+            'product_id'  => 'required|exists:products,id',
+            'pack_size'   => 'required|numeric',
+            'no_of_packs' => 'required|numeric|min:1',
+        ]);
+
+        $sampling = Sampling::findOrFail($request->sampling_id);
+
+        if ($sampling->sample_edited === 'yes') {
+            return redirect()->back()
+                ->with('flash_message_error', 'This sample is already approved.');
+        }
+
+        DB::beginTransaction();
+
+        try {
+
+            SamplingItem::create([
+                'sampling_id'   => $sampling->id,
+                'requested_product_id'    => $request->product_id,
+                'product_id'    => $request->product_id,
+                'pack_size'     => $request->pack_size,
+                'actual_pack_size'     => $request->pack_size,
+                'no_of_packs'   => $request->no_of_packs,
+                'actual_no_of_packs'   => $request->no_of_packs,
+                'qty'           => $request->pack_size * $request->no_of_packs,
+                'actual_qty'           => $request->pack_size * $request->no_of_packs,
+                'dispatched_qty'=> 0,
+            ]);
+
+            DB::commit();
+
+            return redirect()->back()
+                ->with('flash_message_success', 'Product added successfully');
+
+        } catch (\Exception $e) {
+
+            DB::rollBack();
+
+            \Log::error('Add Sampling Item Failed', [
+                'msg'  => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+
+            return redirect()->back()
+                ->with('flash_message_error', 'Unable to add product');
+        }
+    }
+
 
      public function samplingDispatchPlanning(Request $Request){
         Session::put('active','samplingDispatchPlanning'); 
