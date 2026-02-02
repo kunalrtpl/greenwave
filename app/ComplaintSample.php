@@ -97,6 +97,7 @@ class ComplaintSample extends Model
         $complaint_sample->complaint_sample_no   = "CSN".$number;
         $complaint_sample->request_date = (isset($data['request_date'])?$data['request_date']:'');
         $complaint_sample->customer_id = (isset($data['customer_id'])?$data['customer_id']:NULL);
+        $complaint_sample->customer_register_request_id = $data['customer_register_request_id'] ?? null,
         $complaint_sample->feedback_id = ((isset($data['feedback_id']) && !empty($data['feedback_id']))?$data['feedback_id']:NULL);
         $complaint_sample->type = (isset($data['type'])?$data['type']:'');
         $complaint_sample->product_id = (isset($data['product_id'])?$data['product_id']:'');

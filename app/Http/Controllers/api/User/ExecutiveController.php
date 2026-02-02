@@ -797,7 +797,7 @@ class ExecutiveController extends Controller
             if($resp['status'] && isset($resp['user'])) {
                 $data = $request->all();
                 $rules = [
-                    "customer_id"=> "required",
+                    //"customer_id"=> "required",
                     "feedback_date"=> "required",
                     "type"=> "required|in:query,complaint,feedback,suggestion,need sample/trial,feedback/suggestion,",
                 ];
@@ -808,7 +808,8 @@ class ExecutiveController extends Controller
                 }
                 $data = $request->all();
                 $savefeed = new Feedback;
-                $savefeed->customer_id = $data['customer_id'];
+                $savefeed->customer_id = $data['customer_id'] ?? null;
+                $savefeed->customer_register_request_id = $data['customer_register_request_id'] ?? null;
                 $savefeed->feedback_date = $data['feedback_date'];
                 $savefeed->user_id = $resp['user']['id'];
                 $savefeed->remarks = $data['remarks'];
@@ -1775,7 +1776,8 @@ class ExecutiveController extends Controller
                     $sample_submission = new SampleSubmission;
                 }
                 $sample_submission->user_id = $resp['user']['id']; 
-                $sample_submission->customer_id = $data['customer_id']; 
+                $sample_submission->customer_id = $data['customer_id'] ?? null; 
+                $sample_submission->customer_register_request_id = $data['customer_register_request_id'] ?? null; 
                 $sample_submission->submission_date = $data['submission_date']; 
                 $sample_submission->purpose = $data['purpose']; 
                 $sample_submission->submission_type = $data['submission_type']; 
