@@ -11,6 +11,10 @@ class SampleSubmission extends Model
         return $this->belongsTo('App\Customer');
     }
 
+    public function customer_register_request(){
+        return $this->belongsto('App\CustomerRegisterRequest','customer_register_request_id','id')->with(['dealer','linkedExecutive']);
+    }
+
     public function complaint_info(){
         return $this->belongsto('App\Feedback','complaint_id','id')->with(['customer','customer_employee','product','replies']);
     }

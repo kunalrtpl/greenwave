@@ -844,7 +844,7 @@ class ExecutiveController extends Controller
                 if ($validator->fails()){
                     return response()->json(validationResponse($validator),422); 
                 }
-                $feedbacks = Feedback::with(['customer','customer_employee','product','replies'])->where('user_id',$resp['user']['id']);
+                $feedbacks = Feedback::with(['customer','customer_register_request','customer_employee','product','replies'])->where('user_id',$resp['user']['id']);
                 if($data['type'] !='all'){
                     $feedbacks = $feedbacks->where('type',$data['type']);
                 }
@@ -1747,7 +1747,7 @@ class ExecutiveController extends Controller
         if($request->isMethod('get')){
             $resp = $this->resp;
             if($resp['status'] && isset($resp['user'])){
-                $list = SampleSubmission::with(['customer','product','complaint_info'])->where('user_id',$resp['user']['id'])->get();
+                $list = SampleSubmission::with(['customer','customer_register_request','product','complaint_info'])->where('user_id',$resp['user']['id'])->get();
                 $result['sample_submissions'] = $list;
                 $message = 'Data has been fetched successfully';
                 return response()->json(apiSuccessResponse($message,$result),200);
@@ -1762,7 +1762,7 @@ class ExecutiveController extends Controller
                 $data = $request->all();
                 $rules = [
                     "submission_date"=> "required|date_format:Y-m-d",
-                    "customer_id"=> "required",
+                    //"customer_id"=> "required",
                 ];
                 $customMessages = [];
                 $validator = Validator::make($data,$rules,$customMessages);

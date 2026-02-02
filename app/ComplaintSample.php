@@ -23,6 +23,10 @@ class ComplaintSample extends Model
         return $this->belongsto('App\Customer','customer_id','id');
     }
 
+    public function customer_register_request(){
+        return $this->belongsto('App\CustomerRegisterRequest','customer_register_request_id','id')->with(['dealer','linkedExecutive']);
+    }
+
     public function user(){
         return $this->belongsto('App\User','user_id','id');
     }
@@ -68,7 +72,7 @@ class ComplaintSample extends Model
     }
 
     public static function getComplaintSamples($type,$id){
-        $samples = ComplaintSample::with(['customer','productinfo','feedback','histories']);
+        $samples = ComplaintSample::with(['customer','customer_register_request','productinfo','feedback','histories']);
         if($type == "executive"){
             $samples = $samples->where('user_id',$id);
         }else if($type == "dealer"){
