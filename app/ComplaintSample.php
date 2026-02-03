@@ -103,7 +103,9 @@ class ComplaintSample extends Model
         if(isset($data['customer_id']) && !empty($data['customer_id'])){
             $complaint_sample->customer_id = $data['customer_id'];
         }
-        $complaint_sample->customer_register_request_id = $data['customer_register_request_id'] ?? null;
+        if(isset($data['customer_register_request_id']) && !empty($data['customer_register_request_id'])){
+            $complaint_sample->customer_register_request_id = $data['customer_register_request_id'];
+        }
         $complaint_sample->feedback_id = ((isset($data['feedback_id']) && !empty($data['feedback_id']))?$data['feedback_id']:NULL);
         $complaint_sample->type = (isset($data['type'])?$data['type']:'');
         $complaint_sample->product_id = (isset($data['product_id'])?$data['product_id']:'');

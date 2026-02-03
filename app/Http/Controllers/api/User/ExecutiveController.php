@@ -811,7 +811,10 @@ class ExecutiveController extends Controller
                 if(isset($data['customer_id']) && !empty($data['customer_id'])){
                     $savefeed->customer_id = $data['customer_id'] ?? null;
                 }
-                $savefeed->customer_register_request_id = $data['customer_register_request_id'] ?? null;
+
+                if(isset($data['customer_register_request_id']) && !empty($data['customer_register_request_id'])){
+                    $savefeed->customer_register_request_id = $data['customer_register_request_id'] ?? null;
+                }
                 $savefeed->feedback_date = $data['feedback_date'];
                 $savefeed->user_id = $resp['user']['id'];
                 $savefeed->remarks = $data['remarks'];
@@ -1778,8 +1781,13 @@ class ExecutiveController extends Controller
                     $sample_submission = new SampleSubmission;
                 }
                 $sample_submission->user_id = $resp['user']['id']; 
-                $sample_submission->customer_id = $data['customer_id'] ?? null; 
-                $sample_submission->customer_register_request_id = $data['customer_register_request_id'] ?? null; 
+
+                if(isset($data['customer_id']) && !empty($data['customer_id'])){
+                    $sample_submission->customer_id = $data['customer_id'];
+                }
+                if(isset($data['customer_register_request_id']) && !empty($data['customer_register_request_id'])){
+                    $sample_submission->customer_register_request_id = $data['customer_register_request_id'];
+                }
                 $sample_submission->submission_date = $data['submission_date']; 
                 $sample_submission->purpose = $data['purpose']; 
                 $sample_submission->submission_type = $data['submission_type']; 
