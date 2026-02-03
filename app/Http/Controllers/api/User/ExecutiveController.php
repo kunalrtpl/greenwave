@@ -808,7 +808,9 @@ class ExecutiveController extends Controller
                 }
                 $data = $request->all();
                 $savefeed = new Feedback;
-                $savefeed->customer_id = $data['customer_id'] ?? null;
+                if(isset($data['customer_id']) && !empty($data['customer_id'])){
+                    $savefeed->customer_id = $data['customer_id'] ?? null;
+                }
                 $savefeed->customer_register_request_id = $data['customer_register_request_id'] ?? null;
                 $savefeed->feedback_date = $data['feedback_date'];
                 $savefeed->user_id = $resp['user']['id'];

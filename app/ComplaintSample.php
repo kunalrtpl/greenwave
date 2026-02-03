@@ -100,7 +100,9 @@ class ComplaintSample extends Model
         $number = sprintf('%04d',$number);
         $complaint_sample->complaint_sample_no   = "CSN".$number;
         $complaint_sample->request_date = (isset($data['request_date'])?$data['request_date']:'');
-        $complaint_sample->customer_id = (isset($data['customer_id'])?$data['customer_id']:NULL);
+        if(isset($data['customer_id']) && !empty($data['customer_id'])){
+            $complaint_sample->customer_id = $data['customer_id'];
+        }
         $complaint_sample->customer_register_request_id = $data['customer_register_request_id'] ?? null;
         $complaint_sample->feedback_id = ((isset($data['feedback_id']) && !empty($data['feedback_id']))?$data['feedback_id']:NULL);
         $complaint_sample->type = (isset($data['type'])?$data['type']:'');
