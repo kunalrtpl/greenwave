@@ -2025,7 +2025,8 @@ class ExecutiveController extends Controller
        if($request->isMethod('get')){
             $resp = $this->resp;
             if($resp['status'] && isset($resp['user'])){
-                $samples = ComplaintSample::getComplaintSamples('executive',$resp['user']['id']);
+                $filters = $request->all();
+                $samples = ComplaintSample::getComplaintSamples('executive',$resp['user']['id'],$filters);
                 $message = 'Complaint samples has been fetched successfully';
                 $result['samples'] = $samples;
                 return response()->json(apiSuccessResponse($message,$result),200);

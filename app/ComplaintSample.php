@@ -71,16 +71,41 @@ class ComplaintSample extends Model
         return $courier_document_url;
     }
 
-    public static function getComplaintSamples($type,$id){
-        $samples = ComplaintSample::with(['customer','customer_register_request','productinfo','feedback','histories']);
-        if($type == "executive"){
-            $samples = $samples->where('user_id',$id);
-        }else if($type == "dealer"){
-            $samples = $samples->where('dealer_id',$id);
+    public static function getComplaintSamples($type, $id, $filters = null)
+    {
+        $samples = ComplaintSample::with([
+            'customer',
+            'customer_register_request',
+            'productinfo',
+            'feedback',
+            'histories'
+        ]);
+
+        // Role-based filtering
+        if ($type === 'executive') {
+            $samples->where('user_id', $id);
+        } elseif ($type === 'dealer') {
+            $samples->where('dealer_id', $id);
         }
-        $samples = $samples->get();
-        return $samples;
+
+        // Optional filters
+        if (!empty($filters)) {
+
+            if (!empty($filters['customer_id'])) {
+                $samples->where('customer_id', $filters['customer_id']);
+            }
+
+            if (!empty($filters['customer_register_request_id'])) {
+                $samples->where(
+                    'customer_register_request_id',
+                    $filters['customer_register_request_id']
+                );
+            }
+        }
+
+        return $samples->get();
     }
+
 
 
     public static function createComplaintSample($request){
