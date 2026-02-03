@@ -856,6 +856,9 @@ class ExecutiveController extends Controller
                 if(isset($data['customer_id']) && !empty($data['customer_id'])){
                     $feedbacks = $feedbacks->where('customer_id',$data['customer_id']);
                 }
+                if(isset($data['customer_register_request_id']) && !empty($data['customer_register_request_id'])){
+                    $feedbacks = $feedbacks->where('customer_register_request_id',$data['customer_register_request_id']);
+                }
                 $feedbacks = $feedbacks->orderby('id','DESC')->get();
                 $message = 'Record has ben fetched successfully';
                 $result['feedbacks'] = $feedbacks;
@@ -1748,17 +1751,51 @@ class ExecutiveController extends Controller
         }
     }
 
-    public function sampleSubmissionList(Request $request ){
-        if($request->isMethod('get')){
+    public function sampleSubmissionList(Request $request)
+    {
+        if ($request->isMethod('get')) {
+
             $resp = $this->resp;
-            if($resp['status'] && isset($resp['user'])){
-                $list = SampleSubmission::with(['customer','customer_register_request','product','complaint_info'])->where('user_id',$resp['user']['id'])->get();
+
+            if ($resp['status'] && isset($resp['user'])) {
+
+                $query = SampleSubmission::with([
+                    'customer',
+                    'customer_register_request',
+                    'product',
+                    'complaint_info'
+                ])
+                ->where('user_id', $resp['user']['id']);
+
+                // Optional filters
+                if ($request->filled('customer_id')) {
+                    $query->where('customer_id', $request->customer_id);
+                }
+
+                if ($request->filled('customer_register_request_id')) {
+                    $query->where(
+                        'customer_register_request_id',
+                        $request->customer_register_request_id
+                    );
+                }
+
+                if ($request->filled('complaint_id')) {
+                    $query->where('complaint_id', $request->complaint_id);
+                }
+
+                $list = $query->get();
+
                 $result['sample_submissions'] = $list;
                 $message = 'Data has been fetched successfully';
-                return response()->json(apiSuccessResponse($message,$result),200);
+
+                return response()->json(
+                    apiSuccessResponse($message, $result),
+                    200
+                );
             }
         }
     }
+
 
     public function sampleSubmission(Request $request){
         if($request->isMethod('post')){
@@ -1990,7 +2027,8 @@ class ExecutiveController extends Controller
        if($request->isMethod('get')){
             $resp = $this->resp;
             if($resp['status'] && isset($resp['user'])){
-                $samples = MarketSample::getMarketSamples('executive',$resp['user']['id']);
+                $filters = $request->all();
+                $samples = MarketSample::getMarketSamples('executive',$resp['user']['id'],$filters);
                 $message = 'Market sample has been fetched successfully';
                 $result['samples'] = $samples;
                 return response()->json(apiSuccessResponse($message,$result),200);
