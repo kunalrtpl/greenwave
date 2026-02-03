@@ -1844,7 +1844,12 @@ class ExecutiveController extends Controller
                     $free_sample_stock = new FreeSamplingStock;
                     $free_sample_stock->user_id = $resp['user']['id'];
                     $free_sample_stock->product_id = $data['product_id'];
-                    $free_sample_stock->customer_id = $data['customer_id'];
+                    if(isset($data['customer_id']) && !empty($data['customer_id'])){
+                        $free_sample_stock->customer_id = $data['customer_id'];
+                    }
+                    if(isset($data['customer_register_request_id']) && !empty($data['customer_register_request_id'])){
+                        $free_sample_stock->customer_register_request_id = $data['customer_register_request_id'];
+                    }
                     $free_sample_stock->user_id = $resp['user']['id'];
                     $free_sample_stock->stock_in_hand = 0 - $data['qty'];
                     $free_sample_stock->save();
