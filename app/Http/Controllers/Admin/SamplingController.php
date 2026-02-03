@@ -77,9 +77,9 @@ class SamplingController extends Controller
             foreach($querys as $sampleReq){ 
                 $actionValues='
                 <a href=' .route('sampling.download.pdf', $sampleReq['id']).' class="btn btn-sm blue">PDF</a>
-                <a target="_blank" title="View Details" class="btn btn-sm green margin-top-10" href="'.url('admin/free-sampling-detail/'.$sampleReq['id']).'"> View
+                <a style="display:none;"  target="_blank" title="View Details" class="btn btn-sm green margin-top-10" href="'.url('admin/free-sampling-detail/'.$sampleReq['id']).'"> View
                     </a>
-                <a style="display:none;" target="_blank" title="View Details" class="btn btn-sm yellow margin-top-10" href="'.url('admin/view-sampling/'.$sampleReq['id']).'"> View
+                <a target="_blank" title="View Details" class="btn btn-sm yellow margin-top-10" href="'.url('admin/view-sampling/'.$sampleReq['id']).'"> View
                     </a>';
                 $userInfo = "";
                 if(!empty($sampleReq['business_name'])){
