@@ -93,18 +93,6 @@
         </tr>
     </table>
 </div>
-<!-- CUSTOMER -->
-<div class="section">
-    <div class="section-title">Customer Details</div>
-    <table>
-        <tr><td class="label">Customer Name</td><td>: {{ $sampling->customer->name ?? '-' }}</td></tr>
-        <tr><td class="label">Contact Person</td><td>: {{ $sampling->customer->contact_person_name ?? '-' }}</td></tr>
-        <tr><td class="label">Mobile</td><td>: {{ $sampling->customer->mobile ?? '-' }}</td></tr>
-        <tr><td class="label">Address</td><td>: {{ $sampling->customer->address ?? '-' }}</td></tr>
-        <tr><td class="label">Business Model</td><td>: {{ $sampling->customer->business_model ?? '-' }}</td></tr>
-    </table>
-</div>
-
 <!-- EXECUTIVE -->
 <div class="section">
     <div class="section-title">Executive Details</div>
@@ -115,6 +103,39 @@
     </table>
 </div>
 
+<!-- CUSTOMER -->
+<div class="section">
+    <div class="section-title">Customer Details</div>
+
+    @if($sampling->customer)
+        <table>
+            <tr>
+                <td class="label">Customer Name</td>
+                <td>: {{ $sampling->customer->name }}</td>
+            </tr>
+            <tr>
+                <td class="label">Contact Person</td>
+                <td>: {{ $sampling->customer->contact_person_name }}</td>
+            </tr>
+            <tr>
+                <td class="label">Mobile</td>
+                <td>: {{ $sampling->customer->mobile }}</td>
+            </tr>
+            <tr>
+                <td class="label">Address</td>
+                <td>: {{ $sampling->customer->address }}</td>
+            </tr>
+            <tr>
+                <td class="label">Business Model</td>
+                <td>: {{ $sampling->customer->business_model }}</td>
+            </tr>
+        </table>
+    @else
+        <div class="alert alert-warning" style="margin:0;">
+            <strong>Note:</strong> Customer not added in request.
+        </div>
+    @endif
+</div>
 <!-- PURPOSE -->
 <div class="section">
     <div class="section-title">Purpose</div>
@@ -139,32 +160,34 @@
     <div class="section-title">Product Details</div>
 
     @foreach($sampling->sampleitems as $key => $item)
-        <div class="product-card">
-            <div class="product-title">Product {{ $key + 1 }}</div>
+        @if($item->requested_from == "user")
+            <div class="product-card">
+                <div class="product-title">Product {{ $key + 1 }}</div>
 
-            <table>
-                <tr>
-                    <td class="label">Product Name</td>
-                    <td>: {{ $item->requested_product->product_name ?? '-' }}</td>
-                </tr>
-                <tr>
-                    <td class="label">Pack Size</td>
-                    <td>: {{ $item->pack_size }}</td>
-                </tr>
-                <tr>
-                    <td class="label">No. of Packs</td>
-                    <td>: {{ $item->no_of_packs }}</td>
-                </tr>
-                <tr>
-                    <td class="label">Required Qty</td>
-                    <td>: {{ $item->qty }} kg</td>
-                </tr>
-                <tr>
-                    <td class="label">Remarks</td>
-                    <td>: {{ $item->remarks ?? '--' }}</td>
-                </tr>
-            </table>
-        </div>
+                <table>
+                    <tr>
+                        <td class="label">Product Name</td>
+                        <td>: {{ $item->requested_product->product_name ?? '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Pack Size</td>
+                        <td>: {{ $item->pack_size }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">No. of Packs</td>
+                        <td>: {{ $item->no_of_packs }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Required Qty</td>
+                        <td>: {{ $item->qty }} kg</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Remarks</td>
+                        <td>: {{ $item->remarks ?? '--' }}</td>
+                    </tr>
+                </table>
+            </div>
+        @endif
     @endforeach
 </div>
 

@@ -37,17 +37,12 @@
                             <table class="table table-striped table-bordered table-hover" id="datatable_ajax">
                                 <thead>
                                     <tr role="row" class="heading">
-                                        <th width="10%">
-                                            Free/ Paid
-                                        </th>
+                                        
                                         <th width="15%">
                                             Ref No.<br>(Date)
                                         </th>
-                                        <th width="10%">
-                                            Type
-                                        </th>
                                         <th>
-                                            Dealer/ Executive
+                                            Executive
                                         </th>
                                         <th>
                                             Product <br> (Product Code)
@@ -63,20 +58,10 @@
                                         </th>
                                     </tr>
                                     <tr role="row" class="filter">
-                                        <td></td>
                                         <td>
                                             <input placeholder="Ref No." type="text" class="form-control form-filter input-sm" name="ref_no">
                                         </td>
                                         <td>
-                                            <select class="form-control form-filter input-sm" name="user_type">
-                                                <option value="">All</option>
-                                                <option value="Dealer">Dealer</option>
-                                                <option value="Executive">Executive</option>
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <input type="text" class="form-control form-filter input-sm" name="dealer_info" placeholder="Search By Dealer">
-                                            <br>
                                             <input type="text" class="form-control form-filter input-sm" name="executive_info" placeholder="Search By Executive">
                                         </td>
                                         <td>
@@ -84,6 +69,8 @@
                                             <br>
                                             <select class="form-control form-filter input-sm" name="urgent">
                                                 <option value="">All</option>
+                                                <option value="On Hold">On Hold</option>
+                                                <option value="Cancel">Cancel</option>
                                                 <option value="Urgent">Urgent</option>
                                             </select>
                                         </td>

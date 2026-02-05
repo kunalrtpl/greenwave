@@ -374,6 +374,8 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 
 		Route::post('sampling/add-item','SamplingController@addSamplingItem')->name('admin.sampling.addItem');
 
+		Route::post('sampling/delete-item','SamplingController@deleteSamplingItem')->name('admin.sampling.deleteItem');
+
 		Route::match(['get', 'post'], '/paid-sampling-detail/{id}', 'SamplingController@paidSamplingDetail');
 		Route::match(['get', 'post'], '/mark-urgent-sample-item', 'SamplingController@markUrgentSampleItem');
 		Route::match(['get', 'post'], '/update-sampling-status', 'SamplingController@updateSamplingStatus');
@@ -381,7 +383,7 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 
 		Route::match(['get', 'post'], '/sampling-dispatch-planning', 'SamplingController@samplingDispatchPlanning');
 		Route::match(['get', 'post'], '/update-pro-sample-dispatch-qty', 'SamplingController@updateProSampleDispatchQty');
-		Route::match(['get', 'post'], '/sample-finalize-do/{type}', 'SamplingController@sampleFinalizeDo');
+		Route::match(['get', 'post'], '/sample-finalize-do', 'SamplingController@sampleFinalizeDo');
 		Route::match(['get', 'post'], '/undo-sampling-finalize-do/{saleinvoiceid}/{poitemid}', 'SamplingController@undoSampleFinalizeDO');
 		Route::match(['get', 'post'], '/sampling-generate-do-numbers', 'SamplingController@samplingGenerateDoNumbers');
 		Route::match(['get', 'post'], '/sample-do-ready', 'SamplingController@sampleDoReady');

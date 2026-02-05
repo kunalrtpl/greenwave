@@ -21,7 +21,7 @@ class SamplingSaleInvoice extends Model
 
     
     public static function getinvoices($user,$required_through){
-    	$sale_invoices = SamplingSaleInvoice::join('samplings','samplings.id','=','sampling_sale_invoices.sampling_id')->join('products','products.id','=','sampling_sale_invoices.product_id')->join('sampling_items','sampling_items.id','=','sampling_sale_invoices.sampling_item_id')->where('sampling_sale_invoices.do_number','')->where('sampling_sale_invoices.invoice_no','')->where('samplings.required_through',$required_through)->select('sampling_sale_invoices.id as sale_invoice_id','sampling_sale_invoices.sampling_item_id','products.product_name','products.product_code','sampling_items.actual_pack_size','sampling_sale_invoices.qty');
+    	$sale_invoices = SamplingSaleInvoice::join('samplings','samplings.id','=','sampling_sale_invoices.sampling_id')->join('products','products.id','=','sampling_sale_invoices.product_id')->join('sampling_items','sampling_items.id','=','sampling_sale_invoices.sampling_item_id')->where('sampling_sale_invoices.do_number','')->where('sampling_sale_invoices.invoice_no','')->where('sampling_items.required_through',$required_through)->select('sampling_sale_invoices.id as sale_invoice_id','sampling_sale_invoices.sampling_item_id','products.product_name','products.product_code','sampling_items.actual_pack_size','sampling_sale_invoices.qty');
     	if(isset($user['dealer_id'])){
     		$sale_invoices = $sale_invoices->where('sampling_sale_invoices.dealer_id',$user['dealer_id']);
     	}

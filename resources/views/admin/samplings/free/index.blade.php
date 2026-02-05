@@ -28,7 +28,7 @@
                 <div class="portlet light">
                     <div class="portlet-title">
                         <div class="caption">
-                            <span class="caption-subject font-green-sharp bold uppercase">Free Samples</span>
+                            <span class="caption-subject font-green-sharp bold uppercase">Sample Requests</span>
                             <span class="caption-helper">manage records...</span>
                         </div>
                     </div>
@@ -64,8 +64,12 @@
                                         <td>
                                             <input type="text" class="form-control form-filter input-sm" name="employee_info" placeholder="Search By Executive">
                                         </td>
-                                        <td></td>
-                                        <td></td>
+                                        <td>
+                                            <input type="text" class="form-control form-filter input-sm" name="customer_info" placeholder="Search By Customer">
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control form-filter input-sm" name="product_name" placeholder="Search By Product Name">
+                                        </td>
                                         <td></td>
                                         <td>
                                             <div class="form-group">

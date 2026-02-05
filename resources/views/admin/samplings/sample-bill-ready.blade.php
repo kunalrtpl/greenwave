@@ -1,9 +1,9 @@
 @extends('layouts.adminLayout.backendLayout')
 @section('content')
 <style>
-.table-scrollable table tbody tr td{
+    .table-scrollable table tbody tr td{
     vertical-align: middle;
-}
+    }
 </style>
 <div class="page-content-wrapper">
     <div class="page-content">
@@ -12,120 +12,101 @@
                 <h1>Samplings Management</h1>
             </div>
         </div>
-        <ul class="page-breadcrumb breadcrumb">
-            <li>
-                <a href="{{url('admin/dashboard')}}">Dashboard</a>
-            </li>
-        </ul>
-         @if(Session::has('flash_message_error'))
-            <div role="alert" class="alert alert-danger alert-dismissible fade in"> <button aria-label="Close" data-dismiss="alert" style="text-indent: 0;" class="close" type="button"><span aria-hidden="true"></span></button> <strong>Error!</strong> {!! session('flash_message_error') !!} </div>
-        @endif
-        @if(Session::has('flash_message_success'))
-            <div role="alert" class="alert alert-success alert-dismissible fade in"> <button aria-label="Close" data-dismiss="alert" style="text-indent: 0;" class="close" type="button"></button> <strong>Success!</strong> {!! session('flash_message_success') !!} </div>
-        @endif
-        @if(isset($_GET['s']))
-            <div role="alert" class="alert alert-success alert-dismissible fade in"> <button aria-label="Close" data-dismiss="alert" style="text-indent: 0;" class="close" type="button"><span aria-hidden="true"></span></button> <strong>Success!</strong> Record has been updated Sucessfully. </div>
-        @endif
-        <div class="row">
-            <div class="col-md-12">
-                <div class="portlet light">
-                    <div class="portlet-title">
-                        <div class="caption">
-                            <span class="caption-subject font-green-sharp bold uppercase">Sample Bill Ready Dispatched Required</span>
-                            <span class="caption-helper">manage records...</span>
-                        </div>
-                    </div>
-                    <div class="portlet-body">
-                        <div class="table-container">
-                            <table class="table table-striped table-bordered table-hover">
-                                <thead>
-                                    <tr role="row" class="heading">
-                                        <th width="15%">
-                                            Invoice No.<br>(Date)
-                                        </th>
-                                        <th width="15%">
-                                            Dealer/Executive
-                                        </th>
-                                        <th width="10%">
-                                            Free/ Paid
-                                        </th>
-                                        <th width="50%">Products</th>
-                                        <th width="10%">Transport/ Courier</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                @foreach($users as $user)
-                    <tr>
-                        <td>{{$user['invoice_no']}} <br><small>({{date('d M Y',strtotime($user['sale_invoice_date']))}})</small></td>
-                        <td>
-                            {{$user['name']}}
-                        </td>
-                        <td>{{ucwords($user['sample_type'])}}</td>
-                        <td>
-<?php  $do_invoices = \App\SamplingSaleInvoice::billinvoices($user['invoice_no']); ?>
-    <table class="table table-bordered table-striped">
-        <tr>
-            <th width="40%">Product Name</th>
-            <th width="40%">Qty</th>
-            <th width="20%">Actions</th>
-        </tr>
-        <?php $totalQty =0; ?>
-        @foreach($do_invoices['sale_invoices'] as $key=> $doinvoice)
-            <?php $totalQty += $doinvoice['qty'] ?>
-            <tr>
-                <td>{{$doinvoice['product_name']}}</td>
-                <td>{{$doinvoice['qty']}}kg</td>
-                @if($key==0) 
-                    <td rowspan="{{count($do_invoices['sale_invoices'])}}">
-                        <a data-dealer_id="{{$user['dealer_id']}}" data-user_id="{{$user['user_id']}}" data-saleinvoiceids="{{$do_invoices['sale_invoice_ids']}}" href="javascript:;" class="btn btn-sm btn-primary green DoBulkUpdate">Update</a>
-                    </td>
-                @endif
-            </tr>
-        @endforeach 
-            <tr>
-                <th>Total</th>
-                <th>{{$totalQty}}kg</th>
-                <th></th>
-            </tr>
-    </table>
-                        </td>
-                        <td>{{ucwords($user['required_through'])}}</td>
-                    </tr>
-                @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+        <div class="portlet light">
+            <div class="portlet-title">
+                <div class="caption">
+                    <span class="caption-subject font-green-sharp bold uppercase">
+                    Sample Bill Ready Dispatched Required
+                    </span>
+                </div>
+            </div>
+            <div class="portlet-body">
+                <div class="table-container">
+                    <table class="table table-striped table-bordered table-hover">
+                        <thead>
+                            <tr>
+                                <th width="15%">Invoice No.<br>(Date)</th>
+                                <th width="15%">Executive</th>
+                                <th width="50%">Products</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($invoices as $invoice)
+                            <tr>
+                                <td>
+                                    {{ $invoice['invoice_no'] }}
+                                    <br>
+                                    <small>({{ date('d M Y', strtotime($invoice['sale_invoice_date'])) }})</small>
+                                </td>
+                                <td>{{ $invoice['name'] }}</td>
+                                <td>
+                                    <table class="table table-bordered table-striped">
+                                        <tr>
+                                            <th>Product Name</th>
+                                            <th>Qty</th>
+                                            <th>Required Through</th>
+                                            <th>Action</th>
+                                        </tr>
+                                        @php $totalQty = 0; @endphp
+                                        @foreach($invoice['items']['sale_invoices'] as $key => $row)
+                                        @php $totalQty += $row['qty']; @endphp
+                                        <tr>
+                                            <td>{{ $row['product_name'] }}</td>
+                                            <td>{{ $row['qty'] }} kg</td>
+                                            <td>{{ ucwords($row['required_through']) }}</td>
+                                            @if($key == 0)
+                                            <td rowspan="{{ count($invoice['items']['sale_invoices']) }}">
+                                                <a href="javascript:;"
+                                                    class="btn btn-sm btn-primary green DoBulkUpdate"
+                                                    data-saleinvoiceids="{{ $invoice['items']['sale_invoice_ids'] }}"
+                                                    data-user_id="{{ $invoice['user_id'] }}">
+                                                Update
+                                                </a>
+                                            </td>
+                                            @endif
+                                        </tr>
+                                        @endforeach
+                                        <tr>
+                                            <th>Total</th>
+                                            <th>{{ $totalQty }} kg</th>
+                                            <th></th>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
 </div>
-<div class="modal fade" id="BulkUpdateLrNosaleInvoiceModal" tabindex="-1" role="dialog" aria-labelledby="BulkUpdateLrNosaleInvoiceModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
+<div class="modal fade" id="BulkUpdateLrNosaleInvoiceModal">
+    <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
                 </button>
-                <h5 class="modal-title" id="BulkUpdateLrNosaleInvoiceModalLabel">Sale Invoice</h5>
+                <h5 class="modal-title" id="BulkUpdateLrNosaleInvoiceModalLabel">Update Dispatch Details</h5>
             </div>
-            <form action="{{url('/admin/update-bulk-sample-lr-sale-invoice')}}" method="post" autocomplete="off">@csrf
-                <input type="hidden" name="sale_invoice_ids" value="">
-                <input type="hidden" name="dealer_id" value="">
-                <input type="hidden" name="user_id" value="">
+            <form action="{{ url('/admin/update-bulk-sample-lr-sale-invoice') }}" method="post">
+                @csrf
+                <input type="hidden" name="sale_invoice_ids">
+                <input type="hidden" name="user_id">
                 <div class="modal-body">
                     <div class="form-group">
                         <label for="invoice-number" class="col-form-label">Transport/ Courier Name:</label>
                         <input type="text" name="transport_name" placeholder="Enter Transport Name" class="form-control" id="invoice-number" required>
                     </div>
                     <div class="form-group">
-                        <label for="sale-date" class="col-form-label">Dispatch Date:</label>
-                        <input type="date" name="dispatch_date" class="form-control" id="sale-date" required>
+                        <label>Dispatch Date</label>
+                        <input type="date" name="dispatch_date" class="form-control" required>
                     </div>
                     <div class="form-group">
-                        <label for="invoice-number" class="col-form-label">LR Number:</label>
-                        <input type="text" name="lr_no" placeholder="Enter LR Number" class="form-control" id="invoice-number" required>
+                        <label>LR Number</label>
+                        <input type="text" name="lr_no" class="form-control" required placeholder="Enter LR Number">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -135,15 +116,11 @@
         </div>
     </div>
 </div>
-<script type="text/javascript">
+<script>
     $(document).on('click','.DoBulkUpdate',function(){
-        var saleinvoiceids = $(this).data('saleinvoiceids');
-        $('[name=sale_invoice_ids]').val(saleinvoiceids);
+        $('[name=sale_invoice_ids]').val($(this).data('saleinvoiceids'));
         $('[name=user_id]').val($(this).data('user_id'));
-        $('[name=dealer_id]').val($(this).data('dealer_id'));
         $('#BulkUpdateLrNosaleInvoiceModal').modal('show');
-    })
+    });
 </script>
 @stop
-
-

@@ -22,152 +22,178 @@ use Carbon\Carbon;
 class SamplingController extends Controller
 {
     //
-    public function freeSampling(Request $Request){
-        Session::put('active','freeSampling'); 
-        if($Request->ajax()){
-            $conditions = array();
-            $data = $Request->input();
-            $querys = Sampling::with('sampleitems')->leftjoin('dealers','dealers.id','=','samplings.dealer_id')->where('sample_type','free')->leftjoin('users','users.id','=','samplings.user_id')->leftjoin('customers','customers.id','=','samplings.customer_id')->select('samplings.*','dealers.business_name','dealers.owner_mobile as dealer_mobile','dealers.email as dealer_email','users.name as executive_name','users.email as executive_email','customers.name as customer_name');
-            if(!empty($data['id'])){
-                $querys = $querys->where('samplings.sample_ref_no_string',$data['sample_ref_no_string']);
+    public function freeSampling(Request $request)
+    {
+        Session::put('active', 'freeSampling');
+
+        if ($request->ajax()) {
+
+            $data = $request->input();
+
+            /* ================= BASE QUERY ================= */
+            $querys = Sampling::with([
+                    'sampleitems.product',
+                    'sampleitems.sale_invoice_items'
+                ])
+                ->leftJoin('sampling_items', 'sampling_items.sampling_id', '=', 'samplings.id')
+                ->leftJoin('products', 'products.id', '=', 'sampling_items.product_id')
+                ->leftJoin('users', 'users.id', '=', 'samplings.user_id')
+                ->leftJoin('customers', 'customers.id', '=', 'samplings.customer_id')
+                ->where('samplings.sample_type', 'free')
+                ->select(
+                    'samplings.*',
+                    'users.name as executive_name',
+                    'users.email as executive_email',
+                    'customers.name as customer_name'
+                )
+                ->groupBy('samplings.id');
+
+            /* ================= FILTERS ================= */
+
+            // Sample Ref No
+            if (!empty($data['sample_ref_no_string'])) {
+                $querys->where('samplings.sample_ref_no_string', $data['sample_ref_no_string']);
             }
-            if(!empty($data['status'])){
-                if($data['status'] == "completed"){
-                    $querys = $querys->wherein('samplings.sample_status',['executed','completed']);
-                }else{
-                    $querys = $querys->where('samplings.sample_status',$data['status']);
+
+            // Status
+            if (!empty($data['status'])) {
+                if ($data['status'] == "completed") {
+                    $querys->whereIn('samplings.sample_status', ['executed', 'completed']);
+                } else {
+                    $querys->where('samplings.sample_status', $data['status']);
                 }
-            }else{
-                /*$data['status'] = "pending";
-                $querys = $querys->where('samplings.sample_status',$data['status']); */
             }
-            if(!empty($data['user_type'])){
-                $querys = $querys->where('samplings.action','like', '%' .$data['user_type']. '%');
+
+            // User Type
+            if (!empty($data['user_type'])) {
+                $querys->where('samplings.action', 'like', '%' . $data['user_type'] . '%');
             }
-            if(!empty($data['dealer_info'])){
-                $keyword = $data['dealer_info'];
-                $querys = $querys->where(function ($query) use($keyword) {
-                    $query->where('dealers.business_name', 'like', '%' . $keyword . '%')
-                       ->orWhere('dealers.owner_mobile', 'like', '%' . $keyword . '%')
-                       ->orWhere('dealers.email', 'like', '%' . $keyword . '%');
-                  });
+
+            // ✅ CUSTOMER SEARCH
+            if (!empty($data['customer_info'])) {
+                $keyword = $data['customer_info'];
+                $querys->where('customers.name', 'like', '%' . $keyword . '%');
             }
-            if(!empty($data['employee_info'])){
-                $keyword = $data['employee_info'];
-                $querys = $querys->where(function ($query) use($keyword) {
-                    $query->where('users.name', 'like', '%' . $keyword . '%')
-                       ->orWhere('users.email', 'like', '%' . $keyword . '%');
-                  });
+
+            // ✅ PRODUCT NAME SEARCH (MAIN REQUIREMENT)
+            if (!empty($data['product_name'])) {
+                $keyword = $data['product_name'];
+                $querys->where('products.product_name', 'like', '%' . $keyword . '%');
             }
-            $iDisplayLength = intval($_REQUEST['length']);
-            $iDisplayStart = intval($_REQUEST['start']);
-            $iDisplayLength = $iDisplayLength < 0 ? $iTotalRecords : $iDisplayLength; 
-            $iTotalRecords = $querys->where($conditions)->count();
-            $querys =  $querys->where($conditions)
-                        ->skip($iDisplayStart)->take($iDisplayLength)
-                        ->OrderBy('samplings.id','DESC')
-                        ->get();
-            $sEcho = intval($_REQUEST['draw']);
-            $records = array();
-            $records["data"] = array(); 
-            $end = $iDisplayStart + $iDisplayLength;
-            $end = $end > $iTotalRecords ? $iTotalRecords : $end;
-            $i=$iDisplayStart;
-            $querys=json_decode( json_encode($querys), true);
-            foreach($querys as $sampleReq){ 
-                $actionValues='
-                <a href=' .route('sampling.download.pdf', $sampleReq['id']).' class="btn btn-sm blue">PDF</a>
-                <a style="display:none;"  target="_blank" title="View Details" class="btn btn-sm green margin-top-10" href="'.url('admin/free-sampling-detail/'.$sampleReq['id']).'"> View
-                    </a>
-                <a target="_blank" title="View Details" class="btn btn-sm yellow margin-top-10" href="'.url('admin/view-sampling/'.$sampleReq['id']).'"> View
-                    </a>';
-                $userInfo = "";
-                if(!empty($sampleReq['business_name'])){
-                    $userInfo = ucwords($sampleReq['business_name']);
+
+            /* ================= DATATABLES ================= */
+
+            $iDisplayLength = intval($request->input('length'));
+            $iDisplayStart  = intval($request->input('start'));
+            $sEcho          = intval($request->input('draw'));
+
+            $iTotalRecords = $querys->distinct('samplings.id')->count('samplings.id');
+
+            $results = $querys
+                ->orderBy('samplings.id', 'DESC')
+                ->skip($iDisplayStart)
+                ->take($iDisplayLength)
+                ->get();
+
+            /* ================= RESPONSE ================= */
+
+            $records = [];
+            $records["data"] = [];
+
+            foreach ($results as $sampleReq) {
+
+                /* ---------- STATUS TEXT ---------- */
+                $statusText = ucwords($sampleReq->sample_status);
+
+                if ($sampleReq->sample_status == "pending") {
+                    $statusText = "<b style='color:red;'>Pending Confirmation</b>";
+                } elseif ($sampleReq->sample_status == "approved") {
+                    $statusText = "<b>Pending Dispatch</b>";
+                } elseif (in_array($sampleReq->sample_status, ['executed', 'completed'])) {
+                    $statusText = "<b style='color:green;'>Completed</b>";
                 }
-                if(!empty($sampleReq['executive_name'])){
-                    $userInfo = ucwords($sampleReq['executive_name']);
-                }
-                if($sampleReq['sample_status'] =="pending"){
-                   $sampleReq['sample_status'] = "<b style='color:red;'>Pending Confirmation</b>";
-                }elseif($sampleReq['sample_status'] =="approved"){
-                   $sampleReq['sample_status'] = "<b>Pending Dispatch</b>"; 
-                }elseif($sampleReq['sample_status'] =="executed"){
-                    $sampleReq['sample_status'] = "<b style='color:green;'>Completed</b>"; 
-                }elseif($sampleReq['sample_status'] =="completed"){
-                    $sampleReq['sample_status'] = "<b style='color:green;'>Completed</b>";
-                    if(empty($sampleReq['saleinvoices'])){
-                        if(!empty($sampleReq['adjust_items'])){
-                           $sampleReq['sample_status'] = 'Adjusted'; 
-                        }else if(!empty($sampleReq['cancel_items'])){
-                           $sampleReq['sample_status'] = 'Cancelled'; 
-                        }
-                    }else{
-                        if(!empty($sampleReq['adjust_items'])){
-                           $sampleReq['sample_status'] .= '<br><small> Partially Adjusted</small>'; 
-                        }else if(!empty($sampleReq['cancel_items'])){
-                           $sampleReq['sample_status'] .= '<br><small>Partially Cancelled</small>'; 
-                        }
-                    }
-                }
+
+                /* ---------- PRODUCTS TABLE ---------- */
                 $products = '';
-                if($sampleReq['sampleitems']){
-                    $products =  '<table class="table table-bordered">
-                                    <tr>
-                                        <th>Product <br><small>(Pack Size)</small></th>
-                                        <th>RQ</th>
-                                        <th>AQ</th>
-                                        <th>PQ</th>
-                                    </tr>';
-                    foreach($sampleReq['sampleitems'] as $sampleitem){
-                        $item_action = "";
-                        if($sampleitem['item_action']=="On Hold"){
-                            $item_action = '<span class="badge badge-warning">'.$sampleitem['item_action'].'</span>';
-                        }else if($sampleitem['item_action']=="Cancel"){
-                            $item_action = '<span class="badge badge-dark">'.$sampleitem['item_action'].'</span>';
-                        }else if($sampleitem['item_action']=="Urgent"){
-                            $item_action = '<span class="badge badge-danger">'.$sampleitem['item_action'].'</span>';
+                if ($sampleReq->sampleitems->count()) {
+
+                    $products .= '<table class="table table-bordered">
+                        <tr>
+                            <th>Product <br><small>(Pack Size)</small></th>
+                            <th>RQ</th>
+                            <th>AQ</th>
+                            <th>PQ</th>
+                        </tr>';
+
+                    foreach ($sampleReq->sampleitems as $item) {
+
+                        $itemAction = '';
+                        if ($item->item_action == "On Hold") {
+                            $itemAction = '<span class="badge badge-warning">On Hold</span>';
+                        } elseif ($item->item_action == "Cancel") {
+                            $itemAction = '<span class="badge badge-dark">Cancel</span>';
+                        } elseif ($item->item_action == "Urgent") {
+                            $itemAction = '<span class="badge badge-danger">Urgent</span>';
                         }
-                        $sale_invoice_qty = array_sum(array_column($sampleitem['sale_invoice_items'],'qty'));
-                        if(empty($sale_invoice_qty)){
-                            $sale_invoice_qty = 0;
+
+                        $saleQty = $item->sale_invoice_items
+                            ? array_sum(array_column($item->sale_invoice_items->toArray(), 'qty'))
+                            : 0;
+
+                        $pendingQty = $item->actual_qty - $saleQty;
+                        if ($pendingQty <= 0) {
+                            $itemAction = '';
                         }
-                        $pending_qty = $sampleitem['actual_qty'] - $sale_invoice_qty;
-                        //$pending_qty = $sampleitem['actual_qty'];
-                        if($pending_qty ==0){
-                            $item_action = "";
-                        }
+
                         $products .= '<tr>
-                                        <td>'.$sampleitem['product']['product_name'].'<br><small>('.$sampleitem['actual_pack_size'].'kg Packing)</small>'.$item_action.'</td>
-                                        <td>'.$sampleitem['qty'].'kg</td>
-                                        <td>'.$sampleitem['actual_qty'].'kg</td>
-                                        <td>'.$pending_qty.'kg</td>
-                                    </tr>';
+                            <td>'.$item->product->product_name.'
+                                <br><small>('.$item->actual_pack_size.' kg)</small>
+                                '.$itemAction.'
+                            </td>
+                            <td>'.$item->qty.' kg</td>
+                            <td>'.$item->actual_qty.' kg</td>
+                            <td>'.$pendingQty.' kg</td>
+                        </tr>';
                     }
-                    $products .='</table>';
+
+                    $products .= '</table>';
                 }
-                if($sampleReq['action'] =="user"){
-                    $sampleReq['action'] = "executive";
-                }
-                $records["data"][] = array( 
-                	$sampleReq['sample_ref_no_string'].'<br><small>('.
-                    date('d M Y',strtotime($sampleReq['created_at'])).')</small>',
-                    $userInfo,
-                    $sampleReq['customer_name'],
+
+                /* ---------- ACTION BUTTONS ---------- */
+                $actionValues = '
+                    <a href="'.route('sampling.download.pdf', $sampleReq->id).'" class="btn btn-sm blue">PDF</a>
+                    <a target="_blank" class="btn btn-sm green margin-top-10"
+                       href="'.url('admin/free-sampling-detail/'.$sampleReq->id).'">View</a>
+                    <a target="_blank" class="btn btn-sm yellow margin-top-10"
+                       href="'.url('admin/view-sampling/'.$sampleReq->id).'">View</a>
+                ';
+
+                /* ---------- ROW ---------- */
+                $records["data"][] = [
+                    $sampleReq->sample_ref_no_string.'<br><small>('.
+                    date('d M Y', strtotime($sampleReq->created_at)).')</small>',
+                    ucwords($sampleReq->executive_name),
+                    ucwords($sampleReq->customer_name),
                     $products,
-                    $sampleReq['remarks'],
-                    ucwords($sampleReq['sample_status']),
+                    $sampleReq->remarks,
+                    $statusText,
                     $actionValues
-                );
+                ];
             }
+
             $records["draw"] = $sEcho;
             $records["recordsTotal"] = $iTotalRecords;
             $records["recordsFiltered"] = $iTotalRecords;
+
             return response()->json($records);
         }
-        $title = "Free Sample Requests";
-        return View::make('admin.samplings.free.index')->with(compact('title'));
+
+        $title = "Sample Requests";
+        return view('admin.samplings.free.index', compact('title'));
     }
+
+
+    
 
     public function viewSampling($id)
     {
@@ -312,7 +338,7 @@ class SamplingController extends Controller
                     $products .='</table>';
                 }
                 $records["data"][] = array( 
-                	$sampleReq['sample_ref_no_string'].'<br><small>('.
+                    $sampleReq['sample_ref_no_string'].'<br><small>('.
                     date('d M Y',strtotime($sampleReq['created_at'])).')</small>',
                     $userInfo,
                     $sampleReq['request_type'],
@@ -615,6 +641,7 @@ class SamplingController extends Controller
                 'qty'           => $request->pack_size * $request->no_of_packs,
                 'actual_qty'           => $request->pack_size * $request->no_of_packs,
                 'dispatched_qty'=> 0,
+                'requested_from' => 'admin'
             ]);
 
             DB::commit();
@@ -637,13 +664,58 @@ class SamplingController extends Controller
         }
     }
 
+    public function deleteSamplingItem(Request $request)
+    {
+        $request->validate([
+            'item_id' => 'required|exists:sampling_items,id',
+        ]);
+
+        $item = SamplingItem::findOrFail($request->item_id);
+        $sampling = Sampling::findOrFail($item->sampling_id);
+
+        // Block delete if already approved
+        if ($sampling->sample_edited === 'yes') {
+            return redirect()->back()
+                ->with('flash_message_error', 'Approved samples cannot be modified.');
+        }
+
+        // Allow delete ONLY if added by admin
+        if ($item->requested_from !== 'admin') {
+            return redirect()->back()
+                ->with('flash_message_error', 'You cannot delete this item.');
+        }
+
+        DB::beginTransaction();
+        try {
+
+            $item->delete();
+
+            DB::commit();
+
+            return redirect()->back()
+                ->with('flash_message_success', 'Product deleted successfully');
+
+        } catch (\Exception $e) {
+
+            DB::rollBack();
+
+            \Log::error('Delete Sampling Item Failed', [
+                'msg' => $e->getMessage(),
+            ]);
+
+            return redirect()->back()
+                ->with('flash_message_error', 'Unable to delete product');
+        }
+    }
+
+
 
      public function samplingDispatchPlanning(Request $Request){
         Session::put('active','samplingDispatchPlanning'); 
         if($Request->ajax()){
             $conditions = array();
             $data = $Request->input();
-            $querys = SamplingItem::with('sampling')->join('products','products.id','=','sampling_items.product_id')->join('samplings','samplings.id','=','sampling_items.sampling_id')->leftjoin('dealers','dealers.id','=','samplings.dealer_id')->leftjoin('users','users.id','=','samplings.user_id')->leftjoin('customers','customers.id','=','samplings.customer_id')->select('samplings.id','sampling_items.id as order_item_id','samplings.created_at','samplings.dealer_id','dealers.business_name','samplings.sample_type','samplings.required_through','sampling_items.sampling_id','sampling_items.product_id','sampling_items.actual_qty','sampling_items.dispatched_qty','dealers.owner_mobile as dealer_mobile','dealers.email as dealer_email','products.product_name','products.product_code','sampling_items.is_urgent','sampling_items.item_action','customers.name as customer_name','users.name as executive_name','users.mobile as executive_mobile','sampling_items.actual_pack_size')->where('samplings.sample_status','approved')->whereColumn('sampling_items.actual_qty','!=','sampling_items.dispatched_qty');
+            $querys = SamplingItem::with('sampling')->join('products','products.id','=','sampling_items.product_id')->join('samplings','samplings.id','=','sampling_items.sampling_id')->leftjoin('dealers','dealers.id','=','samplings.dealer_id')->leftjoin('users','users.id','=','samplings.user_id')->leftjoin('customers','customers.id','=','samplings.customer_id')->select('samplings.id','sampling_items.id as order_item_id','samplings.created_at','samplings.dealer_id','dealers.business_name','samplings.sample_type','sampling_items.required_through','sampling_items.sampling_id','sampling_items.product_id','sampling_items.actual_qty','sampling_items.dispatched_qty','dealers.owner_mobile as dealer_mobile','dealers.email as dealer_email','products.product_name','products.product_code','sampling_items.is_urgent','sampling_items.item_action','customers.name as customer_name','users.name as executive_name','users.mobile as executive_mobile','sampling_items.actual_pack_size')->where('samplings.sample_status','approved')->whereColumn('sampling_items.actual_qty','!=','sampling_items.dispatched_qty');
             if(!empty($data['dealer_info'])){
                 $keyword = $data['dealer_info'];
                 $querys = $querys->where(function ($query) use($keyword) {
@@ -672,7 +744,7 @@ class SamplingController extends Controller
                 $querys = $querys->where('samplings.sample_ref_no_string',$data['po_no']);
             }
             if(!empty($data['urgent'])){
-                $querys = $querys->where('sampling_items.item_action','Urgent');
+                $querys = $querys->where('sampling_items.item_action',$data['urgent']);
             }
             if(!empty($data['date'])){
                 $querys = $querys->whereDate('sampling_items.created_at',$data['date']);
@@ -720,10 +792,8 @@ class SamplingController extends Controller
                     $type = "Dealer";
                 }
                 $records["data"][] = array(
-                    ucwords($poInfo['sample_type']),
                     $poInfo['sampling']['sample_ref_no_string'].'<br><small>'.
-                    date('d M Y',strtotime($poInfo['created_at'])).'<small>',  
-                    $type,  
+                    date('d M Y',strtotime($poInfo['created_at'])).'<small>', 
                     $userInfo,
                     $poInfo['product_name'].'<br><small>('.$poInfo['product_code'].')</small>'.$item_action,
                     $poInfo['actual_qty'] - $poInfo['dispatched_qty'].'kg <br><small>('.$poInfo['actual_pack_size'].'kg Packing)</small>',
@@ -798,16 +868,85 @@ class SamplingController extends Controller
         }
     }
 
-    public function sampleFinalizeDo($type){
-        Session::put('active','sampleFinalizeDo'); 
+    public function sampleFinalizeDo()
+    {
+        Session::put('active', 'sampleFinalizeDo');
+
         $title = "Finalize D.O.";
-        $dealers = SamplingSaleInvoice::join('samplings','samplings.id','=','sampling_sale_invoices.sampling_id')->join('dealers','dealers.id','=','sampling_sale_invoices.dealer_id')->where('sampling_sale_invoices.do_number','')->where('sampling_sale_invoices.invoice_no','')->where('samplings.sample_type',$type)->whereNull('sampling_sale_invoices.user_id')->groupby('sampling_sale_invoices.dealer_id')->select('sampling_sale_invoices.dealer_id','dealers.business_name as name')->get()->toArray();
-        $executives = SamplingSaleInvoice::join('samplings','samplings.id','=','sampling_sale_invoices.sampling_id')->join('users','users.id','=','sampling_sale_invoices.user_id')->where('sampling_sale_invoices.do_number','')->where('sampling_sale_invoices.invoice_no','')->whereNull('sampling_sale_invoices.dealer_id')->where('samplings.sample_type',$type)->groupby('sampling_sale_invoices.user_id')->select('sampling_sale_invoices.user_id','users.name as name')->get()->toArray();
-        $users = array_merge($dealers,$executives);
-        $keys = array_column($users, 'name');
-        array_multisort($keys, SORT_ASC, $users);
-        //echo "<pre>"; print_r($users); die;
-        return view('admin.samplings.finalize-do')->with(compact('title','users','type'));
+        $type  = 'free';
+
+        $requiredThroughs = ['courier', 'transport'];
+
+        /* -----------------------------
+         | 1. Get Executives
+         |-----------------------------*/
+        $users = SamplingSaleInvoice::join('samplings','samplings.id','=','sampling_sale_invoices.sampling_id')
+            ->join('users','users.id','=','sampling_sale_invoices.user_id')
+            ->where('samplings.sample_type','free')
+            ->where('sampling_sale_invoices.do_number','')
+            ->where('sampling_sale_invoices.invoice_no','')
+            ->whereNotNull('sampling_sale_invoices.user_id')
+            ->groupBy('sampling_sale_invoices.user_id')
+            ->select('sampling_sale_invoices.user_id','users.name')
+            ->orderBy('users.name')
+            ->get()
+            ->toArray();
+
+        $userIds = array_column($users, 'user_id');
+
+        /* -----------------------------
+         | 2. Get ALL invoices at once
+         |-----------------------------*/
+        $allInvoices = SamplingSaleInvoice::join('samplings','samplings.id','=','sampling_sale_invoices.sampling_id')
+            ->join('products','products.id','=','sampling_sale_invoices.product_id')
+            ->join('sampling_items','sampling_items.id','=','sampling_sale_invoices.sampling_item_id')
+            ->where('samplings.sample_type','free')
+            ->where('sampling_sale_invoices.do_number','')
+            ->where('sampling_sale_invoices.invoice_no','')
+            ->whereIn('sampling_sale_invoices.user_id', $userIds)
+            ->select(
+                'sampling_sale_invoices.id as sale_invoice_id',
+                'sampling_sale_invoices.sampling_item_id',
+                'sampling_sale_invoices.user_id',
+                'sampling_items.required_through',
+                'products.product_name',
+                'products.product_code',
+                'sampling_items.actual_pack_size',
+                'sampling_items.comments',
+                'sampling_sale_invoices.qty'
+            )
+            ->get()
+            ->toArray();
+
+        /* -----------------------------
+         | 3. Index invoices (user + through)
+         |-----------------------------*/
+        $invoiceMap = [];
+
+        foreach ($allInvoices as $row) {
+            $invoiceMap[$row['user_id']][$row['required_through']][] = $row;
+        }
+
+        /* -----------------------------
+         | 4. Attach invoices to users
+         |-----------------------------*/
+        foreach ($users as &$user) {
+
+            foreach ($requiredThroughs as $required) {
+
+                $rows = $invoiceMap[$user['user_id']][$required] ?? [];
+
+                $user['invoices'][$required] = [
+                    'sale_invoices'    => $rows,
+                    'sale_invoice_ids' => implode(',', array_column($rows, 'sale_invoice_id'))
+                ];
+            }
+        }
+
+        return view(
+            'admin.samplings.finalize-do',
+            compact('title','users','type','requiredThroughs')
+        );
     }
 
     public function undoSampleFinalizeDO($saleInvoiceid,$samplingitemid){
@@ -816,7 +955,7 @@ class SamplingController extends Controller
         SamplingItem::where('id',$samplingitemid)->decrement('dispatched_qty',$SamplingSaleInvoice->qty);
         Product::where('id',$details->product_id)->increment('current_stock',$SamplingSaleInvoice->qty);
         SamplingSaleInvoice::where('id',$saleInvoiceid)->delete();
-        return redirect::to('/admin/sample-finalize-do/paid')->with('flash_message_success','Updated successfully');
+        return redirect::to('/admin/sample-finalize-do')->with('flash_message_success','Updated successfully');
     }
 
     public function samplingGenerateDoNumbers(Request $request){
@@ -840,20 +979,88 @@ class SamplingController extends Controller
             Session::flash('flash_message_success','DO number has been generated successfully');
             return response()->json([
                 'status' =>true,
-                'url'    =>  url('/admin/sample-finalize-do/'.$data['type'])
+                'url'    =>  url('/admin/sample-finalize-do/')
             ]);
         }
     }
 
-    public function sampleDoReady(){
-        Session::put('active','sampleDoReady'); 
+    public function sampleDoReady()
+    {
+        Session::put('active', 'sampleDoReady');
+
         $title = "D.O. Ready";
-        $users = SamplingSaleInvoice::join('samplings','samplings.id','=','sampling_sale_invoices.sampling_id')->leftjoin('dealers','dealers.id','=','sampling_sale_invoices.dealer_id')->leftjoin('users','users.id','=','sampling_sale_invoices.user_id')->where('sampling_sale_invoices.invoice_no','')->where('sampling_sale_invoices.do_number','!=','')->select('sampling_sale_invoices.dealer_id','sampling_sale_invoices.user_id','sampling_sale_invoices.do_ref_no','sampling_sale_invoices.do_date','samplings.required_through','samplings.sample_type','dealers.business_name as dealer_name','users.name as executive_name',DB::RAW("CONCAT(COALESCE(dealers.business_name,''),COALESCE(users.name,'')) AS name"))->groupby('sampling_sale_invoices.do_ref_no')->get()->toArray();
-        $keys = array_column($users, 'do_ref_no');
-        array_multisort($keys, SORT_ASC, $users);
-        //echo "<pre>"; print_r($users); die;
-        return view('admin.samplings.sample-do-ready')->with(compact('title','users'));
+
+        /* ---------------------------------
+         | 1. Get D.O. headers (executive only, free only)
+         |---------------------------------*/
+        $dos = SamplingSaleInvoice::join('samplings','samplings.id','=','sampling_sale_invoices.sampling_id')
+            ->join('users','users.id','=','sampling_sale_invoices.user_id')
+            ->where('samplings.sample_type','free')
+            ->where('sampling_sale_invoices.invoice_no','')
+            ->where('sampling_sale_invoices.do_number','!=','')
+            ->whereNotNull('sampling_sale_invoices.user_id')
+            ->groupBy(
+                'sampling_sale_invoices.do_ref_no'
+            )
+            ->select(
+                'sampling_sale_invoices.do_ref_no',
+                'sampling_sale_invoices.do_date',
+                'sampling_sale_invoices.user_id',
+                'users.name',
+                'samplings.required_through',
+                'samplings.sample_type'
+            )
+            ->orderBy('sampling_sale_invoices.do_ref_no')
+            ->get()
+            ->toArray();
+
+        $doNumbers = array_column($dos, 'do_ref_no');
+
+        /* ---------------------------------
+         | 2. Get ALL D.O. invoices at once
+         |---------------------------------*/
+        $allInvoices = SamplingSaleInvoice::join('products','products.id','=','sampling_sale_invoices.product_id')
+            ->join('sampling_items','sampling_items.id','=','sampling_sale_invoices.sampling_item_id')
+            ->whereIn('sampling_sale_invoices.do_ref_no', $doNumbers)
+            ->where('sampling_sale_invoices.invoice_no','')
+            ->select(
+                'sampling_sale_invoices.id as sale_invoice_id',
+                'sampling_sale_invoices.do_ref_no',
+                'products.product_name',
+                'sampling_sale_invoices.qty',
+                'sampling_items.required_through'
+            )
+            ->get()
+            ->toArray();
+
+        /* ---------------------------------
+         | 3. Group invoices by DO number
+         |---------------------------------*/
+        $invoiceMap = [];
+
+        foreach ($allInvoices as $row) {
+            $invoiceMap[$row['do_ref_no']][] = $row;
+        }
+
+        /* ---------------------------------
+         | 4. Attach invoices to DOs
+         |---------------------------------*/
+        foreach ($dos as &$do) {
+
+            $rows = $invoiceMap[$do['do_ref_no']] ?? [];
+
+            $do['invoices'] = [
+                'sale_invoices'    => $rows,
+                'sale_invoice_ids' => implode(',', array_column($rows,'sale_invoice_id'))
+            ];
+        }
+
+        return view(
+            'admin.samplings.sample-do-ready',
+            compact('title','dos')
+        );
     }
+
 
     public function updateBulkSampleSaleInvoice(Request $request){
         if($request->all()){
@@ -885,14 +1092,81 @@ class SamplingController extends Controller
     }
 
 
-    public function sampleBillReady(){
-        Session::put('active','sampleBillReady'); 
+    public function sampleBillReady()
+    {
+        Session::put('active', 'sampleBillReady');
+
         $title = "Bill Ready";
-        $users = SamplingSaleInvoice::join('samplings','samplings.id','=','sampling_sale_invoices.sampling_id')->leftjoin('dealers','dealers.id','=','sampling_sale_invoices.dealer_id')->leftjoin('users','users.id','=','sampling_sale_invoices.user_id')->where('sampling_sale_invoices.invoice_no','!=','')->where('sampling_sale_invoices.transport_name','')->select('sampling_sale_invoices.dealer_id','sampling_sale_invoices.sale_invoice_date','sampling_sale_invoices.user_id','sampling_sale_invoices.invoice_no','sampling_sale_invoices.sale_invoice_date','samplings.required_through','samplings.sample_type','dealers.business_name as dealer_name','users.name as executive_name',DB::RAW("CONCAT(COALESCE(dealers.business_name,''),COALESCE(users.name,'')) AS name"))->groupby('sampling_sale_invoices.invoice_no')->get()->toArray();
-        $keys = array_column($users, 'sale_invoice_date');
-        array_multisort($keys, SORT_ASC, $users);
-        //echo "<pre>"; print_r($users); die;
-        return view('admin.samplings.sample-bill-ready')->with(compact('title','users'));
+
+        /* ---------------------------------
+         | 1. Get Invoice headers
+         |---------------------------------*/
+        $invoices = SamplingSaleInvoice::join('samplings','samplings.id','=','sampling_sale_invoices.sampling_id')
+            ->join('users','users.id','=','sampling_sale_invoices.user_id')
+            ->where('samplings.sample_type','free')
+            ->where('sampling_sale_invoices.invoice_no','!=','')
+            ->where('sampling_sale_invoices.transport_name','')
+            ->whereNotNull('sampling_sale_invoices.user_id')
+            ->groupBy(
+                'sampling_sale_invoices.invoice_no'
+            )
+            ->select(
+                'sampling_sale_invoices.invoice_no',
+                'sampling_sale_invoices.sale_invoice_date',
+                'sampling_sale_invoices.user_id',
+                'users.name',
+                'samplings.required_through',
+                'samplings.sample_type'
+            )
+            ->orderBy('sampling_sale_invoices.sale_invoice_date')
+            ->get()
+            ->toArray();
+
+        $invoiceNumbers = array_column($invoices, 'invoice_no');
+
+        /* ---------------------------------
+         | 2. Get ALL invoice items at once
+         |---------------------------------*/
+        $allItems = SamplingSaleInvoice::join('products','products.id','=','sampling_sale_invoices.product_id')
+            ->join('sampling_items','sampling_items.id','=','sampling_sale_invoices.sampling_item_id')
+            ->whereIn('sampling_sale_invoices.invoice_no', $invoiceNumbers)
+            ->where('sampling_sale_invoices.transport_name','')
+            ->select(
+                'sampling_sale_invoices.id as sale_invoice_id',
+                'sampling_sale_invoices.invoice_no',
+                'products.product_name',
+                'sampling_sale_invoices.qty',
+                'sampling_items.required_through'
+            )
+            ->get()
+            ->toArray();
+
+        /* ---------------------------------
+         | 3. Group items by invoice no
+         |---------------------------------*/
+        $itemMap = [];
+
+        foreach ($allItems as $row) {
+            $itemMap[$row['invoice_no']][] = $row;
+        }
+
+        /* ---------------------------------
+         | 4. Attach items to invoices
+         |---------------------------------*/
+        foreach ($invoices as &$invoice) {
+
+            $rows = $itemMap[$invoice['invoice_no']] ?? [];
+
+            $invoice['items'] = [
+                'sale_invoices'    => $rows,
+                'sale_invoice_ids' => implode(',', array_column($rows,'sale_invoice_id'))
+            ];
+        }
+
+        return view(
+            'admin.samplings.sample-bill-ready',
+            compact('title','invoices')
+        );
     }
 
     public function updateBulkSampleLrSaleInvoice(Request $request){
@@ -951,7 +1225,99 @@ class SamplingController extends Controller
         }
     }
 
-    public function sampleDispatchedMaterial(Request $request){
+
+    public function sampleDispatchedMaterial(Request $request)
+    {
+        $data = $request->all();
+
+        Session::put('active','sampleDispatchedMaterial');
+        $title = "Dispatched Sample";
+
+        /* ---------------------------------
+         | 1. Base invoice query (FREE + EXECUTIVE)
+         |---------------------------------*/
+        $query = SamplingSaleInvoice::join('samplings','samplings.id','=','sampling_sale_invoices.sampling_id')
+            ->join('users','users.id','=','sampling_sale_invoices.user_id')
+            ->where('samplings.sample_type','free')
+            ->where('sampling_sale_invoices.invoice_no','!=','')
+            ->where('sampling_sale_invoices.lr_no','!=','')
+            ->whereNotNull('sampling_sale_invoices.user_id')
+            ->select(
+                'sampling_sale_invoices.invoice_no',
+                'sampling_sale_invoices.sale_invoice_date',
+                'sampling_sale_invoices.dispatch_date',
+                'sampling_sale_invoices.lr_no',
+                'sampling_sale_invoices.user_id',
+                'users.name',
+                'samplings.sample_ref_no_string',
+                'samplings.required_through',
+                'samplings.sample_type'
+            )
+            ->orderBy('sampling_sale_invoices.dispatch_date','DESC')
+            ->groupBy(
+                'sampling_sale_invoices.invoice_no'
+            );
+
+        /* ---------------------------------
+         | 2. Filters
+         |---------------------------------*/
+        if (!empty($data['name'])) {
+            $query->where('users.name','like','%'.$data['name'].'%');
+        }
+
+        if (!empty($data['product_id'])) {
+            $query->where('sampling_sale_invoices.product_id',$data['product_id']);
+        }
+
+        if (!empty($data['batch_no'])) {
+            $query->where('sampling_sale_invoices.batch_no',$data['batch_no']);
+        }
+
+        $users = $query->simplePaginate(500);
+
+        /* ---------------------------------
+         | 3. Fetch ALL dispatched items (single query)
+         |---------------------------------*/
+        $invoiceNos = collect($users->items())->pluck('invoice_no')->toArray();
+
+        $items = SamplingSaleInvoice::join('products','products.id','=','sampling_sale_invoices.product_id')
+            ->join('sampling_items','sampling_items.id','=','sampling_sale_invoices.sampling_item_id')
+            ->whereIn('sampling_sale_invoices.invoice_no', $invoiceNos)
+            ->where('sampling_sale_invoices.lr_no','!=','')
+            ->select(
+                'sampling_sale_invoices.invoice_no',
+                'products.product_name',
+                'sampling_sale_invoices.qty',
+                'sampling_sale_invoices.batch_no',
+                'sampling_sale_invoices.price',
+                'sampling_items.required_through'
+            )
+            ->get()
+            ->toArray();
+
+        /* ---------------------------------
+         | 4. Group items by invoice no
+         |---------------------------------*/
+        $itemMap = [];
+        foreach ($items as $row) {
+            $itemMap[$row['invoice_no']][] = $row;
+        }
+
+        /* ---------------------------------
+         | 5. Attach items to paginated users
+         |---------------------------------*/
+        foreach ($users as &$user) {
+            $user->items = $itemMap[$user->invoice_no] ?? [];
+        }
+
+        return view(
+            'admin.samplings.sample-dispatched-material',
+            compact('title','users','data')
+        );
+    }
+
+    //deperecated
+    public function sampleDispatchedMaterial_not_using(Request $request){
         $data = $request->all();
         Session::put('active','sampleDispatchedMaterial'); 
         $title = "Dispatched Sample";

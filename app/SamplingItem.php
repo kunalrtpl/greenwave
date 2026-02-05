@@ -19,6 +19,7 @@ class SamplingItem extends Model
         'qty',
         'actual_qty',
         'dispatched_qty',
+        'requested_from',
     ];
 
      public function requested_product(){

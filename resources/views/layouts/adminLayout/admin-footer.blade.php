@@ -1,4 +1,4 @@
-<div class="page-footer">
+div class="page-footer">
 	<div class="page-footer-inner">
 		<?php echo date('Y');?> &copy;  {{config('constants.project_name')}}
 	</div>
@@ -83,7 +83,7 @@ jQuery(document).ready(function() {
             $('.filter-submit').trigger('click');
         }
     });
-    $(document).on('change', '[name=product_type], [name=status], [name=business_linking], [name=linked_executive], [name=email_status] , [name=b_card_status], [name=order_type]', function(e) {
+    $(document).on('change', '[name=product_type], [name=status], [name=business_linking], [name=linked_executive], [name=email_status] , [name=b_card_status], [name=order_type],[name=urgent]', function(e) {
 	    $('.filter-submit').trigger('click');
 	});
 
