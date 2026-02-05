@@ -87,7 +87,7 @@
                                         <tr>
                                             <th>Total</th>
                                             <th>{{ $totalQty }} kg</th>
-                                            <th colspan="2"></th>
+                                            <th></th>
                                         </tr>
                                     </table>
                                 </td>

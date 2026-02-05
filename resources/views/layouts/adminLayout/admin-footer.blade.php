@@ -1,4 +1,4 @@
-div class="page-footer">
+<div class="page-footer">
 	<div class="page-footer-inner">
 		<?php echo date('Y');?> &copy;  {{config('constants.project_name')}}
 	</div>
