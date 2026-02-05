@@ -162,7 +162,7 @@ class SamplingController extends Controller
                 /* ---------- ACTION BUTTONS ---------- */
                 $actionValues = '
                     <a href="'.route('sampling.download.pdf', $sampleReq->id).'" class="btn btn-sm blue">PDF</a>
-                    <a target="_blank" class="btn btn-sm green margin-top-10"
+                    <a style="display:none;" target="_blank" class="btn btn-sm green margin-top-10"
                        href="'.url('admin/free-sampling-detail/'.$sampleReq->id).'">View</a>
                     <a target="_blank" class="btn btn-sm yellow margin-top-10"
                        href="'.url('admin/view-sampling/'.$sampleReq->id).'">View</a>

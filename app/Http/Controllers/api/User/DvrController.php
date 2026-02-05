@@ -650,7 +650,7 @@ class DvrController extends Controller
 
             // 🧹 Manual cleanup (safe even if cascade exists)
             UserDvrProduct::where('user_dvr_id', $dvr->id)->delete();
-            UserDvrTrial::where('user_dvr_id', $dvr->id)->delete();
+            UserDvrTrialLink::where('user_dvr_id', $dvr->id)->delete();
             UserDvrCustomerContact::where('user_dvr_id', $dvr->id)->delete();
             UserDvrAttachment::where('user_dvr_id', $dvr->id)->delete();
 
