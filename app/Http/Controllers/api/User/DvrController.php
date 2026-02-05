@@ -701,14 +701,11 @@ class DvrController extends Controller
             $userId = $this->resp['user']['id'];
 
             // 🔍 Fetch attachment with DVR ownership check
-            $attachment = UserDvrAttachment::with('dvr')
-                ->where('id', $request->id)
+            $attachment = UserDvrAttachment::where('id', $request->id)
                 ->first();
 
             if (
-                !$attachment ||
-                !$attachment->dvr ||
-                $attachment->dvr->user_id !== $userId
+                !$attachment 
             ) {
                 return response()->json(apiErrorResponse('Attachment not found'), 404);
             }
