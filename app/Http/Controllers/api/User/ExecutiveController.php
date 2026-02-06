@@ -1811,6 +1811,7 @@ class ExecutiveController extends Controller
                 if ($validator->fails()) {
                     return response()->json(validationResponse($validator),422); 
                 }
+                $old_qty = 0;
                 if(isset($data['sample_submission_id']) && !empty($data['sample_submission_id'])){
                     $sample_submission = SampleSubmission::find($data['sample_submission_id']);
                     $old_qty = $sample_submission->qty;

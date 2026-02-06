@@ -114,13 +114,13 @@ class SamplingController extends Controller
                 }
 
                 /* ---------- PRODUCTS TABLE ---------- */
-                $products = '';
+                $products = 'No products added in request';
                 if ($sampleReq->sampleitems->count()) {
 
-                    $products .= '<table class="table table-bordered">
+                    $products = '<table class="table table-bordered">
                         <tr>
                             <th>Product <br><small>(Pack Size)</small></th>
-                            <th>RQ</th>
+                            
                             <th>AQ</th>
                             <th>PQ</th>
                         </tr>';
@@ -150,7 +150,6 @@ class SamplingController extends Controller
                                 <br><small>('.$item->actual_pack_size.' kg)</small>
                                 '.$itemAction.'
                             </td>
-                            <td>'.$item->qty.' kg</td>
                             <td>'.$item->actual_qty.' kg</td>
                             <td>'.$pendingQty.' kg</td>
                         </tr>';
