@@ -2456,7 +2456,8 @@ class DealerController extends Controller
             $resp = $this->resp;
             if($resp['status'] && isset($resp['dealer'])){
                 $resp['dealer']['id'] = Dealer::getParentDealer($resp['dealer']);
-                $list = SampleSubmission::with(['customer','product','complaint_info','feedbackUser',
+                $list = SampleSubmission::with(['user',
+                    'dealer','customer','product','complaint_info','feedbackUser',
                     'feedbackDealer','feedbackCloseUser','feedbackCloseDealer'])->where('dealer_id',$resp['dealer']['id'])->get();
                 $result['sample_submissions'] = $list;
                 $message = 'Data has been fetched successfully';

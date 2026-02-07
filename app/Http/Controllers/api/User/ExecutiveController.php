@@ -1767,6 +1767,8 @@ class ExecutiveController extends Controller
 
                 $query = SampleSubmission::with([
                     'customer',
+                    'user',
+                    'dealer',
                     'customer_register_request',
                     'product',
                     'complaint_info',
