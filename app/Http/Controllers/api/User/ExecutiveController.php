@@ -3161,9 +3161,9 @@ class ExecutiveController extends Controller
                 ->where('status', 'active')
                 ->exists();
 
-            if ($existing) {
+            if ($mobileExists) {
                 return response()->json(
-                    apiErrorResponse(getMobileAlreadyUsedMessage($existing)),
+                    apiErrorResponse(getMobileAlreadyUsedMessage($mobileExists)),
                     400
                 );
             }
