@@ -2456,7 +2456,7 @@ class DealerController extends Controller
             $resp = $this->resp;
             if($resp['status'] && isset($resp['dealer'])){
                 $resp['dealer']['id'] = Dealer::getParentDealer($resp['dealer']);
-                $list = SampleSubmission::with(['customer','product','complaint_info'])->where('dealer_id',$resp['dealer']['id'])->get();
+                $list = SampleSubmission::with(['customer','product','complaint_info','feedbackDealer','feedbackCloseDealer'])->where('dealer_id',$resp['dealer']['id'])->get();
                 $result['sample_submissions'] = $list;
                 $message = 'Data has been fetched successfully';
                 return response()->json(apiSuccessResponse($message,$result),200);
@@ -2559,6 +2559,7 @@ class DealerController extends Controller
                     $sample_submission->is_close = 1;
                     $sample_submission->close_reason =$data['feedback_remarks'];
                 }
+                $sample_submission->feedback_dealer_id = $resp['dealer']['id'];
                 $sample_submission->save(); 
                 $message = 'Feedback has been submitted successfully';
                 return response()->json(apiSuccessResponse($message),200);
@@ -2584,6 +2585,7 @@ class DealerController extends Controller
                 $sample_submission->status = "Closed";
                 $sample_submission->is_close = 1;
                 $sample_submission->close_reason = $data['close_reason'];
+                $sample_submission->feedback_close_dealer_id = $resp['dealer']['id'];
                 $sample_submission->save();
                 $message = 'Closed successfully';
                 return response()->json(apiSuccessResponse($message),200);

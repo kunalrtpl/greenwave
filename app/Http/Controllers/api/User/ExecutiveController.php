@@ -1769,7 +1769,9 @@ class ExecutiveController extends Controller
                     'customer',
                     'customer_register_request',
                     'product',
-                    'complaint_info'
+                    'complaint_info',
+                    'feedbackUser',
+                    'feedbackCloseUser'
                 ])
                 ->where(function ($q) use ($sharedCustomerIds, $userId) {
                     $q->whereIn('customer_id', $sharedCustomerIds)
@@ -1913,6 +1915,7 @@ class ExecutiveController extends Controller
                     $sample_submission->is_close = 1;
                     $sample_submission->close_reason =$data['feedback_remarks'];
                 }
+                $sample_submission->feedback_user_id = $resp['user']['id'];
                 $sample_submission->save(); 
                 $message = 'Feedback has been submitted successfully';
                 return response()->json(apiSuccessResponse($message),200);
@@ -1938,6 +1941,7 @@ class ExecutiveController extends Controller
                 $sample_submission->status = "Closed";
                 $sample_submission->is_close = 1;
                 $sample_submission->close_reason = $data['close_reason'];
+                $sample_submission->feedback_close_user_id = $resp['user']['id'];
                 $sample_submission->save();
                 $message = 'Closed successfully';
                 return response()->json(apiSuccessResponse($message),200);
