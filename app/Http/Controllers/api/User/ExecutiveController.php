@@ -1758,7 +1758,7 @@ class ExecutiveController extends Controller
             $resp = $this->resp;
 
             if ($resp['status'] && isset($resp['user'])) {
-
+                $userId = $resp['user']['id'];
                 // Get customers linked to logged-in user
                 $sharedCustomerIds = \DB::table('user_customer_shares')
                     ->where('user_id', $userId)
