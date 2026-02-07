@@ -1771,7 +1771,9 @@ class ExecutiveController extends Controller
                     'product',
                     'complaint_info',
                     'feedbackUser',
-                    'feedbackCloseUser'
+                    'feedbackDealer',
+                    'feedbackCloseUser',
+                    'feedbackCloseDealer'
                 ])
                 ->where(function ($q) use ($sharedCustomerIds, $userId) {
                     $q->whereIn('customer_id', $sharedCustomerIds)
