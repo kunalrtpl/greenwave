@@ -1759,13 +1759,22 @@ class ExecutiveController extends Controller
 
             if ($resp['status'] && isset($resp['user'])) {
 
+                // Get customers linked to logged-in user
+                $sharedCustomerIds = \DB::table('user_customer_shares')
+                    ->where('user_id', $userId)
+                    ->pluck('customer_id');
+
+
                 $query = SampleSubmission::with([
                     'customer',
                     'customer_register_request',
                     'product',
                     'complaint_info'
                 ])
-                ->where('user_id', $resp['user']['id']);
+                ->where(function ($q) use ($sharedCustomerIds, $userId) {
+                    $q->whereIn('customer_id', $sharedCustomerIds)
+                      ->orWhere('user_id', $userId);
+                });
 
                 // Optional filters
                 if ($request->filled('customer_id')) {
