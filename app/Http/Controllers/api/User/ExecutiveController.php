@@ -3159,7 +3159,7 @@ class ExecutiveController extends Controller
             $mobileExists = \App\CustomerContact::where('mobile_number', $data['mobile_number'])
                 ->where('id', '!=', $data['id'])
                 ->where('status', 'active')
-                ->exists();
+                ->first();
 
             if ($mobileExists) {
                 return response()->json(
