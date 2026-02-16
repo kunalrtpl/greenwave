@@ -849,7 +849,10 @@ class ExecutiveController extends Controller
                 if ($validator->fails()){
                     return response()->json(validationResponse($validator),422); 
                 }
-                $feedbacks = Feedback::with(['customer','customer_register_request','customer_employee','product','replies'])->where('user_id',$resp['user']['id']);
+
+                $userId = $request->filled('user_id') ? $request->user_id : $resp['user']['id'];
+
+                $feedbacks = Feedback::with(['customer','customer_register_request','customer_employee','product','replies'])->forUserSharedData($userId);
                 if($data['type'] !='all'){
                     $feedbacks = $feedbacks->where('type',$data['type']);
                 }
@@ -1758,13 +1761,9 @@ class ExecutiveController extends Controller
             $resp = $this->resp;
 
             if ($resp['status'] && isset($resp['user'])) {
-                $userId = $resp['user']['id'];
-                // Get customers linked to logged-in user
-                $sharedCustomerIds = \DB::table('user_customer_shares')
-                    ->where('user_id', $userId)
-                    ->pluck('customer_id');
+                $userId = $request->filled('user_id') ? $request->user_id : $resp['user']['id'];
 
-
+                //echo $userId; die;
                 $query = SampleSubmission::with([
                     'customer',
                     'user',
@@ -1776,11 +1775,7 @@ class ExecutiveController extends Controller
                     'feedbackDealer',
                     'feedbackCloseUser',
                     'feedbackCloseDealer'
-                ])
-                ->where(function ($q) use ($sharedCustomerIds, $userId) {
-                    $q->whereIn('customer_id', $sharedCustomerIds)
-                      ->orWhere('user_id', $userId);
-                });
+                ])->forUserSharedData($userId);
 
                 // Optional filters
                 if ($request->filled('customer_id')) {
@@ -1918,6 +1913,7 @@ class ExecutiveController extends Controller
                     $sample_submission->status = "Closed";
                     $sample_submission->is_close = 1;
                     $sample_submission->close_reason =$data['feedback_remarks'];
+                    $sample_submission->close_date = date('Y-m-d');
                 }
                 $sample_submission->feedback_user_id = $resp['user']['id'];
                 $sample_submission->save(); 
@@ -1945,6 +1941,8 @@ class ExecutiveController extends Controller
                 $sample_submission->status = "Closed";
                 $sample_submission->is_close = 1;
                 $sample_submission->close_reason = $data['close_reason'];
+                $sample_submission->close_remarks = $data['close_remarks'] ?? null;
+                $sample_submission->close_date = date('Y-m-d');
                 $sample_submission->feedback_close_user_id = $resp['user']['id'];
                 $sample_submission->save();
                 $message = 'Closed successfully';
@@ -2050,8 +2048,10 @@ class ExecutiveController extends Controller
        if($request->isMethod('get')){
             $resp = $this->resp;
             if($resp['status'] && isset($resp['user'])){
+                $userId = $request->filled('user_id') ? $request->user_id : $resp['user']['id'];
+
                 $filters = $request->all();
-                $samples = MarketSample::getMarketSamples('executive',$resp['user']['id'],$filters);
+                $samples = MarketSample::getMarketSamples('executive',$userId,$filters);
                 $message = 'Market sample has been fetched successfully';
                 $result['samples'] = $samples;
                 return response()->json(apiSuccessResponse($message,$result),200);
@@ -2087,7 +2087,10 @@ class ExecutiveController extends Controller
             $resp = $this->resp;
             if($resp['status'] && isset($resp['user'])){
                 $filters = $request->all();
-                $samples = ComplaintSample::getComplaintSamples('executive',$resp['user']['id'],$filters);
+
+                $userId = $request->filled('user_id') ? $request->user_id : $resp['user']['id'];
+
+                $samples = ComplaintSample::getComplaintSamples('executive',$userId,$filters);
                 $message = 'Complaint samples has been fetched successfully';
                 $result['samples'] = $samples;
                 return response()->json(apiSuccessResponse($message,$result),200);
@@ -2716,6 +2719,7 @@ class ExecutiveController extends Controller
                 \App\Customer::where('id', $data['customer_id'])->update([
                     'latitude'  => $data['latitude'],
                     'longitude' => $data['longitude'],
+                    'location_address' => $data['location_address'] ?? null,
                 ]);
 
                 $message = "Customer location updated successfully.";

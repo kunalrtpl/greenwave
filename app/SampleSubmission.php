@@ -3,9 +3,11 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\SharedCustomerTrait;
 
 class SampleSubmission extends Model
 {
+    use SharedCustomerTrait;
     //
     public function customer(){
         return $this->belongsTo('App\Customer');

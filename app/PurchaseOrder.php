@@ -11,6 +11,7 @@ use App\Dealer;
 use App\DealerProduct;
 use App\UserCustomerShare;
 use DB;
+use App\SampleSubmission;
 class PurchaseOrder extends Model
 {
     //
@@ -314,6 +315,14 @@ class PurchaseOrder extends Model
                 $poitem->spsod = $item['spsod'];
             }
             $poitem->save();
+            //sync sample submission as discussed with client
+            if(isset($data['customer_id']) && !empty($data['customer_id'])){
+                self::updateSampleSubmissionOnPO(
+                    $data['customer_id'],
+                    $productinfo->id,
+                    $data['po_date']
+                );
+            }
             if($data['action'] == 'dealer'){
                 $totalPrice += $poitem->net_price * $item['qty'];
             }else{
@@ -402,6 +411,28 @@ class PurchaseOrder extends Model
         //self::sendPOEmails($createpo->id, $data);
         return $createpo->id;
     }
+
+
+
+    public static function updateSampleSubmissionOnPO($customerId, $productId, $poDate)
+    {
+        if (empty($customerId) || empty($productId) || empty($poDate)) {
+            return;
+        }
+
+        $sample = SampleSubmission::where('customer_id', $customerId)
+            ->where('product_id', $productId)
+            ->whereDate('submission_date', '<=', $poDate)
+            ->orderBy('submission_date', 'DESC') // latest eligible sample
+            ->first();
+
+        if ($sample) {
+            $sample->status = 'Order Received';
+            $sample->order_received_date = $poDate;
+            $sample->save();
+        }
+    }
+
 
 
     /**

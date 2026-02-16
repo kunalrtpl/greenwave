@@ -79,6 +79,28 @@
 		.red{
 			color: red;
 		}
+		.dark-line {
+		    border: none;
+		    height: 2px;
+		    background-color: #333;
+		}
+		.highlight-label {
+	        font-weight: 600;
+	        background-color: #000;  /* black background */
+	        color: #fff;             /* white text */
+	        padding: 4px 8px;
+	        display: inline-block;
+	        border-radius: 4px;
+	    }
+	    .highlight-sub-label {
+		    font-weight: 600;
+		    background-color: #ffe082;   /* soft yellow highlight */
+		    font-size:  11px;
+		    padding: 4px 8px;
+		    display: inline-block;
+		    border-radius: 4px;
+		}
+
 	</style>
 	<body class="page-header-fixed page-sidebar-closed-hide-logo page-sidebar-closed-hide-logo">
 		@include('layouts.adminLayout.adminheader')

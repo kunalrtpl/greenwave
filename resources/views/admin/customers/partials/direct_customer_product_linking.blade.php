@@ -10,7 +10,7 @@
         </div>
     </div>
 
-    <p><b>Product Linking</b></p>
+    <p class="highlight-label">Product Linking</p>
 
     <span id="DirectCustomerDiscounts" @if(!empty($customer->business_model) && $customer->business_model == 'Direct Customer') @else style="display: none;" @endif>
         <div class="form-group">

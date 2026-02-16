@@ -5,9 +5,12 @@ namespace App;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Input;
 use App\ComplaintSampleHistory;
+use App\Traits\SharedCustomerTrait;
 class ComplaintSample extends Model
 {
     //
+
+    use SharedCustomerTrait;
 
     protected $appends = ['sample_document_url','sample_document_two_url','sample_document_three_url','courier_document_url'];
     
@@ -83,7 +86,8 @@ class ComplaintSample extends Model
 
         // Role-based filtering
         if ($type === 'executive') {
-            $samples->where('user_id', $id);
+            //coming form trait
+            $samples->forUserSharedData($id);
         } elseif ($type === 'dealer') {
             $samples->where('dealer_id', $id);
         }

@@ -3,10 +3,12 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
-
+use App\Traits\SharedCustomerTrait;
 class Feedback extends Model
 {
     //
+    use SharedCustomerTrait;
+    
     public function dealer(){
     	return $this->belongsto('App\Dealer','dealer_id','id');
     }

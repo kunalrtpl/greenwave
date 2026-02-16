@@ -1951,7 +1951,76 @@ class DealerController extends Controller
         } 
     }
 
-    public function sampleInTransitMaterials(Request $request){
+
+    public function sampleInTransitMaterials(Request $request)
+    {
+        // Ensure request method is GET only
+        if (!$request->isMethod('get')) {
+            return response()->json(apiErrorResponse("Unsupported Route"), 422);
+        }
+
+        $resp = $this->resp;
+
+        // Basic validation
+        if (!($resp['status'] && isset($resp['dealer']))) {
+            return response()->json(apiErrorResponse("Unable to fetch. Please try again after sometime"), 422);
+        }
+
+        // Get dealer + child dealers
+        $dealerIds = Dealer::getParentChildDealers($resp['dealer']);
+
+        /**
+         * Fetch all in-transit sampling sale invoices
+         */
+        $allInvoices = \App\SamplingSaleInvoice::with(['productinfo', 'dealer', 'sampling'])
+            ->whereIn('dealer_id', $dealerIds)
+            ->where('transport_name', '!=', '')
+            ->where('is_delivered', 0)
+            ->orderBy('dispatch_date', 'ASC')
+            ->get();
+
+        /**
+         * Split invoices:
+         * 1. With LR number
+         * 2. Without LR number
+         */
+        $groupedByLr = $allInvoices->filter(fn($inv) => !empty($inv->lr_no))
+                                   ->groupBy('lr_no');
+
+        $groupedNoLr = $allInvoices->filter(fn($inv) => empty($inv->lr_no))
+                                   ->groupBy('dealer_invoice_no');
+
+        // Prepare response arrays
+        $saleInvoices = [];
+        foreach ($groupedByLr as $lrNo => $invoices) {
+            $saleInvoices[] = [
+                'lr_no' => (string) $lrNo,
+                'invoices' => $invoices->values()
+            ];
+        }
+
+        $saleInvoicesNoLr = [];
+        foreach ($groupedNoLr as $dealerInvoiceNo => $invoices) {
+            $saleInvoicesNoLr[] = [
+                'dealer_invoice_no' => (string) $dealerInvoiceNo,
+                'invoices' => $invoices->values()
+            ];
+        }
+
+        $result = [
+            'sale_invoices' => $saleInvoices,
+            'sale_invoices_no_lr' => $saleInvoicesNoLr,
+        ];
+
+        return response()->json(
+            apiSuccessResponse("Sale Invoice has been fetched successfully", $result),
+            200
+        );
+    }
+
+
+
+    /*public function sampleInTransitMaterials(Request $request){
         if($request->isMethod('get')){
             $resp = $this->resp;
             if($resp['status'] && isset($resp['dealer'])) {
@@ -1977,7 +2046,7 @@ class DealerController extends Controller
             $message = "Unsupported Route";
             return response()->json(apiErrorResponse($message),422); 
         }
-    }
+    }*/
 
     public function updateSampleMaterialDelivery(Request $request){
         if($request->isMethod('post')){
@@ -2146,6 +2215,7 @@ class DealerController extends Controller
                 \App\Customer::where('id', $data['customer_id'])->update([
                     'latitude'  => $data['latitude'],
                     'longitude' => $data['longitude'],
+                    'location_address' => $data['location_address'] ?? null,
                 ]);
 
                 $message = "Customer location updated successfully.";

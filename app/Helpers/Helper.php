@@ -3,7 +3,7 @@
 	use App\PackingType;
     use App\PackingSize;
 	use App\Checklist;
-
+	use Carbon\Carbon;
 	function qc_checklists(){
     	$checklists = Checklist::with(['subchecklists'=>function($query){
     		$query->with('subchecklists');
@@ -513,7 +513,11 @@
     }
 
     function fetchProducts($productType){
-    	$products = \App\Product::where('is_trader_product',$productType)->get()->toArray();
+    	$products = \App\Product::where('is_trader_product',$productType)->with(['pricings' => function ($q) {
+                $q->whereDate('price_date', '<=', Carbon::today())
+                  ->orderBy('price_date', 'desc');
+            }])->where('status',1)->get()->toArray();
+    	//echo "<pre>"; print_r($products); die;
     	return $products;
     }
 

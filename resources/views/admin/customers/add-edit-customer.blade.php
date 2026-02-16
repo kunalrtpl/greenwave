@@ -34,7 +34,7 @@
                                 <input type="hidden" name="customer_register_request_id" value="{{$_GET['empref']}}">
                             @endif
                             <div class="form-body">
-                                <p><b>Business Details</b></p>
+                                <p class="highlight-label">Business Details</p>
                                 <div class="form-group">
                                     <label class="col-md-3 control-label">Business Name <span class="asteric">*</span></label>
                                     <div class="col-md-4">
@@ -88,7 +88,7 @@
                                     </div>
                                 </div> -->
                                 <hr class="bold-hr">
-                                <p><b>Primary User Details</b></p>
+                                <p class="highlight-label">Primary User Details</p>
                                 <div class="form-group">
                                     <label class="col-md-3 control-label">Name </label>
                                     <div class="col-md-4">
@@ -123,7 +123,7 @@
                                     </div>
                                 </div>
                                 <hr class="bold-hr">
-                                <p><b>Add-on Users</b></p>
+                                <p class="highlight-label">Add-on Users</p>
                                 <div class="form-group">
                                     <label class="col-md-2 control-label"></label>
                                     <div class="col-md-10">
@@ -214,7 +214,7 @@
                                         <h4 class="text-center text-danger pt-3" style="display: none;" id="Customer-password"></h4>
                                     </div>
                                 </div> -->
-                                <p><b>Business Model & Linking</b></p>
+                                <p class="highlight-label">Business Model & Linking</p>
                                 <div class="form-group">
                                     <label class="col-md-3 control-label"> Product Type <span class="asteric">*</span></label>
                                     <div class="col-md-4">
@@ -261,7 +261,7 @@
                                 <h4 class="text-center text-danger pt-3" style="display: none;" id="Customer-linking_error"></h4>
                                
                                 <hr class="bold-hr">
-                                <p><b>Business Card Upload</b></p>
+                                <p class="highlight-label">Business Card Upload</p>
 
                                 {{-- Business Card (1) --}}
                                 <div class="form-group">

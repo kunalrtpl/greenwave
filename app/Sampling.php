@@ -234,6 +234,7 @@ class Sampling extends Model
         $sample->application_plan = $data['application_plan'] ?? '';
         $sample->dispatch_to = $data['dispatch_to'] ?? '';
         $sample->dispatch_address = $data['dispatch_address'] ?? '';
+        $sample->dealer_id = $data['dealer_id'] ?? null;
 
         $sample->save();
 

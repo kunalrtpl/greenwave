@@ -6,9 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Input;
 use App\MarketSampleHistory;
 use App\MarketSampleProduct;
+use App\Traits\SharedCustomerTrait;
 class MarketSample extends Model
 {
     //
+    use SharedCustomerTrait;
+    
     protected $appends = ['sample_document_url','sample_document_two_url','sample_document_three_url','courier_document_url'];
 
     public function products(){
@@ -70,7 +73,8 @@ class MarketSample extends Model
 
         // Role-based filtering
         if ($type === 'executive') {
-            $samples->where('user_id', $id);
+             //coming form trait
+            $samples->forUserSharedData($id);
         } elseif ($type === 'dealer') {
             $samples->where('dealer_id', $id);
         }

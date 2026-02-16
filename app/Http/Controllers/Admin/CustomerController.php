@@ -427,6 +427,17 @@ class CustomerController extends Controller
                             }
                             if (!empty($netProdInfo['moq'])) {
                                 $custDis->moq = $netProdInfo['moq'];
+                            }if (!empty($netProdInfo['for_qty'])) {
+                                $custDis->for_qty = $netProdInfo['for_qty'];
+                            }
+                            if (!empty($netProdInfo['value'])) {
+                                $custDis->value = $netProdInfo['value'];
+                            }
+                            if (!empty($netProdInfo['applicable_type'])) {
+                                $custDis->applicable_type = $netProdInfo['applicable_type'];
+                            }
+                            if (!empty($netProdInfo['packing_type'])) {
+                                $custDis->packing_type = $netProdInfo['packing_type'];
                             }
                             $custDis->save();
                         }
