@@ -589,7 +589,11 @@ class ExecutiveController extends Controller
                 if(isset($resp['user'])){
                     $customerids = \App\UserCustomerShare::where('user_id',$resp['user']['id'])->pluck('customer_id')->toArray();
                     $purchaseOrders = PurchaseOrder::with(['customer','customer_employee','orderitems','adjust_items','cancel_items','discounts','saleinvoices'])->wherein('customer_id',$customerids);
-                        $purchaseOrders = $purchaseOrders->get()->toArray();
+                    //FOR MINI PACK ORDERS
+                    if(isset($_GET['is_mini_pack_order'])){
+                        $purchaseOrders = $purchaseOrders->where('is_mini_pack_order',1);
+                    }
+                    $purchaseOrders = $purchaseOrders->get()->toArray();
                     $message ="Purcahse Order has been fetched successfully";
                     $result['purchase_orders'] = $purchaseOrders;
                     return response()->json(apiSuccessResponse($message,$result),200);
