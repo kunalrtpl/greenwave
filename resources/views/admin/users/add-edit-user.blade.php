@@ -411,7 +411,61 @@
                                         </select>
                                     </div>
                                 </div>
-                                
+                                <div class="form-group">
+                                    <label class="col-md-3 control-label">
+                                        Conveyance Selection Allowed <span class="asteric">*</span>
+                                    </label>
+                                    <div class="col-md-4">
+                                        <select class="form-control" name="conveyance_selection_allowed">
+                                            <option value="">Please Select</option>
+
+                                            <option value="1"
+                                                @if(empty($empdata))
+                                                    selected
+                                                @else
+                                                    @if($empdata['conveyance_selection_allowed'] == 1) selected @endif
+                                                @endif>
+                                                Yes
+                                            </option>
+
+                                            <option value="0"
+                                                @if(!empty($empdata))
+                                                    @if($empdata['conveyance_selection_allowed'] == 0) selected @endif
+                                                @endif>
+                                                No
+                                            </option>
+
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-md-3 control-label">
+                                        Should Verify Visit <span class="asteric">*</span>
+                                    </label>
+                                    <div class="col-md-4">
+                                        <select class="form-control" name="should_verify_visit">
+                                            <option value="">Please Select</option>
+
+                                            <option value="1"
+                                                @if(empty($empdata))
+                                                    selected
+                                                @else
+                                                    @if($empdata['should_verify_visit'] == 1) selected @endif
+                                                @endif>
+                                                Yes
+                                            </option>
+
+                                            <option value="0"
+                                                @if(!empty($empdata))
+                                                    @if($empdata['should_verify_visit'] == 0) selected @endif
+                                                @endif>
+                                                No
+                                            </option>
+
+                                        </select>
+                                    </div>
+                                </div>
+
                                 <div class="form-group">
                                     <label class="col-md-3 control-label">Modules to Access? <b class="red">({{count($selAppRoles)}})</b> <span class="asteric">*</span></label>
                                     <div class="col-md-6">
