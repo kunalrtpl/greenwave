@@ -162,6 +162,27 @@
                                         </div>
                                     </div>
                                     <div class="form-group">
+                                        <label class="col-md-3 control-label">Basic Discount (%) </label>
+                                        <div class="col-md-4">
+                                            <input step="0.01" type="number" placeholder="Basic Discount" name="basic_discount" style="color:gray" class="form-control" value="{{(!empty($dealerdata['basic_discount']))?$dealerdata['basic_discount']: '' }}"/>
+                                            <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-basic_discount"></h4>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-md-3 control-label">CD (7 days %) </label>
+                                        <div class="col-md-4">
+                                            <input step="0.01" type="number" placeholder="Cash Discount (7 days)" name="cd_7days" style="color:gray" class="form-control" value="{{(!empty($dealerdata['cd_7days']))?$dealerdata['cd_7days']: '' }}"/>
+                                            <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-cd_7days"></h4>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-md-3 control-label">CD (Advance %) </label>
+                                        <div class="col-md-4">
+                                            <input step="0.01" type="number" placeholder="Cash Discount (Advance)" name="cd_advance" style="color:gray" class="form-control" value="{{(!empty($dealerdata['cd_advance']))?$dealerdata['cd_advance']: '' }}"/>
+                                            <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-cd_advance"></h4>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
                                         <label class="col-md-3 control-label">Security Amount (in Rs.) </label>
                                         <div class="col-md-4">
                                             <input type="text" placeholder="Security Amount" name="security_amount" style="color:gray" class="form-control" value="{{(!empty($dealerdata['security_amount']))?$dealerdata['security_amount']: '' }}"/>
