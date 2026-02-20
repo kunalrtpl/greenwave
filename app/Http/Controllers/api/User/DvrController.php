@@ -740,4 +740,67 @@ class DvrController extends Controller
             );
         }
     }
+
+    /**
+     * LINK EXISTING TRIAL TO DVR
+     * POST dvr/trial/link
+     */
+    public function linkTrial(Request $request)
+    {
+        if (!$this->resp['status'] || !isset($this->resp['user'])) {
+            return response()->json(apiErrorResponse('Unauthorized'), 401);
+        }
+
+        $rules = [
+            'user_dvr_id' => 'required|integer|exists:user_dvrs,id',
+            'trial_id'    => 'required|integer|exists:trials,id',
+        ];
+
+        $validator = Validator::make($request->all(), $rules);
+        if ($validator->fails()) {
+            return response()->json(validationResponse($validator), 422);
+        }
+
+        try {
+            $userId = $this->resp['user']['id'];
+
+            // 1. Verify Trial belongs to the user
+            $trial = Trial::where('id', $request->trial_id)
+                          /*->where('user_id', $userId)*/
+                          ->first();
+
+            if (!$trial) {
+                return response()->json(apiErrorResponse('Trial not found or access denied'), 404);
+            }
+
+            // 2. Check if link already exists to avoid duplicates
+            $exists = DB::table('user_dvr_trial_links')
+                ->where('user_dvr_id', $request->user_dvr_id)
+                ->where('trial_id', $request->trial_id)
+                ->exists();
+
+            if (!$exists) {
+                DB::table('user_dvr_trial_links')->insert([
+                    'user_dvr_id' => $request->user_dvr_id,
+                    'trial_id'    => $request->trial_id,
+                    'created_at'  => now(),
+                    'updated_at'  => now(),
+                ]);
+            }
+
+            // 3. Return Trial Info with common relations
+            $trialData = Trial::with(['products', 'attachments', 'complaint_info'])
+                              ->find($request->trial_id);
+
+            return response()->json(
+                apiSuccessResponse('Trial linked to DVR successfully', [
+                    'trial' => $trialData
+                ]),
+                200
+            );
+
+        } catch (\Exception $e) {
+            return response()->json(apiErrorResponse($e->getMessage()), 500);
+        }
+    }
 }

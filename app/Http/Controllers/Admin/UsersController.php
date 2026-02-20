@@ -16,6 +16,7 @@ use App\UserDepartmentRegion;
 use App\UserDepartment;
 use App\UserDepartmentProduct;
 use App\UserCustomer;
+use App\ProductDetail;
 use App\Customer;
 use DB;
 use Cookie;
@@ -88,6 +89,12 @@ class UsersController extends Controller
                 }
                 $actionValues='
                     <a title="Edit User" class="btn btn-sm green margin-top-10" href="'.url('admin/add-edit-user/'.$user['id']).'"> <i class="fa fa-edit"></i>
+                    </a>
+
+                    <a style="display:none;" title="Link Products" 
+                       class="btn btn-sm purple margin-top-10" 
+                       href="'.route('admin.users.products', $user['id']).'">
+                       <i class="fa fa-link"></i>
                     </a>';
                 if($rolesExtraPermission && $user['web_access'] =="Yes"){
                     $actionValues .='
@@ -337,6 +344,41 @@ class UsersController extends Controller
         }catch(\Exception $e){
             return response()->json(['status'=>false,'message'=>$e->getMessage(),'errors'=>array('password'=>$e->getMessage())]);
         }
+    }
+
+    public function userProducts($id)
+    {
+        $user = User::findOrFail($id);
+
+        // Your optimized hierarchy function
+        $hierarchy = ProductDetail::fullHierarchy();
+
+        // Get already linked product IDs
+        $selectedProducts = $user->products()->pluck('product_id')->toArray();
+
+        $title = "Link Products - " . $user->name;
+
+        return view('admin.users.user_products', compact(
+            'user',
+            'hierarchy',
+            'selectedProducts',
+            'title'
+        ));
+}
+
+    public function saveUserProducts(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+
+        // If no checkbox selected, make empty array
+        $productIds = $request->input('products', []);
+
+        // Sync pivot table
+        $user->products()->sync($productIds);
+
+        return redirect()
+            ->route('admin.users.products', $user->id)
+            ->with('success', 'Products linked successfully.');
     }
 
     public function resetPin($userid){

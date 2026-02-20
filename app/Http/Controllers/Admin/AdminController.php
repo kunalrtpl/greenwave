@@ -158,6 +158,7 @@ class AdminController extends Controller
     }
 
     public function dashboard(){
+        //echo "<pre>"; print_r( \App\ProductDetail::fullHierarchy()); die;
         /*$allDvrs = \App\Dvr::get()->toArray();
         foreach($allDvrs as $dvr){
             if(!empty($dvr['trial_details'])){

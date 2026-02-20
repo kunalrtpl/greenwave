@@ -308,6 +308,8 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 
 			    Route::post('trials/by-days', 'DvrController@trialsByDays');
 
+			    Route::post('dvr/trial/link', 'DvrController@linkTrial');
+
 			});
 
 

@@ -71,4 +71,14 @@ class User extends Authenticatable
         $cities = RegionCity::wherein('region_id',$subRegions)->pluck('city')->toArray();
         return array('report_to_users'=>$report_to_users,'report_from_users'=>$report_from_users,'incentives'=>$incentives,'cities'=>$cities,'sub_region_ids'=>$subRegions);
     }
+
+    public function products()
+    {
+        return $this->belongsToMany(
+            Product::class,
+            'user_products',
+            'user_id',
+            'product_id'
+        );
+    }
 }

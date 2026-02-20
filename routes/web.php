@@ -70,6 +70,13 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 		Route::match(['get', 'post'], '/users', 'UsersController@users');
 		Route::match(['get', 'post'], '/add-edit-user/{id?}', 'UsersController@addEditUser');
 		Route::match(['get', 'post'], '/save-user', 'UsersController@saveUser');
+
+		Route::get('users/{id}/products', 'UsersController@userProducts')
+        ->name('admin.users.products');
+
+    	Route::post('users/{id}/products', 'UsersController@saveUserProducts')->name('admin.users.products.save');
+
+
 		Route::match(['get', 'post'], 'user-reset-pin/{userid}', 'UsersController@resetPin');
 		Route::match(['get', 'post'], '/open-user-dept-modal', 'UsersController@openUserDeptModal');
 		Route::match(['get', 'post'], '/append-designation-info', 'UsersController@appendDesignationInfo');

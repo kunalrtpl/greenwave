@@ -110,4 +110,14 @@ class Product extends Model
     {
         return $this->hasOne(\App\CustomerDiscount::class, 'product_id');
     }
+
+    public function users()
+    {
+        return $this->belongsToMany(
+            User::class,
+            'user_products',
+            'product_id',
+            'user_id'
+        );
+    }
 }
