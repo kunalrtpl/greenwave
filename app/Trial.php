@@ -43,4 +43,9 @@ class Trial extends Model
     {
         return $this->belongsTo('App\User', 'other_team_member_id');
     }
+
+    public function creator()
+    {
+        return $this->belongsTo('App\User', 'created_by');
+    }
 }
