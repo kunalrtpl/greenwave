@@ -91,7 +91,7 @@ class UsersController extends Controller
                     <a title="Edit User" class="btn btn-sm green margin-top-10" href="'.url('admin/add-edit-user/'.$user['id']).'"> <i class="fa fa-edit"></i>
                     </a>
 
-                    <a style="display:none;" title="Link Products" 
+                    <a  title="Link Products" 
                        class="btn btn-sm purple margin-top-10" 
                        href="'.route('admin.users.products', $user['id']).'">
                        <i class="fa fa-link"></i>

@@ -2511,6 +2511,31 @@ class ExecutiveController extends Controller
 
     public function directCustomerProducts($customerid)
     {
+        $products = Product::select('products.*')
+            ->join('customer_discounts', function ($join) use ($customerid) {
+                $join->on('customer_discounts.product_id', '=', 'products.id')
+                     ->where('customer_discounts.customer_id', '=', $customerid);
+            })
+            ->where('products.status', 1)
+            ->with([
+                'productpacking',
+                'pricings',
+                'product_stages',
+                'customerDiscounts' => function ($query) use ($customerid) {
+                    $query->where('customer_id', $customerid);
+                }
+            ])
+            ->get();
+
+        $result['products'] = $products;
+        $message = "Products have been fetched successfully";
+
+        return response()->json(apiSuccessResponse($message, $result), 200);
+    }
+
+    
+    /*public function directCustomerProducts($customerid)
+    {
         $productIds = \App\CustomerDiscount::where('customer_id', $customerid)
                         ->pluck('product_id')
                         ->toArray();
@@ -2531,7 +2556,7 @@ class ExecutiveController extends Controller
         $message = "Products have been fetched successfully";
         return response()->json(apiSuccessResponse($message, $result), 200);
     }
-
+*/
     public function saveSalesProjection(Request $request)
     {
         $data = $request->all(); 

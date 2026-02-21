@@ -10,11 +10,16 @@
     .product-list-item { display: flex; justify-content: flex-start; align-items: center; padding: 12px 15px; border-bottom: 1px solid #edf2f7; transition: background 0.2s; }
     .product-list-item:last-child { border-bottom: none; }
     .product-list-item:hover { background-color: #fafafa; }
-    .sr-no { width: 28px; height: 28px; background: #e2e8f0; color: #4a5568; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; margin-right: 15px; flex-shrink: 0; }
+    
+    /* Updated spacing for Sr No and Checkbox alignment */
+    .sr-no { width: 28px; height: 28px; background: #e2e8f0; color: #4a5568; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; margin-right: 12px; flex-shrink: 0; }
+    .product-action { margin-right: 15px; display: flex; align-items: center; }
+    .custom-checkbox { transform: scale(1.2); cursor: pointer; }
+    
     .product-info { flex-grow: 1; }
     .product-name { font-weight: 500; color: #2d3748; display: block; line-height: 1.2; }
     .product-desc { font-size: 0.85em; color: #718096; font-style: italic; }
-    .custom-checkbox { transform: scale(1.2); cursor: pointer; margin-left: 10px; }
+    
     .nav-pills.nav-stacked > li.active > a { background-color: #3598dc !important; }
     .nav-pills.nav-stacked > li > a { border-radius: 4px; margin-bottom: 5px; font-weight: 500; display: flex; justify-content: space-between; align-items: center; }
 
@@ -29,7 +34,7 @@
         bottom: 0;
         left: 0;
         right: 0;
-        background: rgba(255, 255, 255, 0.9); /* Glass effect */
+        background: rgba(255, 255, 255, 0.9);
         backdrop-filter: blur(10px);
         padding: 15px 0;
         border-top: 1px solid #e1e5ec;
@@ -38,7 +43,6 @@
         text-align: center;
     }
     
-    /* Add some padding to the bottom of the page content so the last product isn't hidden by the bar */
     .page-content { padding-bottom: 80px !important; }
     
     .btn-save-float {
@@ -113,16 +117,18 @@
                                                         @foreach($child['products'] as $index => $product)
                                                         <div class="product-list-item">
                                                             <div class="sr-no">{{ $index + 1 }}</div>
-                                                            <div class="product-info">
-                                                                <span class="product-name">{{$product['product_name']}}</span>
-                                                                <span class="product-desc">({{$product['description']}})</span>
-                                                            </div>
+                                                            
                                                             <div class="product-action">
                                                                 <input type="checkbox" 
                                                                        class="custom-checkbox product-cb"
                                                                        name="products[]" 
                                                                        value="{{$product['id']}}"
                                                                        {{ in_array($product['id'],$selectedProducts) ? 'checked' : '' }}>
+                                                            </div>
+
+                                                            <div class="product-info">
+                                                                <span class="product-name">{{$product['product_name']}}</span>
+                                                                <span class="product-desc">({{$product['description']}})</span>
                                                             </div>
                                                         </div>
                                                         @endforeach
@@ -147,8 +153,6 @@
         </div>
     </div>
 </div>
-
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 $(document).ready(function() {
     $('.product-cb').on('change', function() {
