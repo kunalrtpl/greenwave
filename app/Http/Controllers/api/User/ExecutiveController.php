@@ -2511,26 +2511,21 @@ class ExecutiveController extends Controller
 
     public function directCustomerProducts($customerid)
     {
-        $products = Product::select('products.*')
+        $products = Product::select(
+                'products.*',
+                'customer_discounts.id as discount_id'
+            )
             ->join('customer_discounts', function ($join) use ($customerid) {
                 $join->on('customer_discounts.product_id', '=', 'products.id')
                      ->where('customer_discounts.customer_id', '=', $customerid);
             })
             ->where('products.status', 1)
-            ->with([
-                'productpacking',
-                'pricings',
-                'product_stages',
-                'customerDiscounts' => function ($query) use ($customerid) {
-                    $query->where('customer_id', $customerid);
-                }
-            ])
             ->get();
 
-        $result['products'] = $products;
-        $message = "Products have been fetched successfully";
-
-        return response()->json(apiSuccessResponse($message, $result), 200);
+        return response()->json([
+            'message' => 'Products fetched successfully',
+            'products' => $products
+        ]);
     }
 
     
