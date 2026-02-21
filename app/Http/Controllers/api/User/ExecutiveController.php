@@ -2509,33 +2509,26 @@ class ExecutiveController extends Controller
         return response()->json(apiSuccessResponse($message,$result),200);
     }
 
-    public function directCustomerProducts($customerid)
+    public function v2directCustomerProducts($customerid)
     {
-        $products = Product::select(
-                'products.*',
-                'customer_discounts.id as discount_row_id'
-            )
-            ->join('customer_discounts', function ($join) use ($customerid) {
-                $join->on('customer_discounts.product_id', '=', 'products.id')
-                     ->where('customer_discounts.customer_id', '=', $customerid);
-            })
-            ->where('products.status', 1)
-            ->with([
-                'productpacking',
-                'pricings',
-                'product_stages',
-                'customerDiscounts' => function ($query) use ($customerid) {
-                    $query->where('customer_id', $customerid);
-                }
-            ])
-            ->get();
+        $discounts = \App\CustomerDiscount::with([
+            'product.productpacking',
+            'product.pricings',
+            'product.product_stages'
+        ])
+        ->where('customer_id', $customerid)
+        ->get();
 
-        return response()->json([
-            'message' => 'Products fetched successfully',
-            'products' => $products
-        ]);
+        $result['products'] = $discounts;
+
+        $message = "Products have been fetched successfully";
+
+        return response()->json(apiSuccessResponse($message, $result), 200);
     }
-    /*public function directCustomerProducts($customerid)
+
+
+    //deperactead now
+    public function directCustomerProducts($customerid)
     {
         $productIds = \App\CustomerDiscount::where('customer_id', $customerid)
                         ->pluck('product_id')
@@ -2557,7 +2550,7 @@ class ExecutiveController extends Controller
         $message = "Products have been fetched successfully";
         return response()->json(apiSuccessResponse($message, $result), 200);
     }
-*/
+
     public function saveSalesProjection(Request $request)
     {
         $data = $request->all(); 

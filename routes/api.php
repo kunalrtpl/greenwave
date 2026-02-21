@@ -310,6 +310,9 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 
 			    Route::post('dvr/trial/link', 'DvrController@linkTrial');
 
+
+			    Route::match(['get', 'post'], 'direct-customer-products/{customerid}','ExecutiveController@v2directCustomerProducts');
+
 			});
 
 
