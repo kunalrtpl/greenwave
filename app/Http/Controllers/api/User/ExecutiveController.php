@@ -2513,13 +2513,21 @@ class ExecutiveController extends Controller
     {
         $products = Product::select(
                 'products.*',
-                'customer_discounts.id as discount_id'
+                'customer_discounts.id as discount_row_id'
             )
             ->join('customer_discounts', function ($join) use ($customerid) {
                 $join->on('customer_discounts.product_id', '=', 'products.id')
                      ->where('customer_discounts.customer_id', '=', $customerid);
             })
             ->where('products.status', 1)
+            ->with([
+                'productpacking',
+                'pricings',
+                'product_stages',
+                'customerDiscounts' => function ($query) use ($customerid) {
+                    $query->where('customer_id', $customerid);
+                }
+            ])
             ->get();
 
         return response()->json([
@@ -2527,8 +2535,6 @@ class ExecutiveController extends Controller
             'products' => $products
         ]);
     }
-
-    
     /*public function directCustomerProducts($customerid)
     {
         $productIds = \App\CustomerDiscount::where('customer_id', $customerid)
