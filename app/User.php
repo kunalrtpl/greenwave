@@ -81,4 +81,40 @@ class User extends Authenticatable
             'product_id'
         );
     }
+
+    public static function fetchUserProducts($userId)
+    {
+        // Fetch all classes once
+        $allClasses = \App\ProductClass::where('status', 1)->get();
+
+        // Fetch products linked to user
+        $products = Product::with([
+                'productpacking',
+                'pricings',
+                'product_stages',
+                'product_weightages'
+            ])
+            ->select('products.*')
+            ->join('user_products', 'user_products.product_id', '=', 'products.id')
+            ->where('user_products.user_id', $userId)
+            ->where('products.is_trader_product', 0)
+            ->where('products.status', 1)
+            ->get();
+
+        // Attach class name in memory
+        foreach ($products as $product) {
+            foreach ($product->pricings as $pricing) {
+
+                $markup = $pricing->dealer_markup;
+
+                $matchedClass = $allClasses->first(function ($class) use ($markup) {
+                    return $markup >= $class->from && $markup <= $class->to;
+                });
+
+                $pricing->class = $matchedClass ? $matchedClass->class_name : '';
+            }
+        }
+
+        return $products;
+    }
 }

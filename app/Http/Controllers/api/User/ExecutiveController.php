@@ -3402,4 +3402,90 @@ class ExecutiveController extends Controller
     }
 
 
+    public function getUserProducts(Request $request)
+    {
+        if ($request->isMethod('post')) {
+
+            $data = $request->all();
+            $resp = $this->resp;
+
+            $rules = [
+                'user_id' => 'required|exists:users,id',
+            ];
+
+            $validator = Validator::make($data, $rules);
+
+            if ($validator->fails()) {
+                return response()->json(validationResponse($validator), 422);
+            }
+
+            if ($resp['status'] && isset($resp['user'])) {
+
+                $products = \App\User::fetchUserProducts($data['user_id']);
+
+                return response()->json(
+                    apiSuccessResponse("Products fetched successfully", [
+                        'products' => $products
+                    ]),
+                    200
+                );
+            }
+        }
+    }
+
+    public function updateUserProducts(Request $request)
+    {
+        if ($request->isMethod('post')) {
+
+            $data = $request->all();
+            $resp = $this->resp;
+
+            $rules = [
+                'user_id'      => 'required|exists:users,id',
+                'product_ids'  => 'required|array',
+                'product_ids.*'=> 'exists:products,id'
+            ];
+
+            $validator = Validator::make($data, $rules);
+
+            if ($validator->fails()) {
+                return response()->json(validationResponse($validator), 422);
+            }
+
+            if ($resp['status'] && isset($resp['user'])) {
+
+                $userId = $data['user_id'];
+                $productIds = $data['product_ids'];
+
+                // Remove existing products
+                \DB::table('user_products')
+                    ->where('user_id', $userId)
+                    ->delete();
+
+                // Insert new mappings
+                $insertData = [];
+
+                foreach ($productIds as $productId) {
+                    $insertData[] = [
+                        'user_id'    => $userId,
+                        'product_id' => $productId,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
+
+                \DB::table('user_products')->insert($insertData);
+
+                // Fetch updated products using reusable method
+                $products = \App\User::fetchUserProducts($userId);
+
+                return response()->json(
+                    apiSuccessResponse("Products updated successfully", [
+                        'products' => $products
+                    ]),
+                    200
+                );
+            }
+        }
+    }
 }

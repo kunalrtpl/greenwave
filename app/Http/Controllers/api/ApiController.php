@@ -22,14 +22,34 @@ use App\JobEnquiry;
 use App\RequestOtp;
 class ApiController extends Controller
 {
-    //
-    public function products(Request $request){
+
+    public function products(Request $request) {
+        // 1. AUTH CHECK
+        $token = $request->header('Authorization');
+        if (!$token) {
+            return response()->json(apiErrorResponse("Authorization token missing"), 401);
+        }
+
+        $resp = \App\AuthToken::verifyUser($token);
+        if (!$resp['status'] || !isset($resp['user'])) {
+            return response()->json(apiErrorResponse("Invalid token or unauthorized"), 401);
+        }
+
+        $userId = $resp['user']['id'];
+
+        $products = \App\User::fetchUserProducts($userId);
+        
+        $result = [
+            'products' => $products,
+            'product_discounts' => \App\ProductDiscount::get(),
+        ];
+
+        return response()->json(apiSuccessResponse("Products fetched successfully", $result), 200);
+    }
+
+    //not usig anymore
+    public function products_old(Request $request){
     	$products = Product::with(['productpacking','pricings','product_stages','product_weightages'])->where('is_trader_product',0);
-        /*if(isset($_GET['is_trader'])){
-            $products = $products->where('is_trader_product',1);
-        }else{
-            $products = $products->where('is_trader_product',0);
-        }*/
         $products =  $products->where('status',1)->get();
         //echo "<pre>"; print_r($products); die;
         foreach($products as $pkey => $product){

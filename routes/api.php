@@ -283,6 +283,9 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::post('customer-contact/list', 'ExecutiveController@getCustomerContacts');
 			Route::post('deactivate-customer-contact', 'ExecutiveController@deactivateCustomerContact');
 
+			Route::post('user-products', 'ExecutiveController@getUserProducts');
+			Route::post('update-user-products', 'ExecutiveController@updateUserProducts');
+
 
 			Route::group(['prefix' => 'v2'], function () {
 
