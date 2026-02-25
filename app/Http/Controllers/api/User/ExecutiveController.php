@@ -1770,7 +1770,7 @@ class ExecutiveController extends Controller
                 //echo $userId; die;
                 $query = SampleSubmission::with([
                  'customer' => function ($q) {
-                    $q->select('id','dealer_id','name','email','mobile','address')
+                    $q->select('id','dealer_id','name','email','mobile','address','business_model')
                       ->with([
                           'dealer' => function ($d) {
                               $d->select(
