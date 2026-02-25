@@ -11,6 +11,10 @@ class QtyDiscount extends Model
     	return $this->belongsto('App\Product','product_id','id')->select('id','product_name');
     }
 
+    public function dealer(){
+        return $this->belongsTo('App\Dealer','dealer_id');
+    }
+
     public static function get_discounts($proid){
     	$discounts = QtyDiscount::join('products','products.id','=','qty_discounts.product_id')->select('qty_discounts.*','products.product_name')->where('qty_discounts.product_id',$proid)->get();
     	$discounts = json_decode(json_encode($discounts),true);

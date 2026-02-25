@@ -297,6 +297,8 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 
     			Route::post('dvr/trial/update', 'DvrController@updateTrial');
 
+    			Route::post('dvr/trial/delete', 'DvrController@deleteTrial');
+
 			    Route::post('dvr/contacts/add', 'DvrController@addContacts');
 
 			    Route::post('dvr/attachment/add', 'DvrController@addAttachment');
@@ -312,6 +314,8 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			    Route::post('trials/by-days', 'DvrController@trialsByDays');
 
 			    Route::post('dvr/trial/link', 'DvrController@linkTrial');
+			    
+			    Route::post('dvr/trial/unlink', 'DvrController@unlinkTrial');
 
 
 			    Route::match(['get', 'post'], 'direct-customer-products/{customerid}','ExecutiveController@v2directCustomerProducts');

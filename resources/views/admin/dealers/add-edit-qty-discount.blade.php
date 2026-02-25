@@ -29,6 +29,41 @@
                             <input type="hidden" name="_token" value="{{{ csrf_token() }}}" />
                             <div class="form-body">
                                 <div class="form-group">
+                                    <label class="col-md-3 control-label">
+                                        Select Dealer <span class="asteric">*</span>
+                                    </label>
+                                    <div class="col-md-4">
+                                        <select class="form-control select2" name="dealer_id">
+                                            <option value="">Please Select</option>
+
+                                            @foreach($dealers as $dealer)
+                                                <option value="{{$dealer->id}}"
+                                                    {{
+                                                        // 1️⃣ If editing → use saved value
+                                                        (!empty($qtydiscountdata['dealer_id']) &&
+                                                        $qtydiscountdata['dealer_id'] == $dealer->id)
+
+                                                        ||
+
+                                                        // 2️⃣ If adding → use query string dealer_id
+                                                        (empty($qtydiscountdata['dealer_id']) &&
+                                                        request('dealer_id') == $dealer->id)
+
+                                                        ? 'selected' : ''
+                                                    }}>
+                                                    {{$dealer->business_name}}
+                                                </option>
+                                            @endforeach
+
+                                        </select>
+
+                                        <h4 class="text-center text-danger pt-3"
+                                            style="display:none;"
+                                            id="Incentive-dealer_id">
+                                        </h4>
+                                    </div>
+                                </div>
+                                <div class="form-group">
                                     <label class="col-md-3 control-label">Select Product <span class="asteric">*</span></label>
                                     <div class="col-md-4">
                                         <select class="form-control select2" name="product_id">

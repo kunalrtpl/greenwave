@@ -1505,12 +1505,33 @@ class OrdersController extends Controller
         return View::make('admin.orders.dispatched-material')->with(compact('title'));
     }
 
-    public function fetchProductQtyDiscounts(Request $request){
+    /*public function fetchProductQtyDiscounts(Request $request){
         if($request->ajax()){
             $data = $request->all();
             $qtyDiscounts = \App\QtyDiscount::get_discounts($data['productId']);
             return response()->json([
                 'view' => (String)View::make('admin.orders.partials.product-qty-discounts')->with(compact('qtyDiscounts')),
+            ]);
+        }
+    }*/
+
+    public function fetchProductQtyDiscounts(Request $request)
+    {
+        if($request->ajax()){
+
+            $productId = $request->productId;
+            $dealerId  = $request->dealerId;
+
+            $qtyDiscounts = \App\QtyDiscount::where('product_id', $productId)
+                                ->where('dealer_id', $dealerId)
+                                ->orderBy('range_from','asc')
+                                ->get();
+            $qtyDiscounts = json_decode(json_encode($qtyDiscounts),true);
+
+            return response()->json([
+                'view' => (String)View::make(
+                    'admin.orders.partials.product-qty-discounts'
+                )->with(compact('qtyDiscounts')),
             ]);
         }
     }

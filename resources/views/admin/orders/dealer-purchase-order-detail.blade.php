@@ -257,8 +257,8 @@
                         <td class="text-center">
                             <b>Rs. {{$orderItemInfo['product_price']}}</b>
                             @if(!empty($orderItemInfo['product']['qty_discounts']))
-                            <br><br>
-                            <a href="javascript:;" class="fetchProductQtyDiscounts" data-product_id="{{$orderItemInfo['product_id']}}">Qty Discounts</a>
+                                <br><br>
+                                <a href="javascript:;" class="fetchProductQtyDiscounts" data-product_id="{{$orderItemInfo['product_id']}}" data-dealer_id="{{$poDetail['dealer_id']}}">Qty Discounts</a>
                             @endif
                         </td>
                         <td>
@@ -706,9 +706,15 @@
     })
 
     $(document).on('click','.fetchProductQtyDiscounts',function(){
+
         var productId = $(this).data('product_id');
+        var dealerId  = $(this).data('dealer_id');
+
         $.ajax({
-            data : {productId:productId},
+            data : {
+                productId: productId,
+                dealerId : dealerId
+            },
             url : '/admin/fetch-product-qty-discounts',
             type :'post',
             success:function(resp){
@@ -718,9 +724,8 @@
             error:function(){
 
             }
-
-        })
-    })
+        });
+    });
 </script>
 <script type="text/javascript">
     $(document).on('change','[name=po_status]',function(){

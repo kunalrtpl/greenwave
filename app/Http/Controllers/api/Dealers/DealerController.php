@@ -1678,8 +1678,8 @@ class DealerController extends Controller
     public function discounts(){
         $resp = $this->resp;
         if($resp['status'] && isset($resp['dealer'])){
-            $qty_discounts = QtyDiscount::with('product')->select('id','product_id','range_from','range_to','discount')->get();
             $parentDealerId = Dealer::getParentDealer($resp['dealer']);
+            $qty_discounts = QtyDiscount::with('product')->select('id','product_id','range_from','range_to','discount')->where('dealer_id',$parentDealerId)->get();
             $dealer_special_discounts = DealerSpecialDiscount::with('product')->where('dealer_id',$parentDealerId)->get();
             $message = "Fetched successfully";
             $result['qty_discounts'] = $qty_discounts;

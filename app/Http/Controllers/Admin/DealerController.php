@@ -68,7 +68,8 @@ class DealerController extends Controller
                     <a style="font-size:8px;" title="Edit" class="btn btn-sm green margin-top-10" href="'.url('/admin/add-edit-dealer/'.$dealer['id']).'"> <i class="fa fa-edit"></i>
                     </a>
                     <a style="font-size:11px;" title="Manage Dealer Stock" class="btn btn-sm red margin-top-10" href="'.url('/admin/manage-dealer-stock/'.$dealer['id']).'">Manage Stock</a>
-                    <a style="font-size:11px;" title="Special Discount" class="btn btn-sm green margin-top-10" href="'.url('/admin/dealer-special-discount/'.$dealer['id']).'">Special Discount</a>
+                    <a style="font-size:11px;" title="Special Discount" class="btn btn-sm green margin-top-10" href="'.url('/admin/dealer-special-discount/'.$dealer['id']).'">Special Disc.</a>
+                    <a style="font-size:11px;" title="Special Discount" class="btn btn-sm green margin-top-10" href="'.url('/admin/qty-discounts?dealer_id='.$dealer['id']).'">Qty Disc.</a>
                     <a style="font-size:11px;" title="Dealer Users" class="btn btn-sm yellow margin-top-10" href="'.url('/admin/dealer-users/'.$dealer['id']).'">Add-on Users</a>';
                 $resetPin = '';
                 if ( !empty($dealer['hash_salt'])) {
@@ -432,62 +433,48 @@ class DealerController extends Controller
         return view('admin.dealers.manage-dealer-stock')->with(compact('title','linkedProducts','dealerid'));
     }
 
-    public function qtyDiscounts(Request $Request){
+    public function qtyDiscounts(Request $request)
+    {
         Session::put('active','qtyDiscounts'); 
-        $products = QtyDiscount::join('products','products.id','=','qty_discounts.product_id')->select('products.product_name','products.id')->groupby('products.id')->get()->toArray();
-        /*echo "<pre>"; print_r($products); die;
-        if($Request->ajax()){
-            $conditions = array();
-            $data = $Request->input();
-            $querys = QtyDiscount::join('products','products.id','=','qty_discounts.product_id')->select('qty_discounts.*','products.product_name');
-            $iDisplayLength = intval($_REQUEST['length']);
-            $iDisplayStart = intval($_REQUEST['start']);
-            $iDisplayLength = $iDisplayLength < 0 ? $iTotalRecords : $iDisplayLength; 
-            $iTotalRecords = $querys->where($conditions)->count();
-            $querys =  $querys->where($conditions)
-                        ->skip($iDisplayStart)->take($iDisplayLength)
-                        ->OrderBy('qty_discounts.id','DESC')
-                        ->get();
-            $sEcho = intval($_REQUEST['draw']);
-            $records = array();
-            $records["data"] = array(); 
-            $end = $iDisplayStart + $iDisplayLength;
-            $end = $end > $iTotalRecords ? $iTotalRecords : $end;
-            $i=$iDisplayStart;
-            $querys=json_decode( json_encode($querys), true);
-            foreach($querys as $productdis){ 
-                $actionValues='
-                    <a title="Edit" class="btn btn-sm green margin-top-10" href="'.url('/admin/add-edit-qty-discount/'.$productdis['id']).'"> <i class="fa fa-edit"></i>
-                    </a>';
-                $num = ++$i;
-                $records["data"][] = array(      
-                    $num,
-                    $productdis['product_name'],
-                    $productdis['range_from']."kg",
-                    $productdis['range_to']."kg",
-                    $productdis['discount']."%", 
-                    $actionValues
-                );
-            }
-            $records["draw"] = $sEcho;
-            $records["recordsTotal"] = $iTotalRecords;
-            $records["recordsFiltered"] = $iTotalRecords;
-            return response()->json($records);
-        }*/
-        $title = "Qty Discounts";
-        return View::make('admin.dealers.qty-discounts')->with(compact('title','products'));
+        $title = "Dealer Qty Discounts";
+
+        $query = QtyDiscount::with(['product','dealer']);
+
+        // Dealer filter (query string)
+        if ($request->dealer_id) {
+            $query->where('dealer_id', $request->dealer_id);
+        }
+
+        $discounts = $query->orderBy('dealer_id')
+                           ->orderBy('product_id')
+                           ->get();
+
+        // Group by dealer first, then product
+        $groupedDiscounts = $discounts->groupBy([
+            'dealer_id',
+            'product_id'
+        ]);
+
+        $dealers = \App\Dealer::wherenull('parent_id')->select('id','business_name')->get();
+
+        return view('admin.dealers.qty-discounts')
+            ->with(compact('title','groupedDiscounts','dealers'));
     }
 
     public function addEditQtyDiscount(Request $request,$qtydiscountid=NULL){
-        if(!empty($qtydiscountid)){
-            $qtydiscountdata = QtyDiscount::where('id',$qtydiscountid)->first();
 
+        if(!empty($qtydiscountid)){
+            $qtydiscountdata = QtyDiscount::find($qtydiscountid);
             $title ="Edit Qty Discount";
         }else{
             $title ="Add Qty Discount";
-            $qtydiscountdata =array();
+            $qtydiscountdata = [];
         }
-        return view('admin.dealers.add-edit-qty-discount')->with(compact('title','qtydiscountdata','qtydiscountid'));
+
+        $dealers = \App\Dealer::wherenull('parent_id')->select('id','business_name')->get();
+
+        return view('admin.dealers.add-edit-qty-discount')
+            ->with(compact('title','qtydiscountdata','qtydiscountid','dealers'));
     }
 
     public function deleteQtyDiscount($disid){
@@ -505,10 +492,11 @@ class DealerController extends Controller
                     $type ="update";
                 }
                 $validator = Validator::make($request->all(), [
-                    'product_id' => 'bail|required',
-                    'range_from' => 'bail|required|regex:/^\d+(\.\d{1,2})?$/',
-                    'range_to' => 'bail|required|regex:/^\d+(\.\d{1,2})?$/|gt:'.$data['range_from'],
-                    'discount' => 'bail|required|regex:/^\d+(\.\d{1,2})?$/|gt:0|lte:99',     
+                    'dealer_id' => 'required|exists:dealers,id',
+                    'product_id' => 'required|exists:products,id',
+                    'range_from' => 'required|regex:/^\d+(\.\d{1,2})?$/',
+                    'range_to' => 'required|regex:/^\d+(\.\d{1,2})?$/|gt:'.$data['range_from'],
+                    'discount' => 'required|regex:/^\d+(\.\d{1,2})?$/|gt:0|lte:99',
                 ]);
                 if($validator->passes()) {
                     $data = $request->all();
@@ -518,6 +506,7 @@ class DealerController extends Controller
                     }else{
                         $qtyDis = QtyDiscount::find($data['qtydiscountid']);
                     }
+                    $qtyDis->dealer_id  = $data['dealer_id'];
                     $qtyDis->product_id = $data['product_id'];
                     /*$qtyDis->month = $data['month'];
                     $qtyDis->year = $data['year'];

@@ -764,45 +764,213 @@ class DvrController extends Controller
         }
 
         try {
+            $trialId = $request->trial_id;
+            $newUserDvrId = $request->user_dvr_id;
+            $currentUser = $this->resp['user']; // Assuming this contains 'id' and 'name'
+
+            // Fetch the Trial record
+            $trial = Trial::find($trialId);
+            if (!$trial) {
+                return response()->json(apiErrorResponse('Trial not found'), 404);
+            }
+
+            /**
+             * Logic: Team Member Validation
+             * If other_team_member_id is present, match with logged-in user ID.
+             * If it's null, match other_team_member_name with logged-in user name.
+             */
+            if (!is_null($trial->other_team_member_id)) {
+                if ($trial->other_team_member_id != $currentUser['id']) {
+                    return response()->json(apiErrorResponse('You are not the assigned team member for this trial.'), 403);
+                }
+            } else {
+                if (trim($trial->other_team_member_name) !== trim($currentUser['name'])) {
+                    return response()->json(apiErrorResponse('Your name does not match the assigned team member for this trial.'), 403);
+                }
+            }
+
+            // 1. Check count of existing links
+            $existingLinks = DB::table('user_dvr_trial_links')
+                ->where('trial_id', $trialId)
+                ->get();
+
+            if ($existingLinks->count() >= 2) {
+                return response()->json(apiErrorResponse('This trial is already linked to the maximum number of DVRs (2).'), 422);
+            }
+
+            // 2, 3 & 4. Validation against existing DVR if one link already exists
+            if ($existingLinks->count() > 0) {
+                // Check Jointly flag first
+                if ($trial->is_jointly == 0) {
+                    return response()->json(apiErrorResponse('This trial is not marked as Jointly and cannot be linked to multiple DVRs.'), 422);
+                }
+
+                $firstLinkDvrId = $existingLinks->first()->user_dvr_id;
+                $newDvr = DB::table('user_dvrs')->where('id', $newUserDvrId)->first();
+                $existingDvr = DB::table('user_dvrs')->where('id', $firstLinkDvrId)->first();
+
+                // Match logic (Ensuring we don't just match NULL to NULL if values are required)
+                $matchCustomer = ($newDvr->customer_id === $existingDvr->customer_id);
+                $matchRequest  = ($newDvr->customer_register_request_id === $existingDvr->customer_register_request_id);
+                $matchDate     = ($newDvr->dvr_date === $existingDvr->dvr_date);
+
+                if (!$matchCustomer || !$matchRequest || !$matchDate) {
+                    return response()->json(apiErrorResponse('DVR mismatch: Customer, Request, or Date must match the existing linked DVR.'), 422);
+                }
+            }
+
+            // 5. Insert the link
+            DB::table('user_dvr_trial_links')->updateOrInsert(
+                ['user_dvr_id' => $newUserDvrId, 'trial_id' => $trialId],
+                ['created_at' => now(), 'updated_at' => now()]
+            );
+
+            $trialData = Trial::with(['products', 'attachments', 'complaint_info'])->find($trialId);
+
+            return response()->json(apiSuccessResponse('Trial linked successfully', ['trial' => $trialData]), 200);
+
+        } catch (\Exception $e) {
+            return response()->json(apiErrorResponse($e->getMessage()), 500);
+        }
+    }
+
+    /**
+     * 9️⃣ DELETE SINGLE TRIAL
+     * POST /api/user/dvr/trial/delete
+     */
+    public function deleteTrial(Request $request)
+    {
+        // 1. Authorization Check
+        if (!$this->resp['status'] || !isset($this->resp['user'])) {
+            return response()->json(apiErrorResponse('Unauthorized'), 401);
+        }
+
+        // 2. Validation
+        $rules = [
+            'id' => 'required|integer|exists:trials,id',
+        ];
+
+        $validator = Validator::make($request->all(), $rules);
+        if ($validator->fails()) {
+            return response()->json(validationResponse($validator), 422);
+        }
+
+        DB::beginTransaction();
+
+        try {
             $userId = $this->resp['user']['id'];
 
-            // 1. Verify Trial belongs to the user
-            $trial = Trial::where('id', $request->trial_id)
-                          /*->where('user_id', $userId)*/
-                          ->first();
+            // 3. Fetch Trial with ownership check
+            // We verify the trial belongs to the user or was created by them
+            $trial = Trial::where('id', $request->id)
+                ->where('user_id', $userId)
+                ->first();
 
             if (!$trial) {
                 return response()->json(apiErrorResponse('Trial not found or access denied'), 404);
             }
 
-            // 2. Check if link already exists to avoid duplicates
-            $exists = DB::table('user_dvr_trial_links')
-                ->where('user_dvr_id', $request->user_dvr_id)
-                ->where('trial_id', $request->trial_id)
-                ->exists();
+            // 4. Clean up physical attachment files
+            $attachments = UserDvrAttachment::where('trial_id', $trial->id)->get();
+            foreach ($attachments as $attachment) {
+                if ($attachment->file) {
+                    // Use the user_dvr_id folder structure if available, else a general path
+                    $folder = $attachment->user_dvr_id ?? 'general';
+                    $filePath = public_path('DvrAttachments/' . $folder . '/' . $attachment->file);
 
-            if (!$exists) {
-                DB::table('user_dvr_trial_links')->insert([
-                    'user_dvr_id' => $request->user_dvr_id,
-                    'trial_id'    => $request->trial_id,
-                    'created_at'  => now(),
-                    'updated_at'  => now(),
-                ]);
+                    if (file_exists($filePath)) {
+                        @unlink($filePath);
+                    }
+                }
             }
 
-            // 3. Return Trial Info with common relations
-            $trialData = Trial::with(['products', 'attachments', 'complaint_info'])
-                              ->find($request->trial_id);
+            // 5. Manual Cleanup of related table records
+            // (Recommended even if you have ON DELETE CASCADE)
+            UserDvrProduct::where('trial_id', $trial->id)->delete();
+            UserDvrTrialLink::where('trial_id', $trial->id)->delete();
+            UserDvrAttachment::where('trial_id', $trial->id)->delete();
+
+            // 6. Delete the Trial record itself
+            $trial->delete();
+
+            DB::commit();
 
             return response()->json(
-                apiSuccessResponse('Trial linked to DVR successfully', [
-                    'trial' => $trialData
-                ]),
+                apiSuccessResponse('Trial and all associated data deleted successfully'),
                 200
             );
 
         } catch (\Exception $e) {
-            return response()->json(apiErrorResponse($e->getMessage()), 500);
+            DB::rollBack();
+            return response()->json(
+                apiErrorResponse('Failed to delete trial', [
+                    'error' => $e->getMessage()
+                ]),
+                500
+            );
+        }
+    }
+
+    /**
+     * 10️⃣ UN-LINK TRIAL FROM DVR
+     * POST /api/user/dvr/trial/unlink
+     */
+    public function unlinkTrial(Request $request)
+    {
+        // 1. Authorization Check
+        if (!$this->resp['status'] || !isset($this->resp['user'])) {
+            return response()->json(apiErrorResponse('Unauthorized'), 401);
+        }
+
+        // 2. Validation
+        $rules = [
+            'user_dvr_id' => 'required|integer|exists:user_dvrs,id',
+            'trial_id'    => 'required|integer|exists:trials,id',
+        ];
+
+        $validator = Validator::make($request->all(), $rules);
+        if ($validator->fails()) {
+            return response()->json(validationResponse($validator), 422);
+        }
+
+        try {
+            $userId = $this->resp['user']['id'];
+
+            // 3. Ownership Verification
+            // Ensure the DVR belongs to the logged-in user before allowing the unlink
+            $dvrExists = UserDvr::where('id', $request->user_dvr_id)
+                ->where('user_id', $userId)
+                ->exists();
+
+            if (!$dvrExists) {
+                return response()->json(apiErrorResponse('DVR not found or access denied'), 404);
+            }
+
+            // 4. Perform the Un-link
+            $deleted = DB::table('user_dvr_trial_links')
+                ->where('user_dvr_id', $request->user_dvr_id)
+                ->where('trial_id', $request->trial_id)
+                ->delete();
+
+            if ($deleted) {
+                return response()->json(
+                    apiSuccessResponse('Trial un-linked from DVR successfully'),
+                    200
+                );
+            } else {
+                return response()->json(
+                    apiErrorResponse('No active link found between this DVR and Trial'),
+                    404
+                );
+            }
+
+        } catch (\Exception $e) {
+            return response()->json(
+                apiErrorResponse('Failed to un-link trial', [
+                    'error' => $e->getMessage()
+                ]),
+                500
+            );
         }
     }
 }
