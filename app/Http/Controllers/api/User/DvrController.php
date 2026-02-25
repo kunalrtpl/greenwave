@@ -291,7 +291,10 @@ class DvrController extends Controller
         $rules = [
             'user_dvr_id' => 'required|integer|exists:user_dvrs,id',
             'products'    => 'nullable|array',
-            'products.*'  => 'integer|exists:products,id'
+            'products.*'  => 'integer|exists:products,id',
+            // New validation rules
+            'customer_id' => 'nullable|integer|exists:customers,id',
+            'customer_register_request_id' => 'nullable|integer|exists:customer_register_requests,id',
         ];
 
         $validator = Validator::make($request->all(), $rules);
@@ -302,21 +305,25 @@ class DvrController extends Controller
         DB::beginTransaction();
 
         try {
-           $userId = $this->resp['user']['id'];
+            $userId = $this->resp['user']['id'];
+
+            // 🔍 Fetch the parent DVR to inherit customer info if not provided in request
+            $parentDvr = DB::table('user_dvrs')->where('id', $request->user_dvr_id)->first();
 
             // 🔢 Get next trial number for this user
             $lastTrialNumber = Trial::where('user_id', $userId)->max('trial_number');
             $nextTrialNumber = ($lastTrialNumber ?? 0) + 1;
-
 
             // 1️⃣ Create Trial
             $trial = Trial::create(
                 array_merge(
                     $request->except(['products', 'user_dvr_id']),
                     [
-                        'user_id'       => $userId,
-                        'trial_number'  => $nextTrialNumber,
-                        'created_by'    => $userId,  
+                        'user_id'      => $userId,
+                        'trial_number' => $nextTrialNumber,
+                        'created_by'   => $userId,
+                        'customer_id'  => $request->customer_id ?? null,
+                        'customer_register_request_id' => $request->customer_register_request_id ?? null,
                     ]
                 )
             );
@@ -332,9 +339,9 @@ class DvrController extends Controller
             // 3️⃣ Attach products
             foreach ($request->products ?? [] as $productId) {
                 UserDvrProduct::create([
-                    'user_dvr_id'       => null,
-                    'trial_id' => $trial->id,
-                    'product_id'        => $productId
+                    'user_dvr_id' => null,
+                    'trial_id'    => $trial->id,
+                    'product_id'  => $productId
                 ]);
             }
 
