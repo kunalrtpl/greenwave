@@ -66,8 +66,42 @@ class MarketSample extends Model
     {
         $samples = MarketSample::with([
             'customer' => function ($q) {
-                    $q->select('id','dealer_id','name','email','mobile','address','business_model');
-                    },
+                $q->select('id','dealer_id','name','email','mobile','address','business_model')
+                  ->with([
+                      'dealer' => function ($d) {
+                          $d->select(
+                              'id',
+                              'business_name',
+                              'short_name',
+                              'city',
+                              'office_phone',
+                              'department',
+                              'designation',
+                              'owner_name'
+                          )
+                          ->without('contact_persons','linked_products'); // 🔥 override here
+                      },'user_customer_shares' => function ($ucs) {
+                          $ucs->select(
+                              'id',
+                              'user_id',
+                              'customer_id',
+                              'user_date',
+                          )->with([
+                              'user' => function ($u) {
+                                  $u->select(
+                                      'id',
+                                      'name',
+                                      'email',
+                                      'mobile',
+                                      'designation',
+                                      'type',
+                                      'status'
+                                  );
+                              }
+                          ]);
+                      }
+                  ]);
+                },
             'customer_register_request',
             'products',
             'histories'
