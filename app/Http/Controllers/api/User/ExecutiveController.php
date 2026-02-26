@@ -856,7 +856,9 @@ class ExecutiveController extends Controller
 
                 $userId = $request->filled('user_id') ? $request->user_id : $resp['user']['id'];
 
-                $feedbacks = Feedback::with(['customer','customer_register_request','customer_employee','product','replies'])->forUserSharedData($userId);
+                $feedbacks = Feedback::with(['customer' => function ($q) {
+                    $q->select('id','dealer_id','name','email','mobile','address','business_model');
+                    },'customer_register_request','customer_employee','product','replies'])->forUserSharedData($userId);
                 if($data['type'] !='all'){
                     $feedbacks = $feedbacks->where('type',$data['type']);
                 }

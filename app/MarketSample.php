@@ -65,7 +65,9 @@ class MarketSample extends Model
     public static function getMarketSamples($type, $id, $filters = null)
     {
         $samples = MarketSample::with([
-            'customer',
+            'customer' => function ($q) {
+                    $q->select('id','dealer_id','name','email','mobile','address','business_model');
+                    },
             'customer_register_request',
             'products',
             'histories'
