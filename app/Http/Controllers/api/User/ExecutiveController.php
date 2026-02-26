@@ -892,7 +892,24 @@ class ExecutiveController extends Controller
                               ]);
                           }
                       ]);
-                    },'customer_register_request','customer_employee','product','replies'])->forUserSharedData($userId);
+                    },
+                    'customer_register_request' => function($query){
+                        $query->with([
+                          'dealer' => function ($d) {
+                              $d->select(
+                                  'id',
+                                  'business_name',
+                                  'short_name',
+                                  'city',
+                                  'office_phone',
+                                  'department',
+                                  'designation',
+                                  'owner_name'
+                              )
+                              ->without('contact_persons','linked_products');
+                          }
+                      ]);
+                    },'customer_employee','product','replies'])->forUserSharedData($userId);
                 if($data['type'] !='all'){
                     $feedbacks = $feedbacks->where('type',$data['type']);
                 }
@@ -1844,7 +1861,23 @@ class ExecutiveController extends Controller
                     },
                     'user',
                     'dealer',
-                    'customer_register_request',
+                    'customer_register_request' => function($query){
+                        $query->with([
+                          'dealer' => function ($d) {
+                              $d->select(
+                                  'id',
+                                  'business_name',
+                                  'short_name',
+                                  'city',
+                                  'office_phone',
+                                  'department',
+                                  'designation',
+                                  'owner_name'
+                              )
+                              ->without('contact_persons','linked_products');
+                          }
+                      ]);
+                    },
                     'product',
                     'complaint_info',
                     'feedbackUser',

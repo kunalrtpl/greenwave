@@ -102,7 +102,23 @@ class MarketSample extends Model
                       }
                   ]);
                 },
-            'customer_register_request',
+            'customer_register_request' => function($query){
+                $query->with([
+                  'dealer' => function ($d) {
+                      $d->select(
+                          'id',
+                          'business_name',
+                          'short_name',
+                          'city',
+                          'office_phone',
+                          'department',
+                          'designation',
+                          'owner_name'
+                      )
+                      ->without('contact_persons','linked_products');
+                  }
+              ]);
+            },
             'products',
             'histories'
         ]);
