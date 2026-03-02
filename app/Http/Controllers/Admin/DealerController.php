@@ -473,7 +473,7 @@ class DealerController extends Controller
 
     public function qtyDiscounts(Request $request)
     {
-        Session::put('active','qtyDiscounts'); 
+        Session::put('active','dealers'); 
         $title = "Dealer Qty Discounts";
 
         $query = QtyDiscount::with(['product','dealer']);
