@@ -122,6 +122,13 @@
                                         <h4 class="text-center text-danger pt-3" style="display: none;" id="Customer-email"></h4>
                                     </div>
                                 </div>
+                                <div class="form-group">
+                                    <label class="col-md-3 control-label">Location Address </label>
+                                    <div class="col-md-4">
+                                        <input  type="text" placeholder="Location Address" name="location_address" style="color:gray" class="form-control" value="{{(!empty($customerdata['location_address']))?$customerdata['location_address']: '' }}"/>
+                                        <h4 class="text-center text-danger pt-3" style="display: none;" id="Customer-location_address"></h4>
+                                    </div>
+                                </div>
                                 <hr class="bold-hr">
                                 <p class="highlight-label">Add-on Users</p>
                                 <div class="form-group">

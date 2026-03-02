@@ -341,6 +341,12 @@ class CustomerController extends Controller
                         //echo "<pre>"; print_r($data); die;
                         //$customer->payment_discount = $data['payment_discount'];
                     }
+                    $customer->location_address = $data['location_address'];
+                    if($data['location_address'] ==""){
+                        $customer->location_address = NULL; 
+                        $customer->latitude = NULL; 
+                        $customer->longitude = NULL; 
+                    }
                     //$customer->is_spsod = $data['is_spsod'];
                     //$customer->is_monthly_turnover_discount = $data['is_monthly_turnover_discount'];
                     //$customer->custom_spsod_from = $data['custom_spsod_from'];

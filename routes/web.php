@@ -135,6 +135,9 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 		Route::match(['get', 'post'], '/manage-dealer-stock/{id}', 'DealerController@manageDealerStock');
 		Route::match(['get', 'post'], '/dealer-special-discount/{id}', 'DealerController@dealerSpecialDiscount');
 
+		Route::get('dealers/{id}/products', 'DealerController@dealerProducts')->name('admin.dealers.products');;
+		Route::post('dealers/{id}/products', 'DealerController@saveDealerProducts');
+
 		//Dealer Market Product Infos
 		Route::match(['get', 'post'], '/dealer/market-product-infos', 'DealerController@marketProductInfos');
 		

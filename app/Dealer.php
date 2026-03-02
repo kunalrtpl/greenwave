@@ -19,6 +19,17 @@ class Dealer extends Model
     	return $this->hasMany('App\DealerLinkedProduct','dealer_id')->with('product');
     }
 
+    // ADD THIS NEW RELATIONSHIP HERE
+    public function products()
+    {
+        return $this->belongsToMany(
+            'App\Product', 
+            'dealer_linked_products', 
+            'dealer_id', 
+            'product_id'
+        );
+    }
+
     public function customers(){
         return $this->hasMany('App\Customer','dealer_id')->where('business_model','Dealer');
     }

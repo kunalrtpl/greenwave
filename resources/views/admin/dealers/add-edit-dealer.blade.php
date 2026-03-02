@@ -210,6 +210,7 @@
                                             <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-credit_allowed"></h4>
                                         </div>
                                     </div>
+                                    <?php /*
                                     <div class="form-group">
                                         <label class="col-md-3 control-label">Linked Products <b class="red">({{count($selLinkedProids)}})</b></label>
                                         <div class="col-md-9">
@@ -220,6 +221,7 @@
                                             </select>
                                         </div>
                                     </div>
+                                    */?>
                                 </div>
 
                                 <!-- <div class="form-group">

@@ -67,9 +67,14 @@ class DealerController extends Controller
                 $actionValues='
                     <a style="font-size:8px;" title="Edit" class="btn btn-sm green margin-top-10" href="'.url('/admin/add-edit-dealer/'.$dealer['id']).'"> <i class="fa fa-edit"></i>
                     </a>
+                    <a  title="Link Products" 
+                       class="btn btn-sm purple margin-top-10" 
+                       href="'.route('admin.dealers.products', $dealer['id']).'">
+                       <i class="fa fa-link"></i>
+                    </a>
                     <a style="font-size:11px;" title="Manage Dealer Stock" class="btn btn-sm red margin-top-10" href="'.url('/admin/manage-dealer-stock/'.$dealer['id']).'">Manage Stock</a>
                     <a style="font-size:11px;" title="Special Discount" class="btn btn-sm green margin-top-10" href="'.url('/admin/dealer-special-discount/'.$dealer['id']).'">Special Disc.</a>
-                    <a style="font-size:11px;" title="Special Discount" class="btn btn-sm green margin-top-10" href="'.url('/admin/qty-discounts?dealer_id='.$dealer['id']).'">Qty Disc.</a>
+                    <a style="font-size:11px;" title="Qty Discount" class="btn btn-sm green margin-top-10" href="'.url('/admin/qty-discounts?dealer_id='.$dealer['id']).'">Qty Disc.</a>
                     <a style="font-size:11px;" title="Dealer Users" class="btn btn-sm yellow margin-top-10" href="'.url('/admin/dealer-users/'.$dealer['id']).'">Add-on Users</a>';
                 $resetPin = '';
                 if ( !empty($dealer['hash_salt'])) {
@@ -200,12 +205,12 @@ class DealerController extends Controller
                     }else{
                         $linked_dealers = "";
                     }
-                    if(isset($data['linked_products'])){
+                    /*if(isset($data['linked_products'])){
                         $linked_products = $data['linked_products'];
                         unset($data['linked_products']);
                     }else{
                         $linked_products = array();
-                    }
+                    }*/
                     $contact_persons = array();
                     if(isset($data['names'])){
                         
@@ -260,7 +265,7 @@ class DealerController extends Controller
                             $saveContactPeople->save();
                         }
                     }*/
-                    DealerLinkedProduct::where('dealer_id',$dealer->id)->delete();
+                    /*DealerLinkedProduct::where('dealer_id',$dealer->id)->delete();
                     if(!empty($linked_products)){
                         foreach ($linked_products as $key => $linkpro) {
                            $link_product = new DealerLinkedProduct;
@@ -268,7 +273,7 @@ class DealerController extends Controller
                            $link_product->product_id = $linkpro;
                            $link_product->save();
                         }
-                    }
+                    }*/
                     $redirectTo = url('/admin/dealers?s');
                     return response()->json(['status'=>true,'message'=>'ok','url'=>$redirectTo]);
                 }else{
@@ -278,6 +283,39 @@ class DealerController extends Controller
         /*}catch(\Exception $e){
             return response()->json(['status'=>false,'message'=>$e->getMessage(),'errors'=>array('value'=>$e->getMessage())]);
         }*/
+    }
+
+    public function dealerProducts($id)
+    {
+        $dealer = Dealer::findOrFail($id);
+
+        // Get your optimized hierarchy (ensure ProductDetail::fullHierarchy() is available)
+        $hierarchy = \App\ProductDetail::fullHierarchy();
+
+        // Get already linked IDs using our new relationship
+        $selectedProducts = $dealer->products()->pluck('product_id')->toArray();
+        $title = "Link Products - " . $dealer->name;
+        $dealerid = $id;
+
+        return view('admin.dealers.dealer_products', compact(
+            'dealer',
+            'hierarchy',
+            'selectedProducts',
+            'title',
+            'dealerid'
+        ));
+    }
+
+    public function saveDealerProducts(Request $request, $id)
+    {
+        $dealer = Dealer::findOrFail($id);
+
+        // Sync handles adding new links and removing unchecked ones automatically
+        $productIds = $request->input('products', []);
+        $dealer->products()->sync($productIds);
+
+        return redirect()->back()
+            ->with('flash_message_success', 'Dealer products updated successfully.');
     }
 
     public function resetPin($dealerid){

@@ -89,12 +89,6 @@ class UsersController extends Controller
                 }
                 $actionValues='
                     <a title="Edit User" class="btn btn-sm green margin-top-10" href="'.url('admin/add-edit-user/'.$user['id']).'"> <i class="fa fa-edit"></i>
-                    </a>
-
-                    <a  title="Link Products" 
-                       class="btn btn-sm purple margin-top-10" 
-                       href="'.route('admin.users.products', $user['id']).'">
-                       <i class="fa fa-link"></i>
                     </a>';
                 if($rolesExtraPermission && $user['web_access'] =="Yes"){
                     $actionValues .='
@@ -103,6 +97,11 @@ class UsersController extends Controller
                 }
                 if ($rolesExtraPermission && $user['app_access'] == "Yes" && !empty($user['hash_salt'])) {
                     $actionValues .= '
+                    <a  title="Link Products" 
+                       class="btn btn-sm purple margin-top-10" 
+                       href="'.route('admin.users.products', $user['id']).'">
+                       <i class="fa fa-link"></i>
+                    </a>
                     <a title="Reset Pin" class="btn btn-sm red margin-top-10" 
                        href="'.url('admin/user-reset-pin/'.$user['id']).'" 
                        onclick="return confirm(\'Are you sure you want to reset the pin?\');">
@@ -364,7 +363,7 @@ class UsersController extends Controller
             'selectedProducts',
             'title'
         ));
-}
+    }
 
     public function saveUserProducts(Request $request, $id)
     {
