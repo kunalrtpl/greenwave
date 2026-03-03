@@ -240,26 +240,32 @@ function validateDuplicateProduct(currentSelect) {
 
 /* CALCULATION */
 function calculateRow(row) {
-
     const selectedOption = $(row).find('.product-select option:selected');
     const price = parseFloat(selectedOption.data('price')) || 0;
 
     const discount = parseFloat($(row).find('.discount-input').val()) || 0;
     const specialDiscount = parseFloat($(row).find('.special-discount-input').val()) || 0;
 
+    // 1. Calculate price after the base discount only
     const afterDiscount = price - (price * discount / 100);
-    const finalPrice = price - (price * specialDiscount / 100);
 
+    // 2. Calculate final price by adding both discounts together
+    const totalDiscountPercentage = discount + specialDiscount;
+    const finalPrice = price - (price * totalDiscountPercentage / 100);
+
+    // Display Base Market Price
     $(row).find('.market-price-display').html(
         price ? `Rs. ${price.toFixed(2)}` : ''
     );
 
+    // Display price after the first Discount (%) column
     $(row).find('.final-price-display').html(
-        discount ? `Rs. ${afterDiscount.toFixed(2)}` : ''
+        price && discount ? `Rs. ${afterDiscount.toFixed(2)}` : (price ? `Rs. ${price.toFixed(2)}` : '')
     );
 
+    // Display the cumulative Final Price (Discount + Special Discount)
     $(row).find('.special-final-display').html(
-        specialDiscount ? `Rs. ${finalPrice.toFixed(2)}` : ''
+        price && (discount || specialDiscount) ? `Rs. ${finalPrice.toFixed(2)}` : ''
     );
 }
 
