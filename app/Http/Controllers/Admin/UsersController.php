@@ -69,6 +69,8 @@ class UsersController extends Controller
             $i=$iDisplayStart;
             $querys=json_decode( json_encode($querys), true);
             $rolesExtraPermission = \App\UserRole::checkExtraPermission(4,'roles');
+            $resetPinExtraPermission = \App\UserRole::checkExtraPermission(4,'reset_pin');
+            $linkProductsExtraPermission = \App\UserRole::checkExtraPermission(4,'link_products');
             foreach($querys as $user){ 
                 $departmentNames = [];
                 if (!empty($user['departments'])) {
@@ -95,13 +97,17 @@ class UsersController extends Controller
                     <a title="Update Role" class="btn btn-sm yellow margin-top-10" href="'.url('admin/update-role/'.$user['id']).'"> <i class="fa fa-clock-o"></i>
                     </a>';
                 }
-                if ($rolesExtraPermission && $user['app_access'] == "Yes" && !empty($user['hash_salt'])) {
+                if ($linkProductsExtraPermission && $user['app_access'] == "Yes" && !empty($user['hash_salt'])) {
                     $actionValues .= '
                     <a  title="Link Products" 
                        class="btn btn-sm purple margin-top-10" 
                        href="'.route('admin.users.products', $user['id']).'">
                        <i class="fa fa-link"></i>
-                    </a>
+                    </a>';
+                }
+
+                if ($resetPinExtraPermission && $user['app_access'] == "Yes" && !empty($user['hash_salt'])) {
+                    $actionValues .= '
                     <a title="Reset Pin" class="btn btn-sm red margin-top-10" 
                        href="'.url('admin/user-reset-pin/'.$user['id']).'" 
                        onclick="return confirm(\'Are you sure you want to reset the pin?\');">
