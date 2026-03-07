@@ -24,6 +24,7 @@
 /public/error_log
 /public/images/ProductImages
 /public/images/UserProofs
+/public/ExpenseReceipts
 .env
 .phpunit.result.cache
 Homestead.json
