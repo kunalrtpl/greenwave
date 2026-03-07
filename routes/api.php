@@ -287,6 +287,10 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::post('update-user-products', 'ExecutiveController@updateUserProducts');
 
 
+			// --- App Role Assignment Routes ---
+	        Route::post('roles/get', 'AppRoleAssignmentController@getUserAppRoles');
+	        Route::post('roles/save', 'AppRoleAssignmentController@saveAppRoles');
+			
 			Route::group(['prefix' => 'v2'], function () {
 
 			    Route::get('dvrs', 'DvrController@dvrs');
