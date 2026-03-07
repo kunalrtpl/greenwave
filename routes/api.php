@@ -324,8 +324,14 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 
 			    Route::match(['get', 'post'], 'direct-customer-products/{customerid}','ExecutiveController@v2directCustomerProducts');
 
-			});
+			    
 
+			});
+			Route::prefix('expenses')->group(function () {
+			    Route::get('categories', 'ExpenseController@categories');
+			    Route::get('list', 'ExpenseController@index'); // Can take ?month=3&year=2026
+			    Route::post('save', 'ExpenseController@save');
+			});
 
 		});
 	});
