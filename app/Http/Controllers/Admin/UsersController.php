@@ -236,6 +236,7 @@ class UsersController extends Controller
                     $user->gender = $data['gender'];
                     $user->dob = $data['dob'];
                     $user->joining_date = $data['joining_date'];
+                    $user->travel_charges_per_km = $data['travel_charges_per_km'];
                     /*if(!empty($data['permanent_from'])){
                         $user->permanent_from = $data['permanent_from'];
                     }*/
