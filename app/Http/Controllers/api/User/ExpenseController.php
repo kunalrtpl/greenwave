@@ -123,4 +123,98 @@ class ExpenseController extends Controller
             return response()->json(apiErrorResponse($e->getMessage()), 500);
         }
     }
+
+    /**
+     * Update an existing expense
+     */
+    public function update(Request $request, $id)
+    {
+        if (!$this->resp['status']) return response()->json(apiErrorResponse('Unauthorized'), 401);
+
+        $expense = UserExpense::where('id', $id)
+            ->where('user_id', $this->resp['user']['id'])
+            ->first();
+
+        if (!$expense) return response()->json(apiErrorResponse('Expense not found'), 404);
+
+        // Fetch category to check is_travel status
+        $category = ExpenseCategory::find($expense->category_id);
+
+        // Dynamic Validation Rules
+        $rules = [
+            'expense_date' => 'required|date',
+            'status'       => 'required',
+            'remarks'      => 'required|string',
+            'image'        => 'nullable|mimes:jpg,jpeg,png,pdf|max:5120'
+        ];
+
+        // If it's a travel category (is_travel = 1), travel fields are mandatory
+        if ($category->is_travel) {
+            $rules['travel_km'] = 'required|numeric';
+            $rules['charge_per_km'] = 'required|numeric';
+        } else {
+            $rules['requested_amount'] = 'required|numeric';
+        }
+
+        $validator = Validator::make($request->all(), $rules);
+        if ($validator->fails()) return response()->json(validationResponse($validator), 422);
+
+        try {
+            DB::beginTransaction();
+
+            $expense->expense_date = $request->expense_date;
+            $expense->remarks = $request->remarks;
+            $expense->status = $request->status;
+
+            if ($category->is_travel) {
+                $expense->travel_km = $request->travel_km;
+                $expense->charge_per_km = $request->charge_per_km;
+                $expense->is_intercity = $request->is_intercity ?? 0;
+                $expense->intercity_route = $request->intercity_route;
+                // Recalculate amount
+                $expense->requested_amount = $request->travel_km * $request->charge_per_km;
+            } else {
+                $expense->requested_amount = $request->requested_amount;
+            }
+
+            // Handle Image Update (Optional: Delete old image if needed)
+            if ($request->hasFile('image')) {
+                $file = $request->file('image');
+                $userId = $this->resp['user']['id'];
+                $destinationPath = public_path('ExpenseReceipts/' . $userId . '/');
+
+                $fileName = 'exp_upd_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $file->move($destinationPath, $fileName);
+                $expense->image = $fileName;
+            }
+
+            $expense->save();
+            DB::commit();
+
+            return response()->json(apiSuccessResponse('Expense updated successfully', ['expense' => $expense]), 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(apiErrorResponse($e->getMessage()), 500);
+        }
+    }
+
+    /**
+     * Delete an expense
+     */
+    public function destroy($id)
+    {
+        if (!$this->resp['status']) return response()->json(apiErrorResponse('Unauthorized'), 401);
+
+        $expense = UserExpense::where('id', $id)
+            ->where('user_id', $this->resp['user']['id'])
+            ->first();
+
+        if (!$expense) return response()->json(apiErrorResponse('Expense not found or already deleted'), 404);
+
+        // Note: You might want to delete the physical image file from storage here as well
+        $expense->delete();
+
+        return response()->json(apiSuccessResponse('Expense deleted successfully'), 200);
+    }
 }
