@@ -84,6 +84,7 @@ class ExpenseController extends Controller
             $expense->user_id = $userId;
             $expense->category_id = $request->category_id;
             $expense->expense_date = $request->expense_date;
+            $expense->missed_entry = $request->missed_entry ?? 0;
             $expense->remarks = $request->remarks;
             $expense->status = $request->status;
 
