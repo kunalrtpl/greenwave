@@ -138,6 +138,11 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::match(['get', 'post'], '/calculate-product-packing-cost','DealerController@calculateProductPackingCost');
 			Route::match(['get', 'post'], '/my-products-pdf','DealerController@myProductsPdf');
 
+			// NEW: Linking Controller Routes
+	        Route::get('/sub-dealers-list', 'LinkingController@linkedDealersList');
+	        Route::post('/get-dealer-products', 'LinkingController@dealerLinkedProducts');
+	        Route::post('/update-dealer-products', 'LinkingController@saveDealerProducts');
+
 		});
 	});
 

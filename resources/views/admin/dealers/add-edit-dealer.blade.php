@@ -41,6 +41,21 @@
                                         <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-dealer_type"></h4>
                                     </div>
                                 </div> 
+                                <div class="form-group" id="linked-dealer-row" style="display: none;">
+                                    <label class="col-md-3 control-label">Link Dealer <span class="asteric">*</span></label>
+                                    <div class="col-md-4">
+                                        <select class="form-control select2" name="linked_dealer_id">
+                                            <option value="">Select Parent Dealer</option>
+                                            @foreach($parentDealers as $pdealer)
+                                                <option value="{{ $pdealer['id'] }}" 
+                                                    {{ (!empty($dealerdata['linked_dealer_id']) && $dealerdata['linked_dealer_id'] == $pdealer['id']) ? 'selected' : '' }}>
+                                                    {{ $pdealer['business_name'] }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-linked_dealer_id"></h4>
+                                    </div>
+                                </div>
                                 <div class="form-group">
                                     <label class="col-md-3 control-label">Business Name <span class="asteric">*</span></label>
                                     <div class="col-md-4">
@@ -560,35 +575,34 @@
 </style>
 <script>
     function toggleDealerFields() {
-        const selectedType = document.querySelector('input[name="dealer_type"]:checked')?.value;
-        const fieldsDiv = document.getElementById('dealer-type-fields');
+    const selectedType = document.querySelector('input[name="dealer_type"]:checked')?.value;
+    const fieldsDiv = document.getElementById('dealer-type-fields');
+    const linkedDealerRow = document.getElementById('linked-dealer-row');
 
-        // Show/hide dealer-specific financial fields
-        if (selectedType === 'sub dealer') {
-            fieldsDiv.style.display = 'none';
-        } else {
-            fieldsDiv.style.display = 'block';
-        }
-
-        // List of role IDs to hide/uncheck for sub dealer
-        const restrictedRoleIds = [28, 32, 33, 34, 35, 40, 50, 52];
-
-        restrictedRoleIds.forEach(function(id) {
-            const row = document.getElementById('role-row-' + id);
-            if (row) {
-                const checkbox = row.querySelector('input[type="checkbox"]');
-
-                if (selectedType === 'sub dealer') {
-                    // Hide row and uncheck checkbox
-                    row.style.display = 'none';
-                    if (checkbox) checkbox.checked = false;
-                } else {
-                    // Show row
-                    row.style.display = 'table-row';
-                }
-            }
-        });
+    if (selectedType === 'sub dealer') {
+        fieldsDiv.style.display = 'none'; // Hide financial fields
+        linkedDealerRow.style.display = 'block'; // Show Parent Dealer dropdown
+    } else {
+        fieldsDiv.style.display = 'block'; // Show financial fields
+        linkedDealerRow.style.display = 'none'; // Hide Parent Dealer dropdown
+        $('[name="linked_dealer_id"]').val('').trigger('change'); // Clear selection
     }
+    $('.select2').select2({ width: 'resolve' });
+    // Role restrictions logic...
+    const restrictedRoleIds = [28, 32, 33, 34, 35, 40, 50, 52];
+    restrictedRoleIds.forEach(function(id) {
+        const row = document.getElementById('role-row-' + id);
+        if (row) {
+            if (selectedType === 'sub dealer') {
+                row.style.display = 'none';
+                const checkbox = row.querySelector('input[type="checkbox"]');
+                if (checkbox) checkbox.checked = false;
+            } else {
+                row.style.display = 'table-row';
+            }
+        }
+    });
+}
 
     // Run on page load
     document.addEventListener('DOMContentLoaded', function() {
@@ -597,6 +611,8 @@
             el.addEventListener('change', toggleDealerFields);
         });
     });
+
+
 </script>
 
 

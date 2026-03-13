@@ -138,8 +138,14 @@ class DealerController extends Controller
             $operatingCities = array();
     	}
         $otherDealers = Dealer::where('id','!=',$ignoreDealer)->get()->toArray();
+
+        $parentDealers = Dealer::where('dealer_type', 'dealer')
+                            ->whereNull('parent_id') // or whereNull('linked_dealer_id')
+                            ->where('id', '!=', $dealerid ?? 0)
+                            ->get()
+                            ->toArray();
         //echo "<pre>"; print_r($dealerdata); die;
-    	return view('admin.dealers.add-edit-dealer')->with(compact('title','dealerdata','otherDealers','selLinkedProids','selProductTypes','selAppRoles','linkedCustomers','operatingCities'));
+    	return view('admin.dealers.add-edit-dealer')->with(compact('title','dealerdata','otherDealers','selLinkedProids','selProductTypes','selAppRoles','linkedCustomers','operatingCities','parentDealers'));
     }
 
     public function saveDealer(Request $request){
@@ -194,6 +200,9 @@ class DealerController extends Controller
                     }
                     if(empty($data['password'])){
                         unset($data['password']);
+                    }
+                    if($data['dealer_type'] =="dealer") {
+                        unset($data['linked_dealer_id']);
                     }
                     $product_types = implode(',',$data['product_types']);
                     //echo "<pre>"; print_r($data); die;
