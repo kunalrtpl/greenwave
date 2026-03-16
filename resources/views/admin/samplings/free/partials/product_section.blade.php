@@ -3,7 +3,10 @@
     $hasItems   = $sampleDetails->sampleitems->count() > 0;
     $isDisabled = $sampleDetails->sample_edited === 'yes';
 @endphp
-
+{{-- ADD THIS LINE --}}
+<script>
+    var userProductIds = @json($userProductIds ?? []);
+</script>
 <style>
 .select2-container,
 .select2-dropdown {
@@ -122,7 +125,17 @@
                                     {{-- REQUESTED ROW --}}
                                     <tr style="background:#f4f8fb;">
                                         <td><span class="label label-info">Requested</span></td>
-                                        <td>{{ $item->requested_product->product_name ?? '-' }}</td>
+                                        <td>
+                                            {{ $item->requested_product->product_name ?? '-' }}
+                                            @php $reqPid = $item->requested_product->id ?? null; @endphp
+                                            @if($reqPid)
+                                                @if(in_array($reqPid, $userProductIds ?? []))
+                                                    <br><span class="label label-success"><i class="fa fa-link"></i> Linked</span>
+                                                @else
+                                                    <br><span class="label label-danger"><i class="fa fa-chain-broken"></i> Not Linked</span>
+                                                @endif
+                                            @endif
+                                        </td>
                                         <td>{{ $item->pack_size }}</td>
                                         <td>{{ $item->no_of_packs }}</td>
                                         <td>{{ $item->qty }} Kg</td>
@@ -168,7 +181,12 @@
                                                 {{ optional($products->firstWhere('id',$item->product_id))->dealer_price ?? 0 }}
                                             </strong>
                                         </small>
-
+                                        <br>
+                                        @if(in_array($item->product_id, $userProductIds ?? []))
+                                            <span class="link-badge label label-success"><i class="fa fa-link"></i> Linked</span>
+                                        @else
+                                            <span class="link-badge label label-danger"><i class="fa fa-chain-broken"></i> Not Linked</span>
+                                        @endif
                                         <input type="hidden" name="dealer_prices[]" class="hiddenDealerPrice"
                                             value="{{ optional($products->firstWhere('id',$item->product_id))->dealer_price ?? 0 }}">
                                         <input type="hidden" name="item_ids[]" value="{{ $item->id }}">

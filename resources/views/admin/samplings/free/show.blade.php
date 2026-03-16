@@ -302,13 +302,25 @@ $('.approved-product').each(function () {
 });
 
 /* PRODUCT CHANGE */
+/* PRODUCT CHANGE */
 $(document).on('change', '.approved-product', function () {
     let row = $(this).closest('tr');
     let selected = $(this).find(':selected');
+    let productId = parseInt($(this).val());
 
     row.find('.dealer-price').text(selected.data('price') || 0);
     row.find('.hiddenDealerPrice').val(selected.data('price') || 0);
     row.find('.actual-pack-size').data('selected', null);
+
+    // Update link badge
+    let badge = row.find('.link-badge');
+    if (userProductIds.indexOf(productId) !== -1) {
+        badge.removeClass('label-danger').addClass('label-success')
+             .html('<i class="fa fa-link"></i> Linked');
+    } else {
+        badge.removeClass('label-success').addClass('label-danger')
+             .html('<i class="fa fa-chain-broken"></i> Not Linked');
+    }
 
     setPackSizes(row);
     calculateRow(row);

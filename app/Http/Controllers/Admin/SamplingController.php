@@ -221,11 +221,18 @@ class SamplingController extends Controller
         $products->each(function ($product) {
             $product->dealer_price = optional($product->pricings->first())->dealer_price ?? 0;
         });
+
+        $userProductIds = \DB::table('user_products')
+            ->where('user_id', $sampleDetails->user_id)
+            ->pluck('product_id')
+            ->toArray();
+
         $title = "View Sampling";
         return view('admin.samplings.free.show', compact(
             'sampleDetails',
             'products',
-            'title'
+            'title',
+            'userProductIds'
         ));
     }
 
@@ -544,6 +551,18 @@ class SamplingController extends Controller
                 $itemDetails->dealer_price = $data['dealer_prices'][$ikey];
                 $itemDetails->final_value = $itemDetails->dealer_price * $itemDetails->actual_qty;
                 $itemDetails->save();
+
+                // Auto-link product to user if not already linked
+                DB::table('user_products')->updateOrInsert(
+                    [
+                        'user_id'    => $sampleDetails->user_id,
+                        'product_id' => $itemDetails->product_id,
+                    ],
+                    [
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]
+                );
 
                 $subtotal += $itemDetails->net_price * $data['actual_qtys'][$ikey];
 
