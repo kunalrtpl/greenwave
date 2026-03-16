@@ -25,6 +25,7 @@ class CreateUserExpensesTable extends Migration
             
             $table->text('remarks')->nullable();
             $table->string('image')->nullable();
+            $table->string('alternative_image')->nullable();
             $table->string('status'); // requested, approved
             $table->tinyInteger('missed_entry')->default(0);
             // New Approval & Verification Columns

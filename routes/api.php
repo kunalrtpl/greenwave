@@ -340,6 +340,11 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			    // New Routes
 			    Route::post('update/{id}', 'ExpenseController@update'); 
 			    Route::delete('delete/{id}', 'ExpenseController@destroy');
+
+			        // ---- NEW: Query routes ----
+			    Route::get('/{id}/queries',  'ExpenseController@getQueries');  // fetch all queries
+			    Route::post('/{id}/query',   'ExpenseController@sendQuery');   // send a query
+			    Route::post('/{id}/mark-read','ExpenseController@markQueriesRead');
 			});
 
 		});

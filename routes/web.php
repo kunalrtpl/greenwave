@@ -424,6 +424,14 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 	    Route::get('/dvrs', 'UserDvrController@index');
 		Route::get('/dvrs/{id}', 'UserDvrController@show');
 
+
+		// User Expenses
+    Route::get('user-expenses',                         'UserExpenseController@index')->name('admin.user-expenses.index');
+	Route::post('user-expenses/{id}/update-status',     'UserExpenseController@updateStatus')->name('admin.user-expenses.update-status');
+	Route::post('user-expenses/{id}/toggle-verified',   'UserExpenseController@toggleVerified')->name('admin.user-expenses.toggle-verified');
+	Route::get('user-expenses/{id}/queries',            'UserExpenseController@getQueries')->name('admin.user-expenses.queries');
+	Route::post('user-expenses/{id}/raise-query',       'UserExpenseController@raiseQuery')->name('admin.user-expenses.raise-query');
+
 	});
 });
 Route::match(['get', 'post'], '/send-notifications', 'Admin\NotificationController@sendNotifications');
