@@ -23,6 +23,7 @@ class UserExpenseController extends Controller
                 'ue.user_id',
                 'ue.expense_date',
                 'ue.missed_entry',
+                'ue.missed_entry_reason',
                 'ue.requested_amount',
                 'ue.approved_amount',
                 'ue.travel_km',
@@ -144,9 +145,9 @@ class UserExpenseController extends Controller
         ]);
 
         $data = [
-            'status'           => $request->status,
+            'status'        => $request->status,
             'admin_remarks' => $request->admin_remarks ?? null,
-            'updated_at'       => now(),
+            'updated_at'    => now(),
         ];
 
         if ($request->status === 'Approved') {
@@ -166,11 +167,51 @@ class UserExpenseController extends Controller
     }
 
     /**
-     * Toggle verified checkbox via AJAX.
-     * Now accepts optional internal_remarks.
-     * Returns current verified state and remarks.
+     * Toggle verified (YES/NO) via AJAX — no remarks, instant toggle.
      */
     public function toggleVerified(Request $request, $id)
+    {
+        $expense = DB::table('user_expenses')->where('id', $id)->first();
+        if (!$expense) {
+            return response()->json(['success' => false, 'message' => 'Expense not found.'], 404);
+        }
+
+        if ($expense->verified_by) {
+            // Un-verify — keep existing internal_remarks intact (do NOT clear them)
+            DB::table('user_expenses')->where('id', $id)->update([
+                'verified_by' => null,
+                'updated_at'  => now(),
+            ]);
+            $verified = false;
+        } else {
+            // Verify
+            DB::table('user_expenses')->where('id', $id)->update([
+                'verified_by' => auth()->id(),
+                'updated_at'  => now(),
+            ]);
+            $verified = true;
+        }
+
+        // Reload to return fresh internal_remarks & verified_by_name
+        $updated = DB::table('user_expenses as ue')
+            ->leftJoin('users as vb', 'ue.verified_by', '=', 'vb.id')
+            ->where('ue.id', $id)
+            ->select('ue.internal_remarks', 'vb.name as verified_by_name')
+            ->first();
+
+        return response()->json([
+            'success'          => true,
+            'verified'         => $verified,
+            'internal_remarks' => $updated->internal_remarks ?? null,
+            'verified_by_name' => $verified ? (auth()->user()->name ?? 'Admin') : null,
+        ]);
+    }
+
+    /**
+     * Save / update internal remarks for an expense (AJAX).
+     * Separate from verify — can be called any time.
+     */
+    public function saveInternalRemarks(Request $request, $id)
     {
         $expense = DB::table('user_expenses')->where('id', $id)->first();
         if (!$expense) {
@@ -181,31 +222,14 @@ class UserExpenseController extends Controller
             'internal_remarks' => 'nullable|string|max:1000',
         ]);
 
-        if ($expense->verified_by) {
-            // Un-verify — clear remarks too
-            DB::table('user_expenses')->where('id', $id)->update([
-                'verified_by'      => null,
-                'internal_remarks' => null,
-                'updated_at'       => now(),
-            ]);
-            $verified = false;
-            $remarks  = null;
-        } else {
-            // Verify — save remarks
-            DB::table('user_expenses')->where('id', $id)->update([
-                'verified_by'      => auth()->id(),
-                'internal_remarks' => $request->internal_remarks ?? null,
-                'updated_at'       => now(),
-            ]);
-            $verified = true;
-            $remarks  = $request->internal_remarks ?? null;
-        }
+        DB::table('user_expenses')->where('id', $id)->update([
+            'internal_remarks' => $request->internal_remarks ?? null,
+            'updated_at'       => now(),
+        ]);
 
         return response()->json([
             'success'          => true,
-            'verified'         => $verified,
-            'internal_remarks' => $remarks,
-            'verified_by_name' => auth()->user()->name ?? 'Admin',
+            'internal_remarks' => $request->internal_remarks ?? null,
         ]);
     }
 

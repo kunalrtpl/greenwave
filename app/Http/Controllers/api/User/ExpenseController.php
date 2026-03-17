@@ -164,6 +164,7 @@ class ExpenseController extends Controller
             $expense->expense_date = $request->expense_date;
             $expense->missed_entry = $request->missed_entry ?? 0;
             $expense->remarks      = $request->remarks;
+            $expense->missed_entry_reason  = $request->missed_entry_reason ?? '';
             $expense->status       = $request->status;
 
             if ($category->is_travel) {

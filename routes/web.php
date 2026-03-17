@@ -431,6 +431,7 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 	Route::post('user-expenses/{id}/toggle-verified',   'UserExpenseController@toggleVerified')->name('admin.user-expenses.toggle-verified');
 	Route::get('user-expenses/{id}/queries',            'UserExpenseController@getQueries')->name('admin.user-expenses.queries');
 	Route::post('user-expenses/{id}/raise-query',       'UserExpenseController@raiseQuery')->name('admin.user-expenses.raise-query');
+	Route::post('user-expenses/{id}/internal-remarks',       'UserExpenseController@saveInternalRemarks');
 
 	});
 });

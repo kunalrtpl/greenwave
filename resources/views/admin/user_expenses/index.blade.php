@@ -68,10 +68,6 @@
 /* ---- List ---- */
 .exp-list { background:#fff; border-radius:12px; box-shadow:0 4px 20px rgba(30,50,100,.09); overflow:hidden; border:1px solid #e4eaf3; }
 
-/*
-  Columns: # | Employee+Remarks | Amount+Travel | Approved | Bill | Verified | Query | Status
-  Merged travel/route info under requested; Remarks column replaces Travel/Route
-*/
 .exp-grid {
     display: grid;
     grid-template-columns: 52px 200px 130px 130px 110px 90px 80px 100px 145px;
@@ -110,6 +106,14 @@
 .cat-t  { display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; margin-top:5px; background:#edf3fb; color:#2d6faa; }
 .miss-t { display:inline-block; font-size:10px; font-weight:700; padding:2px 7px; border-radius:20px; background:#fff4de; color:#c47d00; border:1px solid #ffc83d; margin-left:3px; }
 
+/* Missed entry reason */
+.missed-reason-txt {
+    display:inline-block; font-size:10px; color:#c47d00; background:#fff9ee;
+    border:1px solid #ffe0a0; border-radius:5px; padding:2px 8px; margin-top:4px;
+    max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    cursor:default;
+}
+
 /* Remarks (user submitted remarks) */
 .remarks-txt { font-size:11px; color:#8a9ab5; font-style:italic; margin-top:4px; padding-top:4px; border-top:1px dashed #edf1f8; }
 
@@ -141,19 +145,21 @@
 .r-thumb:hover .rto { background:rgba(45,111,170,.55); }
 .r-none { width:34px; height:34px; border-radius:7px; border:2px dashed #dde4ee; display:inline-block; text-align:center; line-height:30px; color:#c5cdd8; font-size:13px; vertical-align:middle; }
 
-/* Verified */
+/* ---- Verified column ---- */
 .vc { padding:12px 8px; border-right:1px solid #edf1f8; text-align:center; vertical-align:middle; }
 .v-cb { width:16px; height:16px; cursor:pointer; }
 .v-lb { font-size:9px; font-weight:700; letter-spacing:.3px; }
 .v-lb.on { color:#1e9e58; } .v-lb.off { color:#c5cdd8; }
-/* (i) internal remarks icon */
-.v-info-btn {
-    background:none; border:none; padding:0 2px; cursor:pointer;
-    color:#8a9ab5; font-size:13px; line-height:1; display:inline-block;
-    vertical-align:middle; transition:color .15s;
+
+/* Internal remarks button — pencil icon, separate from verify */
+.btn-int-remarks {
+    background: none; border: 1.5px solid #dde4ee; border-radius: 5px;
+    padding: 2px 6px; cursor: pointer; font-size: 11px; color: #8a9ab5;
+    line-height: 1.4; display: inline-block; margin-top: 4px;
+    transition: all .15s; font-family: 'Inter', sans-serif;
 }
-.v-info-btn:hover { color:#2d6faa; }
-.v-info-btn.has-remark { color:#f39c12; }
+.btn-int-remarks:hover { border-color: #4d8fcc; color: #2d6faa; background: #edf3fb; }
+.btn-int-remarks.has-remark { border-color: #f39c12; color: #c47d00; background: #fff9ee; }
 
 /* Query */
 .qc { padding:12px 8px; border-right:1px solid #edf1f8; text-align:center; }
@@ -221,10 +227,6 @@
 .mod-hdr-blue  { background:linear-gradient(135deg,#2d6faa,#1a4e80); padding:16px 22px; border:none; }
 .mod-hdr-indigo { background:linear-gradient(135deg,#3d5a9a,#253870); padding:16px 22px; border:none; }
 .mod-hdr-green { background:linear-gradient(135deg,#27ae60,#1a7a45); padding:16px 22px; border:none; }
-.mod-title { color:#fff; font-size:15px; font-weight:800; font-family:'Inter',sans-serif; margin:0; }
-.mod-close { color:rgba(255,255,255,.7); font-size:22px; margin-top:-2px; transition:color .2s; }
-.mod-close:hover { color:#fff; }
-
 .modal-content { border-radius:13px!important; border:none!important; box-shadow:0 30px 80px rgba(10,20,50,.22)!important; overflow:hidden; }
 .modal-footer-plain { padding:13px 22px; background:#f7f9fc; border-top:1px solid #edf1f8; }
 
@@ -284,16 +286,13 @@
 .btn-qclose { background:#f0f3f8; color:#6a7a8a; border:1.5px solid #dde4ee; border-radius:7px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; margin-right:8px; }
 .q-loading { text-align:center; padding:40px 0; color:#b0bcc8; }
 
-/* ---- Verify Popup ---- */
-#verifyModal .modal-body { padding:22px; }
-.verify-check-icon { width:50px; height:50px; border-radius:50%; background:#e8faf1; text-align:center; line-height:50px; margin:0 auto 14px; font-size:22px; color:#27ae60; }
-
-/* ---- Internal Remarks popup ---- */
+/* ---- Internal Remarks Modal ---- */
 #internalRemarksModal .modal-body { padding:22px; }
-.ir-box { background:#f7f9fc; border-radius:8px; padding:14px; border-left:4px solid #f39c12; }
-.ir-box .ir-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:#f39c12; margin-bottom:6px; display:block; }
-.ir-box .ir-text { font-size:13px; color:#2d3a4a; line-height:1.6; }
+.ir-current-box { background:#f7f9fc; border-radius:8px; padding:14px; border-left:4px solid #f39c12; margin-bottom:14px; }
+.ir-current-box .ir-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:#f39c12; margin-bottom:6px; display:block; }
+.ir-current-box .ir-text { font-size:13px; color:#2d3a4a; line-height:1.6; }
 .ir-by { font-size:11px; color:#a0aab8; margin-top:8px; }
+.ir-none-txt { font-size:12px; color:#b0bcc8; font-style:italic; }
 </style>
 
 <div class="page-content-wrapper">
@@ -442,7 +441,7 @@
             {{-- # --}}
             <div class="dc-id"><span class="id-num">{{ $expense->id }}</span></div>
 
-            {{-- Employee + Remarks (user remarks) --}}
+            {{-- Employee + Remarks --}}
             <div class="dc">
                 <div class="emp-n">{{ $expense->employee_name ?? 'N/A' }}</div>
                 @if(!empty($expense->employee_mobile))
@@ -450,8 +449,19 @@
                 @endif
                 <div style="margin-top:4px;">
                     <span class="cat-t">{{ $expense->category_name }}</span>
-                    @if($expense->missed_entry) <span class="miss-t">Missed</span> @endif
+                    @if($expense->missed_entry)
+                        <span class="miss-t">Missed</span>
+                    @endif
                 </div>
+                {{-- Missed entry reason --}}
+                @if($expense->missed_entry && !empty($expense->missed_entry_reason))
+                    <div style="margin-top:4px;">
+                        <span class="missed-reason-txt" title="{{ $expense->missed_entry_reason }}">
+                            <i class="fa fa-exclamation-circle" style="margin-right:3px;"></i>{{ \Illuminate\Support\Str::limit($expense->missed_entry_reason, 30) }}
+                        </span>
+                    </div>
+                @endif
+                {{-- User submitted remarks --}}
                 @if(!empty($expense->remarks))
                     <div class="remarks-txt" title="{{ $expense->remarks }}">
                         <i class="fa fa-comment-o"></i> {{ \Illuminate\Support\Str::limit($expense->remarks, 40) }}
@@ -507,27 +517,31 @@
                 </div>
             </div>
 
-            {{-- Verified checkbox + (i) internal remarks icon --}}
+            {{-- Verified checkbox + separate Internal Remarks button --}}
             <div class="vc">
+                {{-- Checkbox: direct toggle, no popup --}}
                 <div style="margin-bottom:3px;">
                     <input type="checkbox"
                         class="v-cb verify-checkbox"
                         data-id="{{ $expense->id }}"
                         {{ !empty($expense->verified_by) ? 'checked' : '' }}
-                        title="{{ !empty($expense->verified_by) ? 'Verified by '.($expense->verified_by_name ?? 'Admin') : 'Click to verify' }}">
+                        title="{{ !empty($expense->verified_by) ? 'Verified by '.($expense->verified_by_name ?? 'Admin').'. Click to un-verify.' : 'Click to verify' }}">
                 </div>
                 <div>
                     <span class="v-lb {{ !empty($expense->verified_by) ? 'on' : 'off' }}" id="vlbl-{{ $expense->id }}">
                         {{ !empty($expense->verified_by) ? 'YES' : 'NO' }}
                     </span>
                 </div>
-                <div style="margin-top:2px;">
+                {{-- Separate internal remarks button --}}
+                <div style="margin-top:4px;">
                     <button
-                        class="v-info-btn {{ !empty($expense->internal_remarks) ? 'has-remark' : '' }}"
-                        id="vinfo-{{ $expense->id }}"
-                        onclick="showInternalRemarks({{ $expense->id }}, '{{ addslashes($expense->verified_by_name ?? '') }}', '{{ addslashes($expense->internal_remarks ?? '') }}')"
-                        title="{{ !empty($expense->internal_remarks) ? 'View internal remarks' : 'No internal remarks' }}"
-                    ><i class="fa fa-info-circle"></i></button>
+                        class="btn-int-remarks btn-open-int-remarks {{ !empty($expense->internal_remarks) ? 'has-remark' : '' }}"
+                        id="irbtn-{{ $expense->id }}"
+                        data-id="{{ $expense->id }}"
+                        data-remarks="{{ addslashes($expense->internal_remarks ?? '') }}"
+                        data-verified-by="{{ addslashes($expense->verified_by_name ?? '') }}"
+                        title="{{ !empty($expense->internal_remarks) ? 'Edit internal remarks' : 'Add internal remarks' }}"
+                    ><i class="fa fa-pencil"></i> Note</button>
                 </div>
             </div>
 
@@ -540,7 +554,6 @@
                     title="View / Send Queries">
                     <i class="fa fa-comments"></i>
                     @if($unread > 0)
-                        {{-- Blinking dot for unread --}}
                         <span class="q-unread-dot" id="qdot-{{ $expense->id }}"></span>
                         <span class="q-badge" id="qbadge-{{ $expense->id }}">{{ $unread > 9 ? '9+' : $unread }}</span>
                     @elseif($qCount > 0)
@@ -565,7 +578,7 @@
                 @endif
             </div>
 
-            {{-- Actions: Update Status only (verify moved to checkbox col) --}}
+            {{-- Actions --}}
             <div class="dc" style="text-align:center;">
                 <button class="btn-upd btn-update-status"
                     data-id="{{ $expense->id }}"
@@ -604,54 +617,33 @@
 </div>
 
 
-{{-- VERIFY REMARKS MODAL --}}
-<div class="modal fade" id="verifyModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document" style="width:400px;max-width:95vw;margin:80px auto;">
-        <div class="modal-content">
-            <div class="modal-header mod-hdr-green">
-                <button type="button" class="close mod-close" data-dismiss="modal">&times;</button>
-                <h4 class="modal-title mod-title"><i class="fa fa-check-circle"></i>&nbsp; Verify Expense</h4>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="v_expense_id">
-                <div class="verify-check-icon"><i class="fa fa-shield"></i></div>
-                <p style="text-align:center;font-size:13px;color:#6a7a8a;margin-bottom:16px;">
-                    Optionally add an internal remark before verifying.
-                </p>
-                <div class="m-remarks-box">
-                    <label><i class="fa fa-lock"></i>&nbsp; Internal Remarks (optional)</label>
-                    <textarea id="v_internal_remarks" rows="3" placeholder="e.g. Bill checked and confirmed..."></textarea>
-                </div>
-                <div id="v_err" class="m-err" style="display:none;margin-top:10px;"></div>
-            </div>
-            <div class="modal-footer modal-footer-plain">
-                <button type="button" class="btn-mcancel" data-dismiss="modal"><i class="fa fa-times"></i> Cancel</button>
-                <button type="button" id="btnVerifyConfirm" class="btn-msave" style="background:linear-gradient(135deg,#27ae60,#1a7a45);">
-                    <i class="fa fa-check"></i> Confirm Verify
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-
-{{-- INTERNAL REMARKS VIEW MODAL --}}
+{{-- INTERNAL REMARKS MODAL (Add / Edit / View) --}}
 <div class="modal fade" id="internalRemarksModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document" style="width:420px;max-width:95vw;margin:80px auto;">
+    <div class="modal-dialog" role="document" style="width:430px;max-width:95vw;margin:80px auto;">
         <div class="modal-content">
             <div class="modal-header" style="background:linear-gradient(135deg,#f39c12,#d68910);padding:16px 22px;border:none;">
                 <button type="button" class="close mod-close" data-dismiss="modal">&times;</button>
-                <h4 class="modal-title mod-title"><i class="fa fa-info-circle"></i>&nbsp; Internal Remarks</h4>
+                <h4 class="modal-title mod-title"><i class="fa fa-pencil"></i>&nbsp; Internal Remarks</h4>
             </div>
-            <div class="modal-body">
-                <div class="ir-box">
-                    <span class="ir-label"><i class="fa fa-lock"></i> Admin Note</span>
-                    <div class="ir-text" id="ir_text">—</div>
-                    <div class="ir-by" id="ir_by"></div>
+            <div class="modal-body" style="padding:22px;">
+                <input type="hidden" id="ir_expense_id">
+                {{-- Show existing remark (read-only preview) --}}
+                <div class="ir-current-box" id="ir_current_wrap" style="display:none;">
+                    <span class="ir-label"><i class="fa fa-lock"></i> Current Note</span>
+                    <div class="ir-text" id="ir_current_text"></div>
+                    <div class="ir-by" id="ir_current_by"></div>
                 </div>
+                <div class="m-remarks-box">
+                    <label><i class="fa fa-pencil-square-o"></i>&nbsp; Edit / Add Internal Remark <span style="color:#aab;">(admin only)</span></label>
+                    <textarea id="ir_textarea" rows="4" placeholder="e.g. Bill checked and confirmed, original submitted..."></textarea>
+                </div>
+                <div id="ir_err" class="m-err" style="display:none;margin-top:10px;"></div>
             </div>
             <div class="modal-footer modal-footer-plain">
-                <button type="button" class="btn-mcancel" data-dismiss="modal"><i class="fa fa-times"></i> Close</button>
+                <button type="button" class="btn-mcancel" data-dismiss="modal"><i class="fa fa-times"></i> Cancel</button>
+                <button type="button" id="btnSaveInternalRemarks" class="btn-msave" style="background:linear-gradient(135deg,#f39c12,#d68910);">
+                    <i class="fa fa-save"></i> Save Remark
+                </button>
             </div>
         </div>
     </div>
@@ -693,7 +685,6 @@
                     <input type="number" id="m_appr" class="form-control" min="0" step="0.01" placeholder="0.00">
                     <span class="ph">Must not exceed requested amount.</span>
                 </div>
-                {{-- Admin Remarks --}}
                 <div class="m-remarks-box">
                     <label><i class="fa fa-comment"></i>&nbsp; Admin Remarks <span style="color:#aab;">(optional)</span></label>
                     <textarea id="m_admin_remarks" rows="2" placeholder="Add a note for this decision..."></textarea>
@@ -771,14 +762,6 @@ function pickSt(v){
     document.getElementById('m_err').style.display='none';
 }
 
-/* ---- Show internal remarks popup ---- */
-function showInternalRemarks(id, verifiedBy, remarks) {
-    var txt = remarks && remarks.trim() ? remarks : '(No internal remarks added)';
-    document.getElementById('ir_text').innerText = txt;
-    document.getElementById('ir_by').innerText   = verifiedBy ? 'Verified by: ' + verifiedBy : '';
-    $('#internalRemarksModal').modal('show');
-}
-
 /* ---- Query helpers ---- */
 function formatQDate(d){
     if(!d) return '';
@@ -799,80 +782,121 @@ function scrollChatBottom(){ var b=document.getElementById('qChatBox'); if(b) b.
 $(document).ready(function(){
 
     /* ======================================================
-       VERIFY CHECKBOX — open popup first, submit on confirm
+       VERIFY CHECKBOX — instant direct toggle, no popup
        ====================================================== */
     $(document).on('change', '.verify-checkbox', function(){
-        var $cb  = $(this);
-        var id   = $cb.data('id');
+        var $cb = $(this);
+        var id  = $cb.data('id');
+        var isChecking = $cb.prop('checked');
 
-        if ($cb.prop('checked')) {
-            // Trying to VERIFY — open remarks popup
-            $cb.prop('checked', false); // keep unchecked until confirmed
-            $('#v_expense_id').val(id);
-            $('#v_internal_remarks').val('');
-            $('#v_err').hide();
-            $('#verifyModal').modal('show');
-        } else {
-            // Un-verifying — do it immediately, no popup
-            doToggleVerify(id, '', $cb);
-        }
-    });
+        // Optimistic UI — disable while saving
+        $cb.prop('disabled', true);
 
-    $('#btnVerifyConfirm').on('click', function(){
-        var id      = $('#v_expense_id').val();
-        var remarks = $('#v_internal_remarks').val().trim();
-        var $cb     = $('.verify-checkbox[data-id="'+id+'"]');
-        var $btn    = $(this);
-
-        $btn.prop('disabled',true).html('<i class="fa fa-spinner fa-spin"></i> Verifying...');
-        doToggleVerify(id, remarks, $cb, function(){
-            $('#verifyModal').modal('hide');
-            $btn.prop('disabled',false).html('<i class="fa fa-check"></i> Confirm Verify');
-        });
-    });
-
-    function doToggleVerify(id, remarks, $cb, callback) {
         $.ajax({
             url: '/admin/user-expenses/'+id+'/toggle-verified',
             type: 'POST',
-            data: { _token:'{{ csrf_token() }}', internal_remarks: remarks },
+            data: { _token: '{{ csrf_token() }}' },
             success: function(r){
                 if(r.success){
                     var $l = $('#vlbl-'+id);
                     if(r.verified){
                         $cb.prop('checked', true);
                         $l.text('YES').attr('class','v-lb on');
-                        // Update (i) icon
-                        var $iBtn = $('#vinfo-'+id);
-                        if(r.internal_remarks){
-                            $iBtn.addClass('has-remark');
-                            $iBtn.attr('onclick', "showInternalRemarks("+id+", '"+escHtml(r.verified_by_name)+"', '"+escHtml(r.internal_remarks)+"')");
-                        }
                         notify('success', 'Marked as Verified');
                     } else {
                         $cb.prop('checked', false);
                         $l.text('NO').attr('class','v-lb off');
-                        $('#vinfo-'+id).removeClass('has-remark');
                         notify('info', 'Verification removed');
                     }
-                    if(callback) callback();
                 } else {
+                    // Revert on failure
+                    $cb.prop('checked', !isChecking);
                     notify('error', 'Failed to update.');
                 }
             },
-            error: function(){ notify('error', 'An error occurred.'); }
+            error: function(){
+                $cb.prop('checked', !isChecking);
+                notify('error', 'An error occurred.');
+            },
+            complete: function(){
+                $cb.prop('disabled', false);
+            }
         });
-    }
+    });
+
+    /* ======================================================
+       INTERNAL REMARKS — separate button (pencil)
+       ====================================================== */
+    $(document).on('click', '.btn-open-int-remarks', function(){
+        var id      = $(this).data('id');
+        var remarks = $(this).data('remarks') || '';
+        var vby     = $(this).data('verified-by') || '';
+
+        $('#ir_expense_id').val(id);
+        $('#ir_textarea').val(remarks);
+        $('#ir_err').hide();
+
+        // Show current remark preview if exists
+        if(remarks && remarks.trim()){
+            $('#ir_current_text').text(remarks);
+            $('#ir_current_by').text(vby ? 'Verified by: '+vby : '');
+            $('#ir_current_wrap').show();
+        } else {
+            $('#ir_current_wrap').hide();
+        }
+
+        $('#internalRemarksModal').modal('show');
+        setTimeout(function(){ $('#ir_textarea').focus(); }, 400);
+    });
+
+    $('#btnSaveInternalRemarks').on('click', function(){
+        var id      = $('#ir_expense_id').val();
+        var remarks = $('#ir_textarea').val().trim();
+        var $btn    = $(this);
+
+        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Saving...');
+        $('#ir_err').hide();
+
+        $.ajax({
+            url: '/admin/user-expenses/'+id+'/internal-remarks',
+            type: 'POST',
+            data: { _token: '{{ csrf_token() }}', internal_remarks: remarks },
+            success: function(r){
+                if(r.success){
+                    var $irBtn = $('#irbtn-'+id);
+                    // Update button data & style
+                    $irBtn.data('remarks', remarks);
+                    if(remarks){
+                        $irBtn.addClass('has-remark').attr('title','Edit internal remarks');
+                    } else {
+                        $irBtn.removeClass('has-remark').attr('title','Add internal remarks');
+                    }
+                    $('#internalRemarksModal').modal('hide');
+                    notify('success', 'Internal remark saved.');
+                } else {
+                    $('#ir_err').html('<i class="fa fa-exclamation-circle"></i> '+(r.message||'Failed to save.')).show();
+                }
+            },
+            error: function(x){
+                var m = 'An error occurred.';
+                if(x.responseJSON && x.responseJSON.errors) m = Object.values(x.responseJSON.errors).flat().join('<br>');
+                $('#ir_err').html('<i class="fa fa-exclamation-circle"></i> '+m).show();
+            },
+            complete: function(){
+                $btn.prop('disabled', false).html('<i class="fa fa-save"></i> Save Remark');
+            }
+        });
+    });
 
     /* ======================================================
        STATUS MODAL
        ====================================================== */
     $(document).on('click', '.btn-update-status', function(){
-        var id    = $(this).data('id');
-        var st    = $(this).data('status');
-        var req   = $(this).data('requested');
-        var appr  = $(this).data('approved');
-        var rmks  = $(this).data('admin-remarks') || '';
+        var id   = $(this).data('id');
+        var st   = $(this).data('status');
+        var req  = $(this).data('requested');
+        var appr = $(this).data('approved');
+        var rmks = $(this).data('admin-remarks') || '';
 
         $('#m_id').val(id);
         $('#m_req').text('\u20B9'+parseFloat(req).toFixed(2));
@@ -891,11 +915,11 @@ $(document).ready(function(){
     });
 
     $('#btnSave').on('click', function(){
-        var id    = $('#m_id').val();
-        var st    = $('#m_status').val();
-        var appr  = $('#m_appr').val();
-        var rmks  = $('#m_admin_remarks').val().trim();
-        var $b    = $(this);
+        var id   = $('#m_id').val();
+        var st   = $('#m_status').val();
+        var appr = $('#m_appr').val();
+        var rmks = $('#m_admin_remarks').val().trim();
+        var $b   = $(this);
 
         if(!st){ $('#m_err').html('<i class="fa fa-exclamation-circle"></i> Please select a status.').show(); return; }
         if(st==='Partially Approved'){
@@ -925,7 +949,6 @@ $(document).ready(function(){
                         $('#appr-'+id).html('<span class="a-nil">&mdash;</span>');
                     }
 
-                    // Update approval remarks display
                     var $rmkEl = $('#appr-rmk-'+id);
                     if(rmks){
                         $rmkEl.html('<i class="fa fa-comment"></i> '+rmks.substring(0,28)+(rmks.length>28?'..':'')).attr('title',rmks).show();
@@ -972,7 +995,6 @@ $(document).ready(function(){
                         var html=''; $.each(r.queries,function(i,q){ html+=renderBubble(q); });
                         $('#qChatBox').html(html); scrollChatBottom();
                     }
-                    // Clear unread badge + blink dot (admin just read them)
                     $('#qbadge-'+id).hide();
                     $('#qdot-'+id).hide();
                 }
@@ -1001,7 +1023,6 @@ $(document).ready(function(){
                     $('#qChatBox').append(renderBubble(r.query));
                     scrollChatBottom();
                     $('#q_message').val('');
-                    // Total badge update (grey — admin already read)
                     var $badge = $('#qbadge-'+id);
                     $badge.text(r.total>9?'9+':r.total).css('background','#8a9ab5').show();
                     notify('success','Query sent!');
