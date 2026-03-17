@@ -165,7 +165,7 @@ class ExpenseController extends Controller
             $expense->missed_entry = $request->missed_entry ?? 0;
             $expense->remarks      = $request->remarks;
             $expense->missed_entry_reason  = $request->missed_entry_reason ?? '';
-            $expense->status       = $request->status;
+            $expense->status       = "Pending Approval";
 
             if ($category->is_travel) {
                 $expense->travel_km       = $request->travel_km;

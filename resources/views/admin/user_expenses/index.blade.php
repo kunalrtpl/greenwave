@@ -354,7 +354,7 @@
                         <label>Status</label>
                         <select name="status" class="form-control">
                             <option value="">All Statuses</option>
-                            <option value="Requested"          {{ request('status') === 'Requested'          ? 'selected' : '' }}>Pending Approval</option>
+                            <option value="Pending Approval"          {{ request('status') === 'Pending Approval'          ? 'selected' : '' }}>Pending Approval</option>
                             <option value="Approved"           {{ request('status') === 'Approved'           ? 'selected' : '' }}>Approved</option>
                             <option value="Partially Approved" {{ request('status') === 'Partially Approved' ? 'selected' : '' }}>Partially Approved</option>
                             <option value="Rejected"           {{ request('status') === 'Rejected'           ? 'selected' : '' }}>Rejected</option>
