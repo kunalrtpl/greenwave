@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-
+use Session;
 class UserExpenseController extends Controller
 {
     /**
@@ -13,6 +13,7 @@ class UserExpenseController extends Controller
      */
     public function index(Request $request)
     {
+        Session::put('active','expenses');
         $query = DB::table('user_expenses as ue')
             ->join('expense_categories as ec', 'ue.category_id', '=', 'ec.id')
             ->leftJoin('users as u',  'ue.user_id',    '=', 'u.id')
