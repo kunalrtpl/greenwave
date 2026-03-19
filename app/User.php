@@ -9,6 +9,7 @@ use Laravel\Passport\HasApiTokens;
 use DB;
 use App\UserDepartmentRegion;
 use App\RegionCity;
+use App\Product;
 class User extends Authenticatable
 {
     use Notifiable,HasApiTokens;
@@ -82,39 +83,62 @@ class User extends Authenticatable
         );
     }
 
-    public static function fetchUserProducts($userId)
+    /**
+     * Base query with eager loading and active filter (no user scope).
+     */
+    private static function baseProductQuery()
     {
-        // Fetch all classes once
-        $allClasses = \App\ProductClass::where('status', 1)->get();
-
-        // Fetch products linked to user
-        $products = Product::with([
+        return Product::with([
                 'productpacking',
                 'pricings',
                 'product_stages',
                 'product_weightages'
             ])
-            ->select('products.*')
-            ->join('user_products', 'user_products.product_id', '=', 'products.id')
-            ->where('user_products.user_id', $userId)
             ->where('products.is_trader_product', 0)
-            ->where('products.status', 1)
-            ->get();
+            ->where('products.status', 1);
+    }
 
-        // Attach class name in memory
+    /**
+     * Attach class names to pricings in memory.
+     */
+    private static function attachClassToProducts($products)
+    {
+        $allClasses = \App\ProductClass::where('status', 1)->get();
+
         foreach ($products as $product) {
             foreach ($product->pricings as $pricing) {
-
                 $markup = $pricing->dealer_markup;
-
                 $matchedClass = $allClasses->first(function ($class) use ($markup) {
                     return $markup >= $class->from && $markup <= $class->to;
                 });
-
                 $pricing->class = $matchedClass ? $matchedClass->class_name : '';
             }
         }
 
         return $products;
+    }
+
+    /**
+     * All active products (no user filter).
+     */
+    public static function fetchAllProducts()
+    {
+        $products = self::baseProductQuery()->get();
+
+        return self::attachClassToProducts($products);
+    }
+
+    /**
+     * Products linked to a specific user (existing behavior, untouched signature).
+     */
+    public static function fetchUserProducts($userId)
+    {
+        $products = self::baseProductQuery()
+            ->select('products.*')
+            ->join('user_products', 'user_products.product_id', '=', 'products.id')
+            ->where('user_products.user_id', $userId)
+            ->get();
+
+        return self::attachClassToProducts($products);
     }
 }

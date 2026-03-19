@@ -24,6 +24,7 @@ class ApiController extends Controller
 {
 
     public function products(Request $request) {
+        $data = $request->all();
         // 1. AUTH CHECK
         $token = $request->header('Authorization');
         if (!$token) {
@@ -36,8 +37,11 @@ class ApiController extends Controller
         }
 
         $userId = $resp['user']['id'];
-
-        $products = \App\User::fetchUserProducts($userId);
+        if(isset($data['all_products'])){
+            $products = \App\User::fetchAllProducts($userId);
+        }else{
+            $products = \App\User::fetchUserProducts($userId);
+        }
         
         $result = [
             'products' => $products,
