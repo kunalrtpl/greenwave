@@ -94,6 +94,7 @@
 .exp-row.s-Approved::before   { background: #2ecc71; }
 .exp-row.s-Partially::before  { background: #f39c12; }
 .exp-row.s-Rejected::before   { background: #e74c3c; }
+.exp-row.s-PendingApproval::before { background: #e74c3c; }
 
 .dc { padding: 12px 10px; border-right: 1px solid #edf1f8; font-size: 13px; color: #2d3a4a; }
 .dc:last-child { border-right: none; }
@@ -131,6 +132,37 @@
 .tr-rate { font-size:10px; color:#8a9ab5; }
 .tr-rt   { font-size:10px; color:#8a9ab5; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px; }
 
+/* View Visits button */
+.btn-view-visits {
+    display:inline-block;
+    background:#edf8f0; color:#1a9a50; border:1.5px solid #b8e6c8; border-radius:5px;
+    padding:3px 9px; font-size:10px; font-weight:700;
+    cursor:pointer; transition:all .18s; font-family:'Inter',sans-serif;
+    line-height:1.4;
+}
+.btn-view-visits:hover { background:#1a9a50; color:#fff; border-color:#1a9a50; }
+
+/* Visits Modal Table */
+.visits-table { width:100%; border-collapse:collapse; font-size:12px; }
+.visits-table th {
+    background:#f0f3f8; padding:8px 10px; font-size:10px; font-weight:700;
+    text-transform:uppercase; letter-spacing:.5px; color:#8a9ab5;
+    border-bottom:2px solid #e4eaf3; text-align:left;
+}
+.visits-table td {
+    padding:10px; border-bottom:1px solid #edf1f8; color:#2d3a4a; vertical-align:top;
+}
+.visits-table tr:last-child td { border-bottom:none; }
+.visits-table tr:hover td { background:#f8fafd; }
+.vt-customer { font-weight:700; color:#1a2333; font-size:13px; }
+.vt-sub { font-size:11px; color:#8a9ab5; margin-top:2px; }
+.vt-purpose { display:inline-block; background:#edf3fb; color:#2d6faa; font-size:10px; font-weight:700; padding:2px 8px; border-radius:12px; }
+.vt-time { font-weight:600; color:#2d3a4a; }
+.vt-loc { font-size:11px; color:#6a7a8a; max-width:160px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.visits-empty { text-align:center; padding:40px 20px; color:#b0bcc8; }
+.visits-empty i { font-size:36px; display:block; margin-bottom:8px; }
+.visits-count-badge { display:inline-block; background:#edf8f0; color:#1a9a50; font-size:11px; font-weight:700; padding:3px 10px; border-radius:12px; margin-left:8px; }
+
 /* Receipt */
 .r-thumb {
     width:34px; height:34px; border-radius:7px; overflow:hidden;
@@ -151,7 +183,7 @@
 .v-lb { font-size:9px; font-weight:700; letter-spacing:.3px; }
 .v-lb.on { color:#1e9e58; } .v-lb.off { color:#c5cdd8; }
 
-/* Internal remarks button — pencil icon, separate from verify */
+/* Internal remarks button */
 .btn-int-remarks {
     background: none; border: 1.5px solid #dde4ee; border-radius: 5px;
     padding: 2px 6px; cursor: pointer; font-size: 11px; color: #8a9ab5;
@@ -179,7 +211,6 @@
     text-align:center; line-height:13px;
     border:2px solid #fff;
 }
-/* Blinking unread indicator */
 @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.2;} }
 .q-unread-dot {
     position:absolute; top:-4px; right:-4px;
@@ -192,9 +223,10 @@
 .sc { padding:12px 10px; }
 .s-badge { display:inline-block; font-size:10px; font-weight:700; padding:3px 10px; border-radius:20px; white-space:nowrap; }
 .sb-Requested { background:#f0f3f8; color:#7a8a9a; }
-.sb-Approved  { background:#e4f9ee; color:#1a7a45; }
-.sb-Partially { background:#fff6e4; color:#a06800; }
+.sb-Approved  { background:#2ecc71; color:#fff; }
+.sb-Partially { background:#f39c12; color:#fff; }
 .sb-Rejected  { background:#feeaea; color:#b52a2a; }
+.sb-PendingApproval { background:#e74c3c; color:#fff; }
 .btn-upd {
     display:inline-block;
     background:#f0f5fc; color:#4d8fcc; border:1.5px solid #cde0f4; border-radius:6px;
@@ -202,7 +234,6 @@
     cursor:pointer; transition:all .18s; margin-top:5px; font-family:'Inter',sans-serif;
 }
 .btn-upd:hover { background:#4d8fcc; color:#fff; border-color:#4d8fcc; }
-/* Approval remarks under status */
 .appr-remarks-txt { font-size:10px; color:#8a9ab5; font-style:italic; margin-top:3px; }
 
 /* ---- Empty / Pagination ---- */
@@ -250,7 +281,6 @@
 .m-pbox .form-control { border-radius:7px; border:2px solid #f39c12; font-size:16px; font-weight:700; color:#a06800; box-shadow:none; }
 .m-pbox .ph { font-size:11px; color:#c47d00; margin-top:5px; display:block; }
 
-/* Remarks textarea in modals */
 .m-remarks-box { margin-top:14px; }
 .m-remarks-box label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:#8a9ab5; display:block; margin-bottom:6px; }
 .m-remarks-box textarea {
@@ -482,6 +512,16 @@
                     @if($expense->is_intercity && !empty($expense->intercity_route))
                         <div class="tr-rt" title="{{ $expense->intercity_route }}">{{ $expense->intercity_route }}</div>
                     @endif
+                    {{-- View Visits Button --}}
+                    <div style="margin-top:5px;">
+                        <button class="btn-view-visits"
+                            data-user-id="{{ $expense->user_id }}"
+                            data-date="{{ $expense->expense_date }}"
+                            data-employee="{{ $expense->employee_name ?? 'Employee' }}"
+                            title="View visits for this date">
+                            <i class="fa fa-map-marker"></i> View Visits
+                        </button>
+                    </div>
                 </div>
                 @endif
             </div>
@@ -519,7 +559,6 @@
 
             {{-- Verified checkbox + separate Internal Remarks button --}}
             <div class="vc">
-                {{-- Checkbox: direct toggle, no popup --}}
                 <div style="margin-bottom:3px;">
                     <input type="checkbox"
                         class="v-cb verify-checkbox"
@@ -532,7 +571,6 @@
                         {{ !empty($expense->verified_by) ? 'YES' : 'NO' }}
                     </span>
                 </div>
-                {{-- Separate internal remarks button --}}
                 <div style="margin-top:4px;">
                     <button
                         class="btn-int-remarks btn-open-int-remarks {{ !empty($expense->internal_remarks) ? 'has-remark' : '' }}"
@@ -617,7 +655,7 @@
 </div>
 
 
-{{-- INTERNAL REMARKS MODAL (Add / Edit / View) --}}
+{{-- INTERNAL REMARKS MODAL --}}
 <div class="modal fade" id="internalRemarksModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document" style="width:430px;max-width:95vw;margin:80px auto;">
         <div class="modal-content">
@@ -627,7 +665,6 @@
             </div>
             <div class="modal-body" style="padding:22px;">
                 <input type="hidden" id="ir_expense_id">
-                {{-- Show existing remark (read-only preview) --}}
                 <div class="ir-current-box" id="ir_current_wrap" style="display:none;">
                     <span class="ir-label"><i class="fa fa-lock"></i> Current Note</span>
                     <div class="ir-text" id="ir_current_text"></div>
@@ -730,6 +767,33 @@
     </div>
 </div>
 
+
+{{-- VISITS MODAL --}}
+<div class="modal fade" id="visitsModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document" style="width:750px;max-width:96vw;margin:50px auto;">
+        <div class="modal-content">
+            <div class="modal-header mod-hdr-green">
+                <button type="button" class="close mod-close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title mod-title">
+                    <i class="fa fa-map-marker"></i>&nbsp;
+                    Visits — <span id="v_employee_name"></span>
+                    <small style="font-size:11px;opacity:.7;margin-left:6px;">(<span id="v_date_label"></span>)</small>
+                    <span class="visits-count-badge" id="v_count_badge" style="display:none;">0 visits</span>
+                </h4>
+            </div>
+            <div class="modal-body" style="padding:0; max-height:70vh; overflow-y:auto;">
+                <div id="visitsContent">
+                    <div class="visits-empty"><i class="fa fa-spinner fa-spin"></i><p>Loading visits...</p></div>
+                </div>
+            </div>
+            <div class="modal-footer modal-footer-plain">
+                <button type="button" class="btn-mcancel" data-dismiss="modal"><i class="fa fa-times"></i> Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <script>
 /* ---- Notify helper ---- */
 function notify(type, msg) {
@@ -782,14 +846,13 @@ function scrollChatBottom(){ var b=document.getElementById('qChatBox'); if(b) b.
 $(document).ready(function(){
 
     /* ======================================================
-       VERIFY CHECKBOX — instant direct toggle, no popup
+       VERIFY CHECKBOX — instant direct toggle
        ====================================================== */
     $(document).on('change', '.verify-checkbox', function(){
         var $cb = $(this);
         var id  = $cb.data('id');
         var isChecking = $cb.prop('checked');
 
-        // Optimistic UI — disable while saving
         $cb.prop('disabled', true);
 
         $.ajax({
@@ -809,7 +872,6 @@ $(document).ready(function(){
                         notify('info', 'Verification removed');
                     }
                 } else {
-                    // Revert on failure
                     $cb.prop('checked', !isChecking);
                     notify('error', 'Failed to update.');
                 }
@@ -836,7 +898,6 @@ $(document).ready(function(){
         $('#ir_textarea').val(remarks);
         $('#ir_err').hide();
 
-        // Show current remark preview if exists
         if(remarks && remarks.trim()){
             $('#ir_current_text').text(remarks);
             $('#ir_current_by').text(vby ? 'Verified by: '+vby : '');
@@ -864,7 +925,6 @@ $(document).ready(function(){
             success: function(r){
                 if(r.success){
                     var $irBtn = $('#irbtn-'+id);
-                    // Update button data & style
                     $irBtn.data('remarks', remarks);
                     if(remarks){
                         $irBtn.addClass('has-remark').attr('title','Edit internal remarks');
@@ -1034,6 +1094,66 @@ $(document).ready(function(){
     });
 
     $('#q_message').on('keydown',function(e){ if(e.ctrlKey&&e.key==='Enter') $('#btnSendQuery').trigger('click'); });
+
+    /* ======================================================
+       VIEW VISITS — for Distance Travelled expenses
+       ====================================================== */
+    $(document).on('click', '.btn-view-visits', function(){
+        var userId   = $(this).data('user-id');
+        var date     = $(this).data('date');
+        var employee = $(this).data('employee');
+
+        $('#v_employee_name').text(employee);
+        $('#v_date_label').text(date);
+        $('#v_count_badge').hide();
+        $('#visitsContent').html('<div class="visits-empty"><i class="fa fa-spinner fa-spin"></i><p>Loading visits...</p></div>');
+        $('#visitsModal').modal('show');
+
+        $.ajax({
+            url: '/admin/user-expenses/get-visits',
+            type: 'GET',
+            data: { user_id: userId, date: date },
+            success: function(r){
+                if(r.success && r.visits.length > 0){
+                    var html = '<table class="visits-table"><thead><tr>'
+                        +'<th style="width:30px;">#</th>'
+                        +'<th>Customer</th>'
+                        +'<th>Time</th>'
+                        +'<th>Start Location</th>'
+                        +'<th>End Location</th>'
+                        +'<th>Purpose</th>'
+                        +'</tr></thead><tbody>';
+
+                    $.each(r.visits, function(i, v){
+                        var custName = v.customer_name || v.crr_name || '—';
+                        var custInfo = v.customer_address || v.crr_address || '';
+                        html += '<tr>'
+                            +'<td style="color:#b0bcc8;font-weight:700;">'+(i+1)+'</td>'
+                            +'<td>'
+                                +'<div class="vt-customer">'+escHtml(custName)+'</div>'
+                                +(custInfo ? '<div class="vt-sub">'+escHtml(custInfo)+'</div>' : '')
+                            +'</td>'
+                            +'<td>'
+                                +'<div class="vt-time">'+(v.start_time||'—')+' &rarr; '+(v.end_time||'—')+'</div>'
+                            +'</td>'
+                            +'<td><div class="vt-loc" title="'+(v.start_location||'')+'">'+(v.start_location||'—')+'</div></td>'
+                            +'<td><div class="vt-loc" title="'+(v.end_location||'')+'">'+(v.end_location||'—')+'</div></td>'
+                            +'<td>'+(v.purpose_of_visit ? '<span class="vt-purpose">'+escHtml(v.purpose_of_visit)+'</span>' : '—')+'</td>'
+                            +'</tr>';
+                    });
+
+                    html += '</tbody></table>';
+                    $('#visitsContent').html(html);
+                    $('#v_count_badge').text(r.visits.length+' visit'+(r.visits.length>1?'s':'')).show();
+                } else {
+                    $('#visitsContent').html('<div class="visits-empty"><i class="fa fa-calendar-times-o"></i><p>No visits found for this date.</p></div>');
+                }
+            },
+            error: function(){
+                $('#visitsContent').html('<div class="visits-empty"><i class="fa fa-exclamation-circle"></i><p>Failed to load visits.</p></div>');
+            }
+        });
+    });
 
 });
 </script>

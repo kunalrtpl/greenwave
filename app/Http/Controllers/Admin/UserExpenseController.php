@@ -317,4 +317,65 @@ class UserExpenseController extends Controller
             'unread'  => $unread,
         ]);
     }
+
+    /**
+     * Get DVR visits for a user on a specific date (for Distance Travelled expenses)
+     */
+    public function getVisits(Request $request)
+    {
+        $userId = $request->input('user_id');
+        $date   = $request->input('date');
+
+        if (!$userId || !$date) {
+            return response()->json(['success' => false, 'message' => 'Missing parameters.']);
+        }
+
+        $visits = \App\UserDvr::where('user_id', $userId)
+            ->where('dvr_date', $date)
+            ->orderBy('start_time', 'asc')
+            ->get();
+
+        $result = [];
+        foreach ($visits as $visit) {
+            $customerName    = null;
+            $customerAddress = null;
+            $crrName         = null;
+            $crrAddress      = null;
+
+            // Try to get customer info
+            if ($visit->customer_id) {
+                $customer = \App\Customer::find($visit->customer_id);
+                if ($customer) {
+                    $customerName    = $customer->name;
+                    $customerAddress = $customer->address ?? null;
+                }
+            }
+
+            // Try customer register request as fallback
+            if (!$customerName && $visit->customer_register_request_id) {
+                $crr = \App\CustomerRegisterRequest::find($visit->customer_register_request_id);
+                if ($crr) {
+                    $crrName    = $crr->name;
+                    $crrAddress = $crr->address ?? null;
+                }
+            }
+
+            $result[] = [
+                'id'              => $visit->id,
+                'customer_name'   => $customerName,
+                'customer_address'=> $customerAddress,
+                'crr_name'        => $crrName,
+                'crr_address'     => $crrAddress,
+                'start_time'      => $visit->start_time,
+                'end_time'        => $visit->end_time,
+                'start_location'  => $visit->start_location,
+                'end_location'    => $visit->end_location,
+                'purpose_of_visit'=> $visit->purpose_of_visit,
+                'visit_type'      => $visit->visit_type,
+                'remarks'         => $visit->remarks,
+            ];
+        }
+
+        return response()->json(['success' => true, 'visits' => $result]);
+    }
 }
