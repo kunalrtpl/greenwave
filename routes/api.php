@@ -329,6 +329,24 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 
 			    Route::match(['get', 'post'], 'direct-customer-products/{customerid}','ExecutiveController@v2directCustomerProducts');
 
+
+			    /*Attendance Routes*/
+			    Route::post('attendance/in',                  'AttendanceController@markIn');
+			    Route::post('attendance/out',                 'AttendanceController@markOut');
+			    Route::get('attendance/list',                 'AttendanceController@attendanceList');
+			    Route::get('attendance/detail/{id}',          'AttendanceController@attendanceDetail');
+			    Route::get('attendance/summary',              'AttendanceController@summary');
+			    Route::post('attendance/leave/apply',         'AttendanceController@applyLeave');
+			    Route::post('attendance/leave/cancel',        'AttendanceController@cancelLeave');
+			    Route::get('attendance/leaves',               'AttendanceController@leaveList');
+			    Route::get('attendance/leave-types',          'AttendanceController@leaveTypes');
+			    Route::get('attendance/quota',                'AttendanceController@leaveQuota');
+			    Route::get('attendance/holidays',             'AttendanceController@holidays');
+			    Route::get('attendance/calendar',             'AttendanceController@calendar');
+			    Route::post('attendance/weekly-off/use',      'AttendanceController@useCompOff');
+			    Route::get('attendance/weekly-off/available', 'AttendanceController@availableCompOffs');
+
+
 			    
 
 			});

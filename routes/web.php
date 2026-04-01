@@ -445,4 +445,5 @@ Route::post('/save-job-enquiry', 'IndexController@saveJobEnquiry');
 // routes/web.php OR routes/api.php
 Route::prefix('/export')->namespace('Export')->group(function(){
 	Route::get('dvrs/csv', 'DvrExportController@exportCsv');
+	Route::get('dvrs/user/csv', 'DvrExportController@exportUserDvrsCsv');
 });
