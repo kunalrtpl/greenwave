@@ -144,7 +144,7 @@ class ExpenseController extends Controller
             'category_id'       => 'required|exists:expense_categories,id',
             'expense_date'      => 'required|date',
             'requested_amount'  => 'required|numeric',
-            'status'            => 'required',
+            //'status'            => 'required',
             'image'             => 'nullable|mimes:jpg,jpeg,png,pdf|max:5120',
             'alternative_image' => 'nullable|mimes:jpg,jpeg,png,pdf|max:5120',
         ];
@@ -226,7 +226,7 @@ class ExpenseController extends Controller
 
         $rules = [
             'expense_date'      => 'required|date',
-            'status'            => 'required',
+            //'status'            => 'required',
             'remarks'           => 'required|string',
             'image'             => 'nullable|mimes:jpg,jpeg,png,pdf|max:5120',
             'alternative_image' => 'nullable|mimes:jpg,jpeg,png,pdf|max:5120',
@@ -249,7 +249,7 @@ class ExpenseController extends Controller
 
             $expense->expense_date = $request->expense_date;
             $expense->remarks      = $request->remarks;
-            $expense->status       = $request->status;
+            //$expense->status       = $request->status;
 
             if ($category->is_travel) {
                 $expense->travel_km        = $request->travel_km;
