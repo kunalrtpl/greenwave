@@ -101,13 +101,27 @@ class AttendanceController extends Controller
      */
     protected function isHoliday(string $date, ?string $userCity): bool
     {
-        return HolidayList::where('date', $date)
-            ->where('is_active', true)
-            ->where(function ($q) use ($userCity) {
-                $q->where('is_national', true);
-                if ($userCity) {
-                    $q->orWhere('city', $userCity);
-                }
+        $carbonDate = \Carbon\Carbon::parse($date);
+        $monthDay = $carbonDate->format('m-d'); // e.g., "01-26"
+
+        return HolidayList::where('is_active', true)
+            ->where(function ($q) use ($date, $monthDay, $userCity) {
+                // Check for National OR City-specific
+                $q->where(function ($inner) use ($userCity) {
+                    $inner->where('is_national', true);
+                    if ($userCity) {
+                        $inner->orWhere('city', $userCity);
+                    }
+                });
+
+                // Handle Recurring vs Fixed dates
+                $q->where(function ($inner) use ($date, $monthDay) {
+                    $inner->where('date', $date) // Exact match (2026-11-08)
+                          ->orWhere(function ($recurringQuery) use ($monthDay) {
+                              $recurringQuery->where('is_recurring', true)
+                                             ->whereRaw("DATE_FORMAT(date, '%m-%d') = ?", [$monthDay]);
+                          });
+                });
             })
             ->exists();
     }

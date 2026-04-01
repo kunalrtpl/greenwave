@@ -20,7 +20,7 @@ class CreateHolidayListsTable extends Migration
             // true  = national holiday shown for everyone
             // false = city-specific (use city column)
             $table->boolean('is_national')->default(false);
-
+            $table->boolean('is_recurring')->default(false)->after('is_national');
             $table->string('type')->nullable();       // Optional: public, restricted, optional
             $table->text('description')->nullable();
             $table->boolean('is_active')->default(true);
