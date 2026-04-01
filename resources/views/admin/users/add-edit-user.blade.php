@@ -79,7 +79,18 @@
                                         <h4 class="text-center text-danger pt-3" style="display: none;" id="Employee-gender"></h4>
                                     </div>
                                 </div> 
-                                
+                                <div class="form-group">
+                                    <label class="col-md-3 control-label">Base City <span class="asteric">*</span></label>
+                                    <div class="col-md-4">
+                                        <select class="form-control select2" name="base_city">
+                                            <option value="">Please Select</option>
+                                            @foreach(getcities() as $city)
+                                                <option value="{{$city['city_name']}}" {{(!empty($empdata) && $empdata['base_city'] == $city['city_name'])?'selected': '' }}>{{$city['city_name']}}</option>
+                                            @endforeach
+                                        </select>
+                                        <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-city"></h4>
+                                    </div>
+                                </div>
                                 <div class="form-group ">
                                     <label class="col-md-3 control-label">Profile Photo </label>
                                     <div class="col-md-4">

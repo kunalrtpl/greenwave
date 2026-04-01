@@ -226,6 +226,7 @@ class UsersController extends Controller
                     $user->designation = $data['designation'];
                     $user->type = "employee";
                     $user->correspondence_address = $data['correspondence_address'];
+                    $user->base_city = $data['base_city'];
                     $user->permanent_address = $data['permanent_address'];
                     $user->aadhar = $data['aadhar'];
                     $user->emergency_contact_person = $data['emergency_contact_person'];
