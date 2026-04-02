@@ -14,6 +14,7 @@ class Kernel extends ConsoleKernel
      */
     protected $commands = [
         //
+        \App\Console\Commands\EarnedLeaveAccrualCommand::class,
     ];
 
     /**
@@ -26,6 +27,12 @@ class Kernel extends ConsoleKernel
     {
         // $schedule->command('inspire')
         //          ->hourly();
+
+        $schedule->command('attendance:el-accrual')
+         ->monthlyOn(1, '00:05')  // Runs at 00:05 on the 1st of every month
+         ->withoutOverlapping()
+         ->runInBackground()
+         ->appendOutputTo(storage_path('logs/el-accrual.log'));
     }
 
     /**

@@ -103,7 +103,10 @@ class UsersController extends Controller
                        class="btn btn-sm purple margin-top-10" 
                        href="'.route('admin.users.products', $user['id']).'">
                        <i class="fa fa-link"></i>
-                    </a>';
+                    </a> <a title="Attendance Settings" class="btn btn-sm green-jungle margin-top-10"
+    href="' . route('admin.users.attendance.settings', $user['id']) . '">
+    <i class="fa fa-calendar"></i>
+</a>';
                 }
 
                 if ($resetPinExtraPermission && $user['app_access'] == "Yes" && !empty($user['hash_salt'])) {

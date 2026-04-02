@@ -76,6 +76,14 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 
     	Route::post('users/{id}/products', 'UsersController@saveUserProducts')->name('admin.users.products.save');
 
+    	Route::get('users/{id}/attendance-settings',
+		    'AttendanceSettingsController@index')
+		    ->name('admin.users.attendance.settings');
+		 
+		Route::post('users/{id}/attendance-settings/save',
+		    'AttendanceSettingsController@save')
+    	->name('admin.users.attendance.settings.save');
+
 
 		Route::match(['get', 'post'], 'user-reset-pin/{userid}', 'UsersController@resetPin');
 		Route::match(['get', 'post'], '/open-user-dept-modal', 'UsersController@openUserDeptModal');
