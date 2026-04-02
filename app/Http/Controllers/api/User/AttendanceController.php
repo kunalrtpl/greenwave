@@ -9,37 +9,25 @@ use App\UserAttendance;
 use App\LeaveType;
 use App\UserLeaveQuota;
 use App\UserLeave;
+use App\UserLeaveSetting;
+use App\UserElAccrualLog;
 use App\HolidayList;
 use App\UserWeeklyOffCompensation;
 use Validator;
 use DB;
 use Carbon\Carbon;
 
-/**
- * AttendanceController
- *
- * Handles full attendance lifecycle:
- *  - Mark IN / OUT
- *  - Apply Leave (single or multiple dates)
- *  - Leave Quota management (financial-year-wise)
- *  - Weekly Off Comp-Off carry-forward (Sunday → next week only)
- *  - Holiday list (national + city-specific)
- *  - Calendar view (attendance + leaves + holidays combined)
- */
 class AttendanceController extends Controller
 {
     protected $resp;
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // ATTENDANCE STATUSES (constants for consistency)
-    // ─────────────────────────────────────────────────────────────────────────
-    const STATUS_PRESENT        = 'Full Day Present';
-    const STATUS_FULL_LEAVE     = 'Allowed Full Day Leave';
-    const STATUS_HALF_LEAVE     = '1/2 Present + 1/2 Leave';
-    const STATUS_WEEKLY_OFF     = 'Weekly Off';
-    const STATUS_COMP_OFF       = 'Comp Off';
-    const STATUS_HOLIDAY        = 'Holiday';
-    const STATUS_ABSENT         = 'Absent';
+    const STATUS_PRESENT    = 'Full Day Present';
+    const STATUS_FULL_LEAVE = 'Allowed Full Day Leave';
+    const STATUS_HALF_LEAVE = '1/2 Present + 1/2 Leave';
+    const STATUS_WEEKLY_OFF = 'Weekly Off';
+    const STATUS_COMP_OFF   = 'Comp Off';
+    const STATUS_HOLIDAY    = 'Holiday';
+    const STATUS_ABSENT     = 'Absent';
 
     public function __construct(Request $request)
     {
@@ -52,12 +40,6 @@ class AttendanceController extends Controller
     // HELPERS
     // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Get financial year string for a given date.
-     * India FY runs April–March.
-     * e.g. date in May 2026 → "2026-27"
-     *      date in Feb 2026 → "2025-26"
-     */
     protected function getFinancialYear($date = null): string
     {
         $d = $date ? Carbon::parse($date) : Carbon::now();
@@ -68,13 +50,25 @@ class AttendanceController extends Controller
     }
 
     /**
-     * Ensure a quota row exists for user/leave_type/FY.
-     * Creates with default_quota if missing.
+     * Get user-specific quota for a leave type in a FY.
+     *
+     * user_leave_settings is the SINGLE SOURCE OF TRUTH for quota values.
+     *
+     * Flow:
+     *   1. Call ensureUserLeaveSetting() → guarantees a settings row exists
+     *      (creates one from leave_types.default_quota if none found)
+     *   2. Use that settings row's annual_quota to seed user_leave_quotas
+     *
+     * EL is always seeded with 0 — the monthly cron manages its total_quota.
      */
     protected function ensureQuota(int $userId, int $leaveTypeId, string $financialYear): UserLeaveQuota
     {
-        $leaveType = LeaveType::find($leaveTypeId);
+        // Step 1: Guarantee a user_leave_settings row exists.
+        //         If it doesn't → auto-created from leave_types defaults.
+        //         If it does    → returned as-is (admin may have customised it).
+        $setting = $this->ensureUserLeaveSetting($userId, $leaveTypeId, $financialYear);
 
+        // Step 2: Guarantee a user_leave_quotas row exists, seeded from the setting.
         return UserLeaveQuota::firstOrCreate(
             [
                 'user_id'        => $userId,
@@ -82,53 +76,79 @@ class AttendanceController extends Controller
                 'financial_year' => $financialYear,
             ],
             [
-                'total_quota' => $leaveType->default_quota ?? 0,
+                'total_quota' => (float) ($setting->annual_quota ?? 0),
                 'used_quota'  => 0,
             ]
         );
     }
 
     /**
-     * Get the logged-in user's base_city from users table.
+     * Guarantee a user_leave_settings row exists for user + leave_type + FY.
+     *
+     *  EXISTS  → return it unchanged  (admin-customised values are preserved)
+     *  MISSING → create from leave_types.default_quota and return the new row
+     *
+     * leave_types.default_quota is ONLY used as the one-time seed value.
+     * After creation, the settings row is the authoritative source.
      */
+    protected function ensureUserLeaveSetting(int $userId, int $leaveTypeId, string $fy): UserLeaveSetting
+    {
+        $leaveType = LeaveType::find($leaveTypeId);
+        $isEL      = $leaveType && $leaveType->code === 'EL';
+
+        return UserLeaveSetting::firstOrCreate(
+            [
+                'user_id'        => $userId,
+                'leave_type_id'  => $leaveTypeId,
+                'financial_year' => $fy,
+            ],
+            [
+                // EL: annual_quota = 5 (opening balance when no setting exists)
+                // SL/CL/LWP: seeded from leave_types.default_quota
+                'annual_quota'        => $isEL ? 5.0 : (float) ($leaveType->default_quota ?? 0),
+
+                // EL accrual defaults — admin can customise per user after creation
+                'monthly_accrual'     => $isEL ? 1.0  : null,
+                'carry_forward'       => $isEL ? true : false,   // EL: carry forward ON by default
+                'carry_forward_limit' => $isEL ? 10.0 : 0,       // EL: max 10 days accumulation
+            ]
+        );
+    }
+
     protected function getUserCity(int $userId): ?string
     {
         return DB::table('users')->where('id', $userId)->value('base_city');
     }
 
     /**
-     * Check if a given date is a holiday for the user's city.
+     * isHoliday — supports is_recurring flag.
+     * Recurring holidays match every year by MM-DD (e.g. Republic Day 26th Jan).
+     * Non-recurring holidays match exact date only.
      */
     protected function isHoliday(string $date, ?string $userCity): bool
     {
-        $carbonDate = \Carbon\Carbon::parse($date);
-        $monthDay = $carbonDate->format('m-d'); // e.g., "01-26"
+        $carbonDate = Carbon::parse($date);
+        $monthDay   = $carbonDate->format('m-d');
 
         return HolidayList::where('is_active', true)
-            ->where(function ($q) use ($date, $monthDay, $userCity) {
-                // Check for National OR City-specific
-                $q->where(function ($inner) use ($userCity) {
-                    $inner->where('is_national', true);
-                    if ($userCity) {
-                        $inner->orWhere('city', $userCity);
-                    }
-                });
-
-                // Handle Recurring vs Fixed dates
-                $q->where(function ($inner) use ($date, $monthDay) {
-                    $inner->where('date', $date) // Exact match (2026-11-08)
-                          ->orWhere(function ($recurringQuery) use ($monthDay) {
-                              $recurringQuery->where('is_recurring', true)
-                                             ->whereRaw("DATE_FORMAT(date, '%m-%d') = ?", [$monthDay]);
-                          });
-                });
+            ->where(function ($q) use ($userCity) {
+                $q->where('is_national', true);
+                if ($userCity) {
+                    $q->orWhere('city', $userCity);
+                }
+            })
+            ->where(function ($q) use ($date, $monthDay) {
+                $q->where('date', $date)
+                  ->orWhere(function ($r) use ($monthDay) {
+                      $r->where('is_recurring', true)
+                        ->whereRaw("DATE_FORMAT(date, '%m-%d') = ?", [$monthDay]);
+                  });
             })
             ->exists();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 1️⃣  MARK IN ATTENDANCE
-    //     POST v2/attendance/in
+    // 1️⃣  MARK IN
     // ─────────────────────────────────────────────────────────────────────────
     public function markIn(Request $request)
     {
@@ -157,7 +177,6 @@ class AttendanceController extends Controller
         $userId = $this->resp['user']['id'];
         $inDate = $request->in_date;
 
-        // ── Guard: must not have an open (out-less) attendance for the same date ──
         $openAttendance = UserAttendance::where('user_id', $userId)
             ->whereDate('in_date', $inDate)
             ->whereNull('out_time')
@@ -191,15 +210,13 @@ class AttendanceController extends Controller
                 'status'                          => self::STATUS_PRESENT,
             ]);
 
-            // ── Sunday worked → generate comp-off (once per Sunday) ──
+            // Sunday worked → comp-off
             if (Carbon::parse($inDate)->dayOfWeek === Carbon::SUNDAY) {
                 $alreadyHasComp = UserWeeklyOffCompensation::where('user_id', $userId)
-                    ->where('worked_date', $inDate)
-                    ->exists();
+                    ->where('worked_date', $inDate)->exists();
 
                 if (!$alreadyHasComp) {
                     $workedCarbon = Carbon::parse($inDate);
-                    // Comp-off valid: next Mon (worked+1) to next Sat (worked+6)
                     UserWeeklyOffCompensation::create([
                         'user_id'     => $userId,
                         'worked_date' => $inDate,
@@ -211,7 +228,6 @@ class AttendanceController extends Controller
             }
 
             DB::commit();
-
             return response()->json(
                 apiSuccessResponse('Attendance marked successfully', ['attendance' => $attendance]),
                 200
@@ -224,8 +240,7 @@ class AttendanceController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 2️⃣  MARK OUT ATTENDANCE
-    //     POST v2/attendance/out
+    // 2️⃣  MARK OUT
     // ─────────────────────────────────────────────────────────────────────────
     public function markOut(Request $request)
     {
@@ -256,13 +271,11 @@ class AttendanceController extends Controller
         $userId = $this->resp['user']['id'];
 
         $attendance = UserAttendance::where('id', $request->attendance_id)
-            ->where('user_id', $userId)
-            ->first();
+            ->where('user_id', $userId)->first();
 
         if (!$attendance) {
             return response()->json(apiErrorResponse('Attendance record not found'), 404);
         }
-
         if (!is_null($attendance->out_time)) {
             return response()->json(apiErrorResponse('OUT is already marked for this attendance'), 422);
         }
@@ -286,34 +299,13 @@ class AttendanceController extends Controller
                 apiSuccessResponse('OUT attendance marked successfully', ['attendance' => $attendance->fresh()]),
                 200
             );
-
         } catch (\Exception $e) {
             return response()->json(apiErrorResponse($e->getMessage()), 500);
         }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 3️⃣  APPLY LEAVE (SUPPORTS MULTIPLE DATES IN ONE CALL)
-    //     POST v2/attendance/leave/apply
-    //
-    //  Payload example:
-    //  {
-    //    "leaves": [
-    //      {
-    //        "date": "2026-01-01",
-    //        "leave_type_id": 1,            ← FK to leave_types.id
-    //        "leave_duration": "full_day",  ← full_day | half_day
-    //        "half_day_type": null,         ← first_half | second_half (required if half_day)
-    //        "remarks": "Sick"
-    //      }
-    //    ]
-    //  }
-    //
-    //  Leave type suggestions to show in UI dropdown:
-    //   ID 1 → Sick Leave      (SL)  has_quota=true  quota_editable=true
-    //   ID 2 → Casual Leave    (CL)  has_quota=true  quota_editable=true
-    //   ID 3 → Earned Leave    (EL)  has_quota=true  quota_editable=false ← admin CANNOT edit
-    //   ID 4 → Leave Without Pay (LWP) has_quota=false ← no quota tracking at all
+    // 3️⃣  APPLY LEAVE (multi-date)
     // ─────────────────────────────────────────────────────────────────────────
     public function applyLeave(Request $request)
     {
@@ -335,7 +327,6 @@ class AttendanceController extends Controller
             return response()->json(validationResponse($validator), 422);
         }
 
-        // Extra: half_day_type required when leave_duration is half_day
         foreach ($request->leaves as $i => $leave) {
             if ($leave['leave_duration'] === 'half_day' && empty($leave['half_day_type'])) {
                 return response()->json(
@@ -348,68 +339,54 @@ class AttendanceController extends Controller
         $userId = $this->resp['user']['id'];
 
         DB::beginTransaction();
-
         try {
-            // ── PHASE 1: Pre-validate all quotas before touching anything ──────
-            // Group deductions by leave_type_id + financial_year
-            $quotaMap = []; // key = "leaveTypeId_FY" → remaining after all deductions
-
+            // PHASE 1: Pre-validate all quotas
+            $quotaMap = [];
             foreach ($request->leaves as $leave) {
                 $leaveType = LeaveType::find($leave['leave_type_id']);
-
                 if (!$leaveType || !$leaveType->is_active) {
                     DB::rollBack();
                     return response()->json(
-                        apiErrorResponse("Leave type ID {$leave['leave_type_id']} is invalid or inactive"),
-                        422
+                        apiErrorResponse("Leave type ID {$leave['leave_type_id']} is invalid or inactive"), 422
                     );
                 }
 
                 if ($leaveType->has_quota) {
-                    $fy       = $this->getFinancialYear($leave['date']);
-                    $key      = $leave['leave_type_id'] . '_' . $fy;
-                    $deduct   = ($leave['leave_duration'] === 'half_day') ? 0.5 : 1.0;
+                    $fy     = $this->getFinancialYear($leave['date']);
+                    $key    = $leave['leave_type_id'] . '_' . $fy;
+                    $deduct = ($leave['leave_duration'] === 'half_day') ? 0.5 : 1.0;
 
                     if (!isset($quotaMap[$key])) {
                         $quota = $this->ensureQuota($userId, $leave['leave_type_id'], $fy);
                         $quotaMap[$key] = $quota->total_quota - $quota->used_quota;
                     }
-
                     $quotaMap[$key] -= $deduct;
 
                     if ($quotaMap[$key] < 0) {
                         DB::rollBack();
                         return response()->json(
-                            apiErrorResponse(
-                                "Insufficient {$leaveType->name} balance for the selected dates. " .
-                                "Please check your quota."
-                            ),
+                            apiErrorResponse("Insufficient {$leaveType->name} balance. Please check your quota."),
                             422
                         );
                     }
                 }
             }
 
-            // ── PHASE 2: Apply each leave ─────────────────────────────────────
+            // PHASE 2: Apply leaves
             $appliedLeaves = [];
-
             foreach ($request->leaves as $leave) {
-                $leaveType   = LeaveType::find($leave['leave_type_id']);
-                $fy          = $this->getFinancialYear($leave['date']);
-                $deduct      = ($leave['leave_duration'] === 'half_day') ? 0.5 : 1.0;
-
+                $leaveType        = LeaveType::find($leave['leave_type_id']);
+                $fy               = $this->getFinancialYear($leave['date']);
+                $deduct           = ($leave['leave_duration'] === 'half_day') ? 0.5 : 1.0;
                 $attendanceStatus = ($leave['leave_duration'] === 'full_day')
                     ? self::STATUS_FULL_LEAVE
                     : self::STATUS_HALF_LEAVE;
 
-                // Create or update attendance row for this date
                 $attendance = UserAttendance::where('user_id', $userId)
                     ->whereDate('in_date', $leave['date'])
-                    ->orderBy('id', 'desc')
-                    ->first();
+                    ->orderBy('id', 'desc')->first();
 
                 if (!$attendance) {
-                    // No existing attendance → create a placeholder row
                     $attendance = UserAttendance::create([
                         'user_id' => $userId,
                         'in_date' => $leave['date'],
@@ -420,7 +397,6 @@ class AttendanceController extends Controller
                     $attendance->update(['status' => $attendanceStatus]);
                 }
 
-                // Create leave record
                 $userLeave = UserLeave::create([
                     'user_id'        => $userId,
                     'leave_type_id'  => $leave['leave_type_id'],
@@ -433,7 +409,6 @@ class AttendanceController extends Controller
                     'quota_deducted' => $deduct,
                 ]);
 
-                // Deduct quota if applicable
                 if ($leaveType->has_quota) {
                     $quota = $this->ensureQuota($userId, $leave['leave_type_id'], $fy);
                     $quota->increment('used_quota', $deduct);
@@ -460,7 +435,6 @@ class AttendanceController extends Controller
 
     // ─────────────────────────────────────────────────────────────────────────
     // 4️⃣  CANCEL LEAVE
-    //     POST v2/attendance/leave/cancel
     // ─────────────────────────────────────────────────────────────────────────
     public function cancelLeave(Request $request)
     {
@@ -476,15 +450,11 @@ class AttendanceController extends Controller
         }
 
         $userId = $this->resp['user']['id'];
-
-        $leave = UserLeave::where('id', $request->id)
-            ->where('user_id', $userId)
-            ->first();
+        $leave  = UserLeave::where('id', $request->id)->where('user_id', $userId)->first();
 
         if (!$leave) {
             return response()->json(apiErrorResponse('Leave record not found'), 404);
         }
-
         if ($leave->status === 'cancelled') {
             return response()->json(apiErrorResponse('Leave is already cancelled'), 422);
         }
@@ -493,24 +463,20 @@ class AttendanceController extends Controller
         try {
             $leaveType = LeaveType::find($leave->leave_type_id);
 
-            // Restore quota
             if ($leaveType && $leaveType->has_quota) {
                 $fy    = $this->getFinancialYear($leave->date);
                 $quota = UserLeaveQuota::where('user_id', $userId)
                     ->where('leave_type_id', $leave->leave_type_id)
                     ->where('financial_year', $fy)
                     ->first();
-
                 if ($quota) {
                     $quota->decrement('used_quota', $leave->quota_deducted);
                 }
             }
 
-            // Revert attendance status
             if ($leave->attendance_id) {
                 $attendance = UserAttendance::find($leave->attendance_id);
                 if ($attendance) {
-                    // Check if other leaves exist for same date
                     $otherLeaves = UserLeave::where('attendance_id', $leave->attendance_id)
                         ->where('id', '!=', $leave->id)
                         ->where('status', 'approved')
@@ -523,12 +489,10 @@ class AttendanceController extends Controller
             }
 
             $leave->update(['status' => 'cancelled']);
-
             DB::commit();
 
             return response()->json(
-                apiSuccessResponse('Leave cancelled and quota restored successfully'),
-                200
+                apiSuccessResponse('Leave cancelled and quota restored successfully'), 200
             );
 
         } catch (\Exception $e) {
@@ -538,8 +502,7 @@ class AttendanceController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 5️⃣  ATTENDANCE LIST (MONTH/YEAR FILTER)
-    //     GET v2/attendance/list?month=4&year=2026
+    // 5️⃣  ATTENDANCE LIST
     // ─────────────────────────────────────────────────────────────────────────
     public function attendanceList(Request $request)
     {
@@ -555,9 +518,7 @@ class AttendanceController extends Controller
         }
 
         $userId = $this->resp['user']['id'];
-        if ($request->filled('employee_id')) {
-            $userId = $request->employee_id;
-        }
+        if ($request->filled('employee_id')) $userId = $request->employee_id;
 
         $attendances = UserAttendance::where('user_id', $userId)
             ->whereMonth('in_date', $month)
@@ -568,9 +529,8 @@ class AttendanceController extends Controller
 
         return response()->json(
             apiSuccessResponse('Attendance list fetched', [
-                'month'       => $month,
-                'year'        => $year,
-                'total'       => $attendances->count(),
+                'month' => $month, 'year' => $year,
+                'total' => $attendances->count(),
                 'attendances' => $attendances,
             ]),
             200
@@ -579,7 +539,6 @@ class AttendanceController extends Controller
 
     // ─────────────────────────────────────────────────────────────────────────
     // 6️⃣  LEAVE LIST
-    //     GET v2/attendance/leaves?month=4&year=2026
     // ─────────────────────────────────────────────────────────────────────────
     public function leaveList(Request $request)
     {
@@ -599,14 +558,13 @@ class AttendanceController extends Controller
             ->get();
 
         return response()->json(
-            apiSuccessResponse('Leave list fetched', ['leaves' => $leaves]),
-            200
+            apiSuccessResponse('Leave list fetched', ['leaves' => $leaves]), 200
         );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 7️⃣  LEAVE QUOTA (FINANCIAL YEAR WISE)
-    //     GET v2/attendance/quota?financial_year=2025-26
+    // 7️⃣  LEAVE QUOTA (with EL accrual history)
+    //     GET v2/attendance/quota?financial_year=2026-27
     // ─────────────────────────────────────────────────────────────────────────
     public function leaveQuota(Request $request)
     {
@@ -625,19 +583,36 @@ class AttendanceController extends Controller
             ->get();
 
         $quotaData = $leaveTypes->map(function ($leaveType) use ($userId, $financialYear) {
-            $quota = $this->ensureQuota($userId, $leaveType->id, $financialYear);
+            $quota   = $this->ensureQuota($userId, $leaveType->id, $financialYear);
+            $setting = UserLeaveSetting::where('user_id', $userId)
+                ->where('leave_type_id', $leaveType->id)
+                ->where('financial_year', $financialYear)
+                ->first();
 
-            return [
+            $row = [
                 'leave_type_id'    => $leaveType->id,
                 'leave_type_name'  => $leaveType->name,
                 'leave_type_code'  => $leaveType->code,
                 'color'            => $leaveType->color,
-                'quota_editable'   => $leaveType->quota_editable, // false = EL (admin can't edit)
+                'quota_editable'   => $leaveType->quota_editable,
                 'financial_year'   => $financialYear,
                 'total_quota'      => (float) $quota->total_quota,
                 'used_quota'       => (float) $quota->used_quota,
                 'remaining_quota'  => max(0, (float) $quota->total_quota - (float) $quota->used_quota),
+                // User-specific settings (if configured)
+                'annual_quota_override' => $setting ? $setting->annual_quota : null,
             ];
+
+            // Extra EL info
+            if ($leaveType->code === 'EL' && $setting) {
+                $row['el_settings'] = [
+                    'monthly_accrual'     => $setting->monthly_accrual,
+                    'carry_forward'       => $setting->carry_forward,
+                    'carry_forward_limit' => $setting->carry_forward_limit,
+                ];
+            }
+
+            return $row;
         });
 
         return response()->json(
@@ -650,8 +625,243 @@ class AttendanceController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 8️⃣  LEAVE TYPES LIST (for UI dropdowns)
-    //     GET v2/attendance/leave-types
+    // NEW ✅  EL ACCRUAL HISTORY
+    //      GET v2/attendance/el-accrual-history?financial_year=2026-27
+    // ─────────────────────────────────────────────────────────────────────────
+    public function elAccrualHistory(Request $request)
+    {
+        if (!$this->resp['status'] || !isset($this->resp['user'])) {
+            return response()->json(apiErrorResponse('Unauthorized'), 401);
+        }
+
+        $userId        = $this->resp['user']['id'];
+        $financialYear = $request->filled('financial_year')
+            ? $request->financial_year
+            : $this->getFinancialYear();
+
+        $elType = LeaveType::where('code', 'EL')->first();
+        if (!$elType) {
+            return response()->json(apiErrorResponse('EL leave type not configured'), 404);
+        }
+
+        $logs = UserElAccrualLog::where('user_id', $userId)
+            ->where('leave_type_id', $elType->id)
+            ->where('financial_year', $financialYear)
+            ->orderBy('accrual_year')
+            ->orderBy('accrual_month')
+            ->get();
+
+        return response()->json(
+            apiSuccessResponse('EL accrual history fetched', [
+                'financial_year' => $financialYear,
+                'logs'           => $logs,
+            ]),
+            200
+        );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // NEW ✅  QUOTA ALL FINANCIAL YEARS (for history view)
+    //      GET v2/attendance/quota/history
+    // ─────────────────────────────────────────────────────────────────────────
+    public function quotaHistory(Request $request)
+    {
+        if (!$this->resp['status'] || !isset($this->resp['user'])) {
+            return response()->json(apiErrorResponse('Unauthorized'), 401);
+        }
+
+        $userId = $this->resp['user']['id'];
+
+        // Get all FY rows for this user, grouped by FY
+        $quotas = UserLeaveQuota::with('leaveType')
+            ->where('user_id', $userId)
+            ->orderBy('financial_year', 'desc')
+            ->get()
+            ->groupBy('financial_year');
+
+        $history = $quotas->map(function ($rows, $fy) {
+            return [
+                'financial_year' => $fy,
+                'leave_balances' => $rows->map(function ($q) {
+                    return [
+                        'leave_type_id'   => $q->leave_type_id,
+                        'leave_type_name' => $q->leaveType ? $q->leaveType->name : null,
+                        'leave_type_code' => $q->leaveType ? $q->leaveType->code : null,
+                        'total_quota'     => (float) $q->total_quota,
+                        'used_quota'      => (float) $q->used_quota,
+                        'remaining_quota' => max(0, (float) $q->total_quota - (float) $q->used_quota),
+                    ];
+                })->values(),
+            ];
+        })->values();
+
+        return response()->json(
+            apiSuccessResponse('Quota history fetched', ['history' => $history]),
+            200
+        );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // NEW ✅  SAVE LEAVE SETTINGS PER USER (Admin or HR use)
+    //      POST v2/attendance/leave-settings/save
+    //
+    //  Allows setting per-user quota and EL accrual config.
+    //  Can be called from your admin panel for each user.
+    //
+    //  Payload:
+    //  {
+    //    "user_id": 5,
+    //    "financial_year": "2026-27",
+    //    "settings": [
+    //      {
+    //        "leave_type_id": 1,        ← SL
+    //        "annual_quota": 10         ← Override: this user gets 10 SL days (not 12)
+    //      },
+    //      {
+    //        "leave_type_id": 2,        ← CL
+    //        "annual_quota": 8
+    //      },
+    //      {
+    //        "leave_type_id": 3,        ← EL
+    //        "monthly_accrual": 1.25,   ← 1.25 days added per month by cron
+    //        "carry_forward": true,
+    //        "carry_forward_limit": 10  ← Max 10 EL days accumulation
+    //      }
+    //    ]
+    //  }
+    // ─────────────────────────────────────────────────────────────────────────
+    public function saveLeaveSettings(Request $request)
+    {
+        if (!$this->resp['status'] || !isset($this->resp['user'])) {
+            return response()->json(apiErrorResponse('Unauthorized'), 401);
+        }
+
+        $rules = [
+            'user_id'                             => 'required|integer|exists:users,id',
+            'financial_year'                      => 'required|string|regex:/^\d{4}-\d{2}$/',
+            'settings'                            => 'required|array|min:1',
+            'settings.*.leave_type_id'            => 'required|integer|exists:leave_types,id',
+            'settings.*.annual_quota'             => 'nullable|numeric|min:0',
+            'settings.*.monthly_accrual'          => 'nullable|numeric|min:0|max:30',
+            'settings.*.carry_forward'            => 'nullable|boolean',
+            'settings.*.carry_forward_limit'      => 'nullable|numeric|min:0',
+        ];
+
+        $validator = Validator::make($request->all(), $rules);
+        if ($validator->fails()) {
+            return response()->json(validationResponse($validator), 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $savedSettings = [];
+
+            foreach ($request->settings as $item) {
+                $leaveType = LeaveType::find($item['leave_type_id']);
+
+                // Guard: EL quota is NOT directly editable via this endpoint
+                // (EL annual_quota is managed by cron only)
+                if ($leaveType && $leaveType->code === 'EL' && isset($item['annual_quota'])) {
+                    unset($item['annual_quota']); // silently strip
+                }
+
+                $setting = UserLeaveSetting::updateOrCreate(
+                    [
+                        'user_id'        => $request->user_id,
+                        'leave_type_id'  => $item['leave_type_id'],
+                        'financial_year' => $request->financial_year,
+                    ],
+                    [
+                        'annual_quota'        => $item['annual_quota']        ?? null,
+                        'monthly_accrual'     => $item['monthly_accrual']     ?? null,
+                        'carry_forward'       => $item['carry_forward']       ?? false,
+                        'carry_forward_limit' => $item['carry_forward_limit'] ?? 0,
+                    ]
+                );
+
+                // If SL/CL annual_quota changed, also update the live quota total
+                // (only if quota row already exists — don't create it here)
+                if ($leaveType && $leaveType->code !== 'EL' && isset($item['annual_quota'])) {
+                    $existingQuota = UserLeaveQuota::where('user_id', $request->user_id)
+                        ->where('leave_type_id', $item['leave_type_id'])
+                        ->where('financial_year', $request->financial_year)
+                        ->first();
+
+                    if ($existingQuota) {
+                        $existingQuota->update(['total_quota' => $item['annual_quota']]);
+                    }
+                }
+
+                $savedSettings[] = $setting->load('leaveType');
+            }
+
+            DB::commit();
+
+            return response()->json(
+                apiSuccessResponse('Leave settings saved successfully', ['settings' => $savedSettings]),
+                200
+            );
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(apiErrorResponse($e->getMessage()), 500);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // NEW ✅  GET LEAVE SETTINGS FOR A USER
+    //      GET v2/attendance/leave-settings?user_id=5&financial_year=2026-27
+    // ─────────────────────────────────────────────────────────────────────────
+    public function getLeaveSettings(Request $request)
+    {
+        if (!$this->resp['status'] || !isset($this->resp['user'])) {
+            return response()->json(apiErrorResponse('Unauthorized'), 401);
+        }
+
+        $userId = $request->filled('user_id')
+            ? (int) $request->user_id
+            : $this->resp['user']['id'];
+
+        $financialYear = $request->filled('financial_year')
+            ? $request->financial_year
+            : $this->getFinancialYear();
+
+        $leaveTypes = LeaveType::where('is_active', true)->orderBy('sort_order')->get();
+
+        $data = $leaveTypes->map(function ($lt) use ($userId, $financialYear) {
+            $setting = UserLeaveSetting::where('user_id', $userId)
+                ->where('leave_type_id', $lt->id)
+                ->where('financial_year', $financialYear)
+                ->first();
+
+            return [
+                'leave_type_id'       => $lt->id,
+                'leave_type_name'     => $lt->name,
+                'leave_type_code'     => $lt->code,
+                'has_quota'           => $lt->has_quota,
+                'quota_editable'      => $lt->quota_editable,
+                'global_default'      => $lt->default_quota,
+                // User setting (null = not configured, using global default)
+                'annual_quota'        => $setting ? $setting->annual_quota : null,
+                'monthly_accrual'     => $setting ? $setting->monthly_accrual : null,
+                'carry_forward'       => $setting ? $setting->carry_forward : null,
+                'carry_forward_limit' => $setting ? $setting->carry_forward_limit : null,
+                'setting_exists'      => !is_null($setting),
+            ];
+        });
+
+        return response()->json(
+            apiSuccessResponse('Leave settings fetched', [
+                'user_id'        => $userId,
+                'financial_year' => $financialYear,
+                'settings'       => $data,
+            ]),
+            200
+        );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 8️⃣  LEAVE TYPES
     // ─────────────────────────────────────────────────────────────────────────
     public function leaveTypes(Request $request)
     {
@@ -661,20 +871,15 @@ class AttendanceController extends Controller
 
         $leaveTypes = LeaveType::where('is_active', true)
             ->orderBy('sort_order')
-            ->get([
-                'id', 'name', 'code', 'has_quota',
-                'quota_editable', 'color', 'default_quota'
-            ]);
+            ->get(['id', 'name', 'code', 'has_quota', 'quota_editable', 'color', 'default_quota']);
 
         return response()->json(
-            apiSuccessResponse('Leave types fetched', ['leave_types' => $leaveTypes]),
-            200
+            apiSuccessResponse('Leave types fetched', ['leave_types' => $leaveTypes]), 200
         );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 9️⃣  HOLIDAY LIST (NATIONAL + USER'S CITY)
-    //     GET v2/attendance/holidays?year=2026
+    // 9️⃣  HOLIDAYS
     // ─────────────────────────────────────────────────────────────────────────
     public function holidays(Request $request)
     {
@@ -686,30 +891,41 @@ class AttendanceController extends Controller
         $userCity = $this->getUserCity($userId);
         $year     = (int) $request->query('year', now()->year);
 
+        // For recurring holidays, we need to match by MM-DD for the given year
         $holidays = HolidayList::where('is_active', true)
-            ->whereYear('date', $year)
             ->where(function ($q) use ($userCity) {
                 $q->where('is_national', true);
-                if ($userCity) {
-                    $q->orWhere('city', $userCity);
-                }
+                if ($userCity) $q->orWhere('city', $userCity);
             })
-            ->orderBy('date', 'asc')
-            ->get();
+            ->where(function ($q) use ($year) {
+                // Exact year match OR recurring (any year, show for requested year)
+                $q->whereYear('date', $year)
+                  ->orWhere('is_recurring', true);
+            })
+            ->orderByRaw("DATE_FORMAT(date, '%m-%d') asc")
+            ->get()
+            ->map(function ($h) use ($year) {
+                // For recurring holidays, rewrite the date to the requested year
+                if ($h->is_recurring) {
+                    $h->display_date = $year . '-' . Carbon::parse($h->date)->format('m-d');
+                } else {
+                    $h->display_date = $h->date;
+                }
+                return $h;
+            });
 
         return response()->json(
             apiSuccessResponse('Holidays fetched', [
-                'year'      => $year,
-                'city'      => $userCity,
-                'holidays'  => $holidays,
+                'year'     => $year,
+                'city'     => $userCity,
+                'holidays' => $holidays,
             ]),
             200
         );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 🔟  CALENDAR VIEW (COMBINED: ATTENDANCE + LEAVES + HOLIDAYS)
-    //     GET v2/attendance/calendar?month=4&year=2026
+    // 🔟  CALENDAR VIEW
     // ─────────────────────────────────────────────────────────────────────────
     public function calendar(Request $request)
     {
@@ -726,66 +942,59 @@ class AttendanceController extends Controller
         }
 
         $userCity = $this->getUserCity($userId);
-
-        // Auto-expire stale comp-offs before building calendar
         $this->expireStaleCompOffs($userId);
 
-        // Pre-load all data for the month in bulk
         $attendances = UserAttendance::where('user_id', $userId)
-            ->whereMonth('in_date', $month)
-            ->whereYear('in_date', $year)
-            ->get()
-            ->groupBy(function ($a) {
-                return Carbon::parse($a->in_date)->toDateString();
-            });
+            ->whereMonth('in_date', $month)->whereYear('in_date', $year)
+            ->get()->groupBy(fn($a) => Carbon::parse($a->in_date)->toDateString());
 
         $leaves = UserLeave::with('leaveType')
-            ->where('user_id', $userId)
-            ->where('status', 'approved')
-            ->whereMonth('date', $month)
-            ->whereYear('date', $year)
-            ->get()
-            ->groupBy(function ($l) {
-                return Carbon::parse($l->date)->toDateString();
-            });
+            ->where('user_id', $userId)->where('status', 'approved')
+            ->whereMonth('date', $month)->whereYear('date', $year)
+            ->get()->groupBy(fn($l) => Carbon::parse($l->date)->toDateString());
 
-        $holidays = HolidayList::where('is_active', true)
-            ->whereMonth('date', $month)
-            ->whereYear('date', $year)
+        // Holidays: exact date for this month/year + recurring by MM-DD
+        $monthDay = sprintf('%02d', $month);
+        $holidayRows = HolidayList::where('is_active', true)
             ->where(function ($q) use ($userCity) {
                 $q->where('is_national', true);
-                if ($userCity) {
-                    $q->orWhere('city', $userCity);
-                }
+                if ($userCity) $q->orWhere('city', $userCity);
             })
-            ->get()
-            ->keyBy(function ($h) {
-                return Carbon::parse($h->date)->toDateString();
-            });
+            ->where(function ($q) use ($month, $year, $monthDay) {
+                $q->where(function ($inner) use ($month, $year) {
+                    $inner->whereMonth('date', $month)->whereYear('date', $year);
+                })->orWhere(function ($inner) use ($monthDay) {
+                    $inner->where('is_recurring', true)
+                          ->whereRaw("DATE_FORMAT(date, '%m') = ?", [$monthDay]);
+                });
+            })
+            ->get();
+
+        // Key holidays by the day-of-month they fall on this calendar month
+        $holidays = collect();
+        foreach ($holidayRows as $h) {
+            $ds = $h->is_recurring
+                ? ($year . '-' . sprintf('%02d', $month) . '-' . Carbon::parse($h->date)->format('d'))
+                : Carbon::parse($h->date)->toDateString();
+            $holidays[$ds] = $h;
+        }
 
         $compOffs = UserWeeklyOffCompensation::where('user_id', $userId)
-            ->where('status', 'used')
-            ->whereNotNull('used_on')
-            ->whereMonth('used_on', $month)
-            ->whereYear('used_on', $year)
-            ->get()
-            ->keyBy(function ($c) {
-                return Carbon::parse($c->used_on)->toDateString();
-            });
+            ->where('status', 'used')->whereNotNull('used_on')
+            ->whereMonth('used_on', $month)->whereYear('used_on', $year)
+            ->get()->keyBy(fn($c) => Carbon::parse($c->used_on)->toDateString());
 
-        // Build day-by-day calendar array
         $startDate = Carbon::create($year, $month, 1)->startOfMonth();
         $endDate   = $startDate->copy()->endOfMonth();
         $today     = Carbon::today();
         $calendar  = [];
 
         for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
-            $ds        = $date->toDateString();
-            $isSunday  = ($date->dayOfWeek === Carbon::SUNDAY);
-            $isHoliday = isset($holidays[$ds]);
-            $isCompOff = isset($compOffs[$ds]);
-            $isFuture  = $date->gt($today);
-
+            $ds             = $date->toDateString();
+            $isSunday       = ($date->dayOfWeek === Carbon::SUNDAY);
+            $isHoliday      = isset($holidays[$ds]);
+            $isCompOff      = isset($compOffs[$ds]);
+            $isFuture       = $date->gt($today);
             $dayAttendances = $attendances->get($ds, collect());
             $dayLeaves      = $leaves->get($ds, collect());
 
@@ -810,63 +1019,28 @@ class AttendanceController extends Controller
         }
 
         return response()->json(
-            apiSuccessResponse('Calendar fetched', [
-                'month'    => $month,
-                'year'     => $year,
-                'calendar' => $calendar,
-            ]),
+            apiSuccessResponse('Calendar fetched', ['month' => $month, 'year' => $year, 'calendar' => $calendar]),
             200
         );
     }
 
-    /**
-     * Determine the display status for a calendar day.
-     */
     protected function computeDayStatus(
-        string $date,
-        bool $isSunday,
-        bool $isHoliday,
-        bool $isCompOff,
-        $dayAttendances,
-        $dayLeaves,
-        bool $isFuture
+        string $date, bool $isSunday, bool $isHoliday, bool $isCompOff,
+        $dayAttendances, $dayLeaves, bool $isFuture
     ): ?string {
-        // Priority order: Holiday → Comp Off → Leave → Weekly Off → Present → Absent
-        if ($isHoliday) {
-            return self::STATUS_HOLIDAY;
-        }
-
-        if ($isCompOff) {
-            return self::STATUS_COMP_OFF;
-        }
-
+        if ($isHoliday)                    return self::STATUS_HOLIDAY;
+        if ($isCompOff)                    return self::STATUS_COMP_OFF;
         if ($dayLeaves->isNotEmpty()) {
             $first = $dayLeaves->first();
-            return ($first->leave_duration === 'full_day')
-                ? self::STATUS_FULL_LEAVE
-                : self::STATUS_HALF_LEAVE;
+            return ($first->leave_duration === 'full_day') ? self::STATUS_FULL_LEAVE : self::STATUS_HALF_LEAVE;
         }
-
-        if ($isSunday && $dayAttendances->isEmpty()) {
-            return self::STATUS_WEEKLY_OFF;
-        }
-
-        if ($dayAttendances->isNotEmpty()) {
-            return $dayAttendances->first()->status ?? self::STATUS_PRESENT;
-        }
-
+        if ($isSunday && $dayAttendances->isEmpty()) return self::STATUS_WEEKLY_OFF;
+        if ($dayAttendances->isNotEmpty())  return $dayAttendances->first()->status ?? self::STATUS_PRESENT;
         return $isFuture ? null : self::STATUS_ABSENT;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 1️⃣1️⃣  USE COMP-OFF (WEEKLY OFF CARRY FORWARD)
-    //      POST v2/attendance/weekly-off/use
-    //
-    //  Rules:
-    //   - Comp-off earned by working on Sunday
-    //   - Can only be used Mon–Sat of the FOLLOWING week
-    //   - If not used by that Saturday → expires (no further carry-forward)
-    //   - Max 2 weekly offs per week (Sunday + 1 comp-off)
+    // 1️⃣1️⃣  USE COMP-OFF
     // ─────────────────────────────────────────────────────────────────────────
     public function useCompOff(Request $request)
     {
@@ -887,78 +1061,56 @@ class AttendanceController extends Controller
         $userId  = $this->resp['user']['id'];
         $useDate = Carbon::parse($request->use_date);
 
-        // Cannot use on a Sunday (Sunday is already Weekly Off)
         if ($useDate->dayOfWeek === Carbon::SUNDAY) {
-            return response()->json(
-                apiErrorResponse('Comp-off cannot be used on a Sunday'),
-                422
-            );
+            return response()->json(apiErrorResponse('Comp-off cannot be used on a Sunday'), 422);
         }
 
         $compOff = UserWeeklyOffCompensation::where('id', $request->comp_off_id)
-            ->where('user_id', $userId)
-            ->where('status', 'available')
-            ->first();
+            ->where('user_id', $userId)->where('status', 'available')->first();
 
         if (!$compOff) {
-            return response()->json(
-                apiErrorResponse('Comp-off not found, already used, or expired'),
-                404
-            );
+            return response()->json(apiErrorResponse('Comp-off not found, already used, or expired'), 404);
         }
 
-        // Validate: use_date must fall within valid_from → expires_on
-        $validFrom  = Carbon::parse($compOff->valid_from);
-        $expiresOn  = Carbon::parse($compOff->expires_on)->endOfDay();
+        $validFrom = Carbon::parse($compOff->valid_from);
+        $expiresOn = Carbon::parse($compOff->expires_on)->endOfDay();
 
         if ($useDate->lt($validFrom) || $useDate->gt($expiresOn)) {
             return response()->json(
                 apiErrorResponse(
-                    "Comp-off can only be used between " .
-                    $compOff->valid_from . " and " . $compOff->expires_on .
-                    " (the week following " . $compOff->worked_date . ")"
+                    "Comp-off can only be used between {$compOff->valid_from} and {$compOff->expires_on} " .
+                    "(following week of {$compOff->worked_date})"
                 ),
                 422
             );
         }
 
-        // Guard: max 2 weekly offs in a week (Sun + 1 comp-off max)
         $weekStart = $useDate->copy()->startOfWeek(Carbon::MONDAY);
         $weekEnd   = $useDate->copy()->endOfWeek(Carbon::SATURDAY);
 
-        $compOffsUsedThisWeek = UserWeeklyOffCompensation::where('user_id', $userId)
+        $usedThisWeek = UserWeeklyOffCompensation::where('user_id', $userId)
             ->where('status', 'used')
             ->whereBetween('used_on', [$weekStart->toDateString(), $weekEnd->toDateString()])
             ->count();
 
-        if ($compOffsUsedThisWeek >= 1) {
+        if ($usedThisWeek >= 1) {
             return response()->json(
-                apiErrorResponse(
-                    'You have already used a comp-off this week. ' .
-                    'Maximum 1 comp-off per week is allowed.'
-                ),
+                apiErrorResponse('You have already used a comp-off this week. Maximum 1 per week.'),
                 422
             );
         }
 
         DB::beginTransaction();
         try {
-            $compOff->update([
-                'used_on' => $request->use_date,
-                'status'  => 'used',
-            ]);
+            $compOff->update(['used_on' => $request->use_date, 'status' => 'used']);
 
-            // Create/update attendance row for the comp-off date
             $attendance = UserAttendance::where('user_id', $userId)
-                ->whereDate('in_date', $request->use_date)
-                ->first();
+                ->whereDate('in_date', $request->use_date)->first();
 
             if (!$attendance) {
                 UserAttendance::create([
-                    'user_id' => $userId,
-                    'in_date' => $request->use_date,
-                    'in_time' => null,
-                    'status'  => self::STATUS_COMP_OFF,
+                    'user_id' => $userId, 'in_date' => $request->use_date,
+                    'in_time' => null, 'status' => self::STATUS_COMP_OFF,
                 ]);
             } else {
                 $attendance->update(['status' => self::STATUS_COMP_OFF]);
@@ -967,13 +1119,9 @@ class AttendanceController extends Controller
             DB::commit();
 
             return response()->json(
-                apiSuccessResponse(
-                    'Comp-off used successfully for ' . $request->use_date,
-                    ['comp_off' => $compOff->fresh()]
-                ),
+                apiSuccessResponse('Comp-off used successfully for ' . $request->use_date, ['comp_off' => $compOff->fresh()]),
                 200
             );
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(apiErrorResponse($e->getMessage()), 500);
@@ -982,7 +1130,6 @@ class AttendanceController extends Controller
 
     // ─────────────────────────────────────────────────────────────────────────
     // 1️⃣2️⃣  AVAILABLE COMP-OFFS
-    //      GET v2/attendance/weekly-off/available
     // ─────────────────────────────────────────────────────────────────────────
     public function availableCompOffs(Request $request)
     {
@@ -991,24 +1138,16 @@ class AttendanceController extends Controller
         }
 
         $userId = $this->resp['user']['id'];
-
-        // Auto-expire before fetching
         $this->expireStaleCompOffs($userId);
 
         $compOffs = UserWeeklyOffCompensation::where('user_id', $userId)
-            ->where('status', 'available')
-            ->orderBy('expires_on', 'asc')
-            ->get();
+            ->where('status', 'available')->orderBy('expires_on', 'asc')->get();
 
         return response()->json(
-            apiSuccessResponse('Available comp-offs fetched', ['comp_offs' => $compOffs]),
-            200
+            apiSuccessResponse('Available comp-offs fetched', ['comp_offs' => $compOffs]), 200
         );
     }
 
-    /**
-     * Mark all expired comp-offs for the user.
-     */
     protected function expireStaleCompOffs(int $userId): void
     {
         UserWeeklyOffCompensation::where('user_id', $userId)
@@ -1018,8 +1157,7 @@ class AttendanceController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 1️⃣3️⃣  ATTENDANCE DETAIL (SINGLE RECORD)
-    //      GET v2/attendance/detail/{id}
+    // 1️⃣3️⃣  ATTENDANCE DETAIL
     // ─────────────────────────────────────────────────────────────────────────
     public function attendanceDetail($id)
     {
@@ -1031,25 +1169,20 @@ class AttendanceController extends Controller
             return response()->json(apiErrorResponse('Invalid ID'), 422);
         }
 
-        $userId = $this->resp['user']['id'];
-
         $attendance = UserAttendance::where('id', $id)
-            ->where('user_id', $userId)
-            ->first();
+            ->where('user_id', $this->resp['user']['id'])->first();
 
         if (!$attendance) {
             return response()->json(apiErrorResponse('Attendance not found'), 404);
         }
 
         return response()->json(
-            apiSuccessResponse('Attendance detail fetched', ['attendance' => $attendance]),
-            200
+            apiSuccessResponse('Attendance detail fetched', ['attendance' => $attendance]), 200
         );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 1️⃣4️⃣  SUMMARY (MONTHLY STATS)
-    //      GET v2/attendance/summary?month=4&year=2026
+    // 1️⃣4️⃣  MONTHLY SUMMARY
     // ─────────────────────────────────────────────────────────────────────────
     public function summary(Request $request)
     {
@@ -1057,28 +1190,31 @@ class AttendanceController extends Controller
             return response()->json(apiErrorResponse('Unauthorized'), 401);
         }
 
-        $userId   = $this->resp['user']['id'];
-        $month    = (int) $request->query('month', now()->month);
-        $year     = (int) $request->query('year',  now()->year);
-        $userCity = $this->getUserCity($userId);
-
+        $userId    = $this->resp['user']['id'];
+        $month     = (int) $request->query('month', now()->month);
+        $year      = (int) $request->query('year',  now()->year);
+        $userCity  = $this->getUserCity($userId);
         $startDate = Carbon::create($year, $month, 1)->startOfMonth();
         $endDate   = $startDate->copy()->endOfMonth();
         $today     = Carbon::today();
 
-        // Count working days so far (excluding Sundays & holidays)
         $holidays = HolidayList::where('is_active', true)
-            ->whereYear('date', $year)->whereMonth('date', $month)
             ->where(function ($q) use ($userCity) {
                 $q->where('is_national', true);
                 if ($userCity) $q->orWhere('city', $userCity);
             })
+            ->where(function ($q) use ($month, $year) {
+                $q->where(function ($inner) use ($month, $year) {
+                    $inner->whereMonth('date', $month)->whereYear('date', $year);
+                })->orWhere('is_recurring', true);
+            })
             ->pluck('date')
+            ->map(fn($d) => Carbon::parse($d)->format('m-d'))
             ->toArray();
 
         $totalWorkingDays = 0;
         for ($d = $startDate->copy(); $d->lte($endDate) && $d->lte($today); $d->addDay()) {
-            if ($d->dayOfWeek !== Carbon::SUNDAY && !in_array($d->toDateString(), $holidays)) {
+            if ($d->dayOfWeek !== Carbon::SUNDAY && !in_array($d->format('m-d'), $holidays)) {
                 $totalWorkingDays++;
             }
         }
@@ -1090,24 +1226,22 @@ class AttendanceController extends Controller
 
         $leaveDays = UserLeave::where('user_id', $userId)
             ->whereMonth('date', $month)->whereYear('date', $year)
-            ->where('status', 'approved')
-            ->sum('quota_deducted');
+            ->where('status', 'approved')->sum('quota_deducted');
 
         $compOffDays = UserWeeklyOffCompensation::where('user_id', $userId)
             ->where('status', 'used')
-            ->whereMonth('used_on', $month)->whereYear('used_on', $year)
-            ->count();
+            ->whereMonth('used_on', $month)->whereYear('used_on', $year)->count();
 
         return response()->json(
             apiSuccessResponse('Summary fetched', [
-                'month'              => $month,
-                'year'               => $year,
-                'total_working_days' => $totalWorkingDays,
-                'present_days'       => $presentDays,
-                'leave_days'         => (float) $leaveDays,
-                'comp_off_days'      => $compOffDays,
-                'absent_days'        => max(0, $totalWorkingDays - $presentDays - $leaveDays - $compOffDays),
-                'holidays_this_month'=> count($holidays),
+                'month'               => $month,
+                'year'                => $year,
+                'total_working_days'  => $totalWorkingDays,
+                'present_days'        => $presentDays,
+                'leave_days'          => (float) $leaveDays,
+                'comp_off_days'       => $compOffDays,
+                'absent_days'         => max(0, $totalWorkingDays - $presentDays - $leaveDays - $compOffDays),
+                'holidays_this_month' => count($holidays),
             ]),
             200
         );
