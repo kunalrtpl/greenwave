@@ -442,6 +442,22 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 	Route::post('user-expenses/{id}/raise-query',       'UserExpenseController@raiseQuery')->name('admin.user-expenses.raise-query');
 	Route::post('user-expenses/{id}/internal-remarks',       'UserExpenseController@saveInternalRemarks');
 
+
+	Route::get('attendance',                          'AdminAttendanceController@index')
+     ->name('admin.attendance.index');
+ 
+	Route::get('attendance/quota-info',               'AdminAttendanceController@getQuotaInfo')
+	     ->name('admin.attendance.quota-info');
+	 
+	// ⚠️ IMPORTANT: create-record MUST come before {id}/update-status
+	// otherwise Laravel will try to match "create-record" as an {id}
+	Route::post('attendance/create-record',           'AdminAttendanceController@createRecord')
+	     ->name('admin.attendance.create-record');
+	 
+	Route::post('attendance/{id}/update-status',      'AdminAttendanceController@updateStatus')
+     ->name('admin.attendance.update-status');
+
+
 	});
 });
 Route::match(['get', 'post'], '/send-notifications', 'Admin\NotificationController@sendNotifications');
