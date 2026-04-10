@@ -48,7 +48,7 @@ class UserExpenseController extends Controller
                 'vb.name as verified_by_name',
                 'ab.name as approved_by_name'
             )
-            ->orderBy('ue.id', 'desc');
+            ->orderBy('ue.expense_date', 'desc');
 
         if ($request->filled('employee_id')) {
             $query->where('ue.user_id', $request->employee_id);
@@ -107,9 +107,34 @@ class UserExpenseController extends Controller
             $years[] = $y;
         }
 
+        $visitCounts = [];
+
+        $expenseKeys = $expenses->map(function ($exp) {
+            return [
+                'user_id' => $exp->user_id,
+                'date'    => $exp->expense_date,
+            ];
+        });
+
+        $visitsData = DB::table('user_dvrs')
+            ->select('user_id', 'dvr_date', DB::raw('COUNT(*) as total'))
+            ->where(function ($q) use ($expenseKeys) {
+                foreach ($expenseKeys as $key) {
+                    $q->orWhere(function ($sub) use ($key) {
+                        $sub->where('user_id', $key['user_id'])
+                            ->whereDate('dvr_date', $key['date']);
+                    });
+                }
+            })
+            ->groupBy('user_id', 'dvr_date')
+            ->get();
+        foreach ($visitsData as $v) {
+            $visitCounts[$v->user_id . '_' . $v->dvr_date] = $v->total;
+        }
+        //echo "<pre>"; print_r($visitCounts); die;
         $title = 'User Expenses';
         return view('admin.user_expenses.index',
-            compact('expenses', 'employees', 'years', 'title', 'queryCounts', 'unreadQueryCounts'));
+            compact('expenses', 'employees', 'years', 'title', 'queryCounts', 'unreadQueryCounts','visitCounts'));
     }
 
     /**

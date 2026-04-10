@@ -20,15 +20,23 @@ class UserAttendance extends Model
         'missed',
         // Status
         'status',
+        // Audit — admin status changes
+        'previous_status',
+        'status_changed_by',
+        'status_change_note',
+        'status_changed_at',
     ];
 
     protected $casts = [
-        'missed'        => 'boolean',
-        'in_latitude'   => 'float',
-        'in_longitude'  => 'float',
-        'out_latitude'  => 'float',
-        'out_longitude' => 'float',
+        'missed'             => 'boolean',
+        'in_latitude'        => 'float',
+        'in_longitude'       => 'float',
+        'out_latitude'       => 'float',
+        'out_longitude'      => 'float',
+        'status_changed_at'  => 'datetime',
     ];
+
+    // ── Relationships ─────────────────────────────────────────────
 
     public function user()
     {
@@ -40,11 +48,33 @@ class UserAttendance extends Model
         return $this->hasMany(UserLeave::class, 'attendance_id');
     }
 
-    // Check if out is marked
-    public function getIsOutMarkedAttribute()
+    public function changedBy()
+    {
+        return $this->belongsTo(\App\User::class, 'status_changed_by');
+    }
+
+    // ── Computed attributes ───────────────────────────────────────
+
+    public function getIsOutMarkedAttribute(): bool
     {
         return !is_null($this->out_time);
     }
 
-    protected $appends = ['is_out_marked'];
+    public function getIsOpenAttribute(): bool
+    {
+        return !is_null($this->in_time)
+            && is_null($this->out_time)
+            && !$this->missed;
+    }
+
+    public function getWasAdminUpdatedAttribute(): bool
+    {
+        return !is_null($this->status_changed_by);
+    }
+
+    protected $appends = [
+        'is_out_marked',
+        'is_open',
+        'was_admin_updated',
+    ];
 }

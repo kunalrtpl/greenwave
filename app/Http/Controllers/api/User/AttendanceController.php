@@ -21,13 +21,19 @@ class AttendanceController extends Controller
 {
     protected $resp;
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // STATUS CONSTANTS — canonical list, must match AdminAttendanceController
+    // ─────────────────────────────────────────────────────────────────────────
     const STATUS_PRESENT    = 'Full Day Present';
-    const STATUS_FULL_LEAVE = 'Allowed Full Day Leave';
+    const STATUS_HALF_LWP   = '1/2 Present + 1/2 LWP';
     const STATUS_HALF_LEAVE = '1/2 Present + 1/2 Leave';
+    const STATUS_FULL_LEAVE = 'Allowed Full Day Leave';
+    const STATUS_LWP_UNINF  = 'LWP (Uninformed Absence)';       // replaces STATUS_ABSENT
+    const STATUS_LWP_UNAPP  = 'LWP (Unapproved Leave)';
+    const STATUS_LWP_EXCESS = 'LWP (Leave in excess of quota)';
+    const STATUS_HOLIDAY    = 'Allowed Holiday';                 // was 'Holiday'
+    const STATUS_COMP_OFF   = 'Compensatory Weekly Off';         // was 'Comp Off'
     const STATUS_WEEKLY_OFF = 'Weekly Off';
-    const STATUS_COMP_OFF   = 'Comp Off';
-    const STATUS_HOLIDAY    = 'Holiday';
-    const STATUS_ABSENT     = 'Absent';
 
     public function __construct(Request $request)
     {
@@ -49,26 +55,10 @@ class AttendanceController extends Controller
         return ($d->year - 1) . '-' . substr($d->year, -2);
     }
 
-    /**
-     * Get user-specific quota for a leave type in a FY.
-     *
-     * user_leave_settings is the SINGLE SOURCE OF TRUTH for quota values.
-     *
-     * Flow:
-     *   1. Call ensureUserLeaveSetting() → guarantees a settings row exists
-     *      (creates one from leave_types.default_quota if none found)
-     *   2. Use that settings row's annual_quota to seed user_leave_quotas
-     *
-     * EL is always seeded with 0 — the monthly cron manages its total_quota.
-     */
     protected function ensureQuota(int $userId, int $leaveTypeId, string $financialYear): UserLeaveQuota
     {
-        // Step 1: Guarantee a user_leave_settings row exists.
-        //         If it doesn't → auto-created from leave_types defaults.
-        //         If it does    → returned as-is (admin may have customised it).
         $setting = $this->ensureUserLeaveSetting($userId, $leaveTypeId, $financialYear);
 
-        // Step 2: Guarantee a user_leave_quotas row exists, seeded from the setting.
         return UserLeaveQuota::firstOrCreate(
             [
                 'user_id'        => $userId,
@@ -82,15 +72,6 @@ class AttendanceController extends Controller
         );
     }
 
-    /**
-     * Guarantee a user_leave_settings row exists for user + leave_type + FY.
-     *
-     *  EXISTS  → return it unchanged  (admin-customised values are preserved)
-     *  MISSING → create from leave_types.default_quota and return the new row
-     *
-     * leave_types.default_quota is ONLY used as the one-time seed value.
-     * After creation, the settings row is the authoritative source.
-     */
     protected function ensureUserLeaveSetting(int $userId, int $leaveTypeId, string $fy): UserLeaveSetting
     {
         $leaveType = LeaveType::find($leaveTypeId);
@@ -103,14 +84,10 @@ class AttendanceController extends Controller
                 'financial_year' => $fy,
             ],
             [
-                // EL: annual_quota = 5 (opening balance when no setting exists)
-                // SL/CL/LWP: seeded from leave_types.default_quota
                 'annual_quota'        => $isEL ? 5.0 : (float) ($leaveType->default_quota ?? 0),
-
-                // EL accrual defaults — admin can customise per user after creation
                 'monthly_accrual'     => $isEL ? 1.0  : null,
-                'carry_forward'       => $isEL ? true : false,   // EL: carry forward ON by default
-                'carry_forward_limit' => $isEL ? 10.0 : 0,       // EL: max 10 days accumulation
+                'carry_forward'       => $isEL ? true : false,
+                'carry_forward_limit' => $isEL ? 10.0 : 0,
             ]
         );
     }
@@ -120,11 +97,6 @@ class AttendanceController extends Controller
         return DB::table('users')->where('id', $userId)->value('base_city');
     }
 
-    /**
-     * isHoliday — supports is_recurring flag.
-     * Recurring holidays match every year by MM-DD (e.g. Republic Day 26th Jan).
-     * Non-recurring holidays match exact date only.
-     */
     protected function isHoliday(string $date, ?string $userCity): bool
     {
         $carbonDate = Carbon::parse($date);
@@ -351,6 +323,7 @@ class AttendanceController extends Controller
                     );
                 }
 
+                // ML (Miscellaneous) and no-quota types skip balance check
                 if ($leaveType->has_quota) {
                     $fy     = $this->getFinancialYear($leave['date']);
                     $key    = $leave['leave_type_id'] . '_' . $fy;
@@ -529,8 +502,9 @@ class AttendanceController extends Controller
 
         return response()->json(
             apiSuccessResponse('Attendance list fetched', [
-                'month' => $month, 'year' => $year,
-                'total' => $attendances->count(),
+                'month'       => $month,
+                'year'        => $year,
+                'total'       => $attendances->count(),
                 'attendances' => $attendances,
             ]),
             200
@@ -563,8 +537,7 @@ class AttendanceController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 7️⃣  LEAVE QUOTA (with EL accrual history)
-    //     GET v2/attendance/quota?financial_year=2026-27
+    // 7️⃣  LEAVE QUOTA
     // ─────────────────────────────────────────────────────────────────────────
     public function leaveQuota(Request $request)
     {
@@ -590,20 +563,18 @@ class AttendanceController extends Controller
                 ->first();
 
             $row = [
-                'leave_type_id'    => $leaveType->id,
-                'leave_type_name'  => $leaveType->name,
-                'leave_type_code'  => $leaveType->code,
-                'color'            => $leaveType->color,
-                'quota_editable'   => $leaveType->quota_editable,
-                'financial_year'   => $financialYear,
-                'total_quota'      => (float) $quota->total_quota,
-                'used_quota'       => (float) $quota->used_quota,
-                'remaining_quota'  => max(0, (float) $quota->total_quota - (float) $quota->used_quota),
-                // User-specific settings (if configured)
+                'leave_type_id'         => $leaveType->id,
+                'leave_type_name'       => $leaveType->name,
+                'leave_type_code'       => $leaveType->code,
+                'color'                 => $leaveType->color,
+                'quota_editable'        => $leaveType->quota_editable,
+                'financial_year'        => $financialYear,
+                'total_quota'           => (float) $quota->total_quota,
+                'used_quota'            => (float) $quota->used_quota,
+                'remaining_quota'       => max(0, (float) $quota->total_quota - (float) $quota->used_quota),
                 'annual_quota_override' => $setting ? $setting->annual_quota : null,
             ];
 
-            // Extra EL info
             if ($leaveType->code === 'EL' && $setting) {
                 $row['el_settings'] = [
                     'monthly_accrual'     => $setting->monthly_accrual,
@@ -625,8 +596,7 @@ class AttendanceController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // NEW ✅  EL ACCRUAL HISTORY
-    //      GET v2/attendance/el-accrual-history?financial_year=2026-27
+    // EL ACCRUAL HISTORY
     // ─────────────────────────────────────────────────────────────────────────
     public function elAccrualHistory(Request $request)
     {
@@ -661,8 +631,7 @@ class AttendanceController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // NEW ✅  QUOTA ALL FINANCIAL YEARS (for history view)
-    //      GET v2/attendance/quota/history
+    // QUOTA HISTORY (all financial years)
     // ─────────────────────────────────────────────────────────────────────────
     public function quotaHistory(Request $request)
     {
@@ -672,7 +641,6 @@ class AttendanceController extends Controller
 
         $userId = $this->resp['user']['id'];
 
-        // Get all FY rows for this user, grouped by FY
         $quotas = UserLeaveQuota::with('leaveType')
             ->where('user_id', $userId)
             ->orderBy('financial_year', 'desc')
@@ -702,33 +670,7 @@ class AttendanceController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // NEW ✅  SAVE LEAVE SETTINGS PER USER (Admin or HR use)
-    //      POST v2/attendance/leave-settings/save
-    //
-    //  Allows setting per-user quota and EL accrual config.
-    //  Can be called from your admin panel for each user.
-    //
-    //  Payload:
-    //  {
-    //    "user_id": 5,
-    //    "financial_year": "2026-27",
-    //    "settings": [
-    //      {
-    //        "leave_type_id": 1,        ← SL
-    //        "annual_quota": 10         ← Override: this user gets 10 SL days (not 12)
-    //      },
-    //      {
-    //        "leave_type_id": 2,        ← CL
-    //        "annual_quota": 8
-    //      },
-    //      {
-    //        "leave_type_id": 3,        ← EL
-    //        "monthly_accrual": 1.25,   ← 1.25 days added per month by cron
-    //        "carry_forward": true,
-    //        "carry_forward_limit": 10  ← Max 10 EL days accumulation
-    //      }
-    //    ]
-    //  }
+    // SAVE LEAVE SETTINGS PER USER
     // ─────────────────────────────────────────────────────────────────────────
     public function saveLeaveSettings(Request $request)
     {
@@ -737,14 +679,14 @@ class AttendanceController extends Controller
         }
 
         $rules = [
-            'user_id'                             => 'required|integer|exists:users,id',
-            'financial_year'                      => 'required|string|regex:/^\d{4}-\d{2}$/',
-            'settings'                            => 'required|array|min:1',
-            'settings.*.leave_type_id'            => 'required|integer|exists:leave_types,id',
-            'settings.*.annual_quota'             => 'nullable|numeric|min:0',
-            'settings.*.monthly_accrual'          => 'nullable|numeric|min:0|max:30',
-            'settings.*.carry_forward'            => 'nullable|boolean',
-            'settings.*.carry_forward_limit'      => 'nullable|numeric|min:0',
+            'user_id'                        => 'required|integer|exists:users,id',
+            'financial_year'                 => 'required|string|regex:/^\d{4}-\d{2}$/',
+            'settings'                       => 'required|array|min:1',
+            'settings.*.leave_type_id'       => 'required|integer|exists:leave_types,id',
+            'settings.*.annual_quota'        => 'nullable|numeric|min:0',
+            'settings.*.monthly_accrual'     => 'nullable|numeric|min:0|max:30',
+            'settings.*.carry_forward'       => 'nullable|boolean',
+            'settings.*.carry_forward_limit' => 'nullable|numeric|min:0',
         ];
 
         $validator = Validator::make($request->all(), $rules);
@@ -759,10 +701,9 @@ class AttendanceController extends Controller
             foreach ($request->settings as $item) {
                 $leaveType = LeaveType::find($item['leave_type_id']);
 
-                // Guard: EL quota is NOT directly editable via this endpoint
-                // (EL annual_quota is managed by cron only)
+                // EL total_quota is cron-managed — strip annual_quota if passed
                 if ($leaveType && $leaveType->code === 'EL' && isset($item['annual_quota'])) {
-                    unset($item['annual_quota']); // silently strip
+                    unset($item['annual_quota']);
                 }
 
                 $setting = UserLeaveSetting::updateOrCreate(
@@ -779,8 +720,7 @@ class AttendanceController extends Controller
                     ]
                 );
 
-                // If SL/CL annual_quota changed, also update the live quota total
-                // (only if quota row already exists — don't create it here)
+                // Sync live quota total for SL/CL when annual_quota changes
                 if ($leaveType && $leaveType->code !== 'EL' && isset($item['annual_quota'])) {
                     $existingQuota = UserLeaveQuota::where('user_id', $request->user_id)
                         ->where('leave_type_id', $item['leave_type_id'])
@@ -809,8 +749,7 @@ class AttendanceController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // NEW ✅  GET LEAVE SETTINGS FOR A USER
-    //      GET v2/attendance/leave-settings?user_id=5&financial_year=2026-27
+    // GET LEAVE SETTINGS FOR A USER
     // ─────────────────────────────────────────────────────────────────────────
     public function getLeaveSettings(Request $request)
     {
@@ -841,7 +780,6 @@ class AttendanceController extends Controller
                 'has_quota'           => $lt->has_quota,
                 'quota_editable'      => $lt->quota_editable,
                 'global_default'      => $lt->default_quota,
-                // User setting (null = not configured, using global default)
                 'annual_quota'        => $setting ? $setting->annual_quota : null,
                 'monthly_accrual'     => $setting ? $setting->monthly_accrual : null,
                 'carry_forward'       => $setting ? $setting->carry_forward : null,
@@ -891,26 +829,20 @@ class AttendanceController extends Controller
         $userCity = $this->getUserCity($userId);
         $year     = (int) $request->query('year', now()->year);
 
-        // For recurring holidays, we need to match by MM-DD for the given year
         $holidays = HolidayList::where('is_active', true)
             ->where(function ($q) use ($userCity) {
                 $q->where('is_national', true);
                 if ($userCity) $q->orWhere('city', $userCity);
             })
             ->where(function ($q) use ($year) {
-                // Exact year match OR recurring (any year, show for requested year)
-                $q->whereYear('date', $year)
-                  ->orWhere('is_recurring', true);
+                $q->whereYear('date', $year)->orWhere('is_recurring', true);
             })
             ->orderByRaw("DATE_FORMAT(date, '%m-%d') asc")
             ->get()
             ->map(function ($h) use ($year) {
-                // For recurring holidays, rewrite the date to the requested year
-                if ($h->is_recurring) {
-                    $h->display_date = $year . '-' . Carbon::parse($h->date)->format('m-d');
-                } else {
-                    $h->display_date = $h->date;
-                }
+                $h->display_date = $h->is_recurring
+                    ? $year . '-' . Carbon::parse($h->date)->format('m-d')
+                    : $h->date;
                 return $h;
             });
 
@@ -953,8 +885,7 @@ class AttendanceController extends Controller
             ->whereMonth('date', $month)->whereYear('date', $year)
             ->get()->groupBy(fn($l) => Carbon::parse($l->date)->toDateString());
 
-        // Holidays: exact date for this month/year + recurring by MM-DD
-        $monthDay = sprintf('%02d', $month);
+        $monthDay    = sprintf('%02d', $month);
         $holidayRows = HolidayList::where('is_active', true)
             ->where(function ($q) use ($userCity) {
                 $q->where('is_national', true);
@@ -967,10 +898,8 @@ class AttendanceController extends Controller
                     $inner->where('is_recurring', true)
                           ->whereRaw("DATE_FORMAT(date, '%m') = ?", [$monthDay]);
                 });
-            })
-            ->get();
+            })->get();
 
-        // Key holidays by the day-of-month they fall on this calendar month
         $holidays = collect();
         foreach ($holidayRows as $h) {
             $ds = $h->is_recurring
@@ -1024,23 +953,45 @@ class AttendanceController extends Controller
         );
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // computeDayStatus — UPDATED
+    // Changes from old version:
+    //   STATUS_HOLIDAY  → 'Allowed Holiday'        (was 'Holiday')
+    //   STATUS_COMP_OFF → 'Compensatory Weekly Off' (was 'Comp Off')
+    //   No more STATUS_ABSENT — past no-punch now returns STATUS_LWP_UNINF
+    // ─────────────────────────────────────────────────────────────────────────
     protected function computeDayStatus(
-        string $date, bool $isSunday, bool $isHoliday, bool $isCompOff,
-        $dayAttendances, $dayLeaves, bool $isFuture
+        string $date,
+        bool $isSunday,
+        bool $isHoliday,
+        bool $isCompOff,
+        $dayAttendances,
+        $dayLeaves,
+        bool $isFuture
     ): ?string {
-        if ($isHoliday)                    return self::STATUS_HOLIDAY;
-        if ($isCompOff)                    return self::STATUS_COMP_OFF;
+        if ($isHoliday) return self::STATUS_HOLIDAY;   // 'Allowed Holiday'
+        if ($isCompOff) return self::STATUS_COMP_OFF;  // 'Compensatory Weekly Off'
+
         if ($dayLeaves->isNotEmpty()) {
             $first = $dayLeaves->first();
-            return ($first->leave_duration === 'full_day') ? self::STATUS_FULL_LEAVE : self::STATUS_HALF_LEAVE;
+            return ($first->leave_duration === 'full_day')
+                ? self::STATUS_FULL_LEAVE   // 'Allowed Full Day Leave'
+                : self::STATUS_HALF_LEAVE;  // '1/2 Present + 1/2 Leave'
         }
+
         if ($isSunday && $dayAttendances->isEmpty()) return self::STATUS_WEEKLY_OFF;
-        if ($dayAttendances->isNotEmpty())  return $dayAttendances->first()->status ?? self::STATUS_PRESENT;
-        return $isFuture ? null : self::STATUS_ABSENT;
+
+        if ($dayAttendances->isNotEmpty()) {
+            // Return whatever the DB says — admin may have set any status
+            return $dayAttendances->first()->status ?? self::STATUS_PRESENT;
+        }
+
+        // Past date, no record, not Sunday/holiday → LWP Uninformed
+        return $isFuture ? null : self::STATUS_LWP_UNINF;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 1️⃣1️⃣  USE COMP-OFF
+    // 1️⃣1️⃣  USE COMP-OFF — UPDATED: status = 'Compensatory Weekly Off'
     // ─────────────────────────────────────────────────────────────────────────
     public function useCompOff(Request $request)
     {
@@ -1085,9 +1036,8 @@ class AttendanceController extends Controller
             );
         }
 
-        $weekStart = $useDate->copy()->startOfWeek(Carbon::MONDAY);
-        $weekEnd   = $useDate->copy()->endOfWeek(Carbon::SATURDAY);
-
+        $weekStart    = $useDate->copy()->startOfWeek(Carbon::MONDAY);
+        $weekEnd      = $useDate->copy()->endOfWeek(Carbon::SATURDAY);
         $usedThisWeek = UserWeeklyOffCompensation::where('user_id', $userId)
             ->where('status', 'used')
             ->whereBetween('used_on', [$weekStart->toDateString(), $weekEnd->toDateString()])
@@ -1109,8 +1059,10 @@ class AttendanceController extends Controller
 
             if (!$attendance) {
                 UserAttendance::create([
-                    'user_id' => $userId, 'in_date' => $request->use_date,
-                    'in_time' => null, 'status' => self::STATUS_COMP_OFF,
+                    'user_id' => $userId,
+                    'in_date' => $request->use_date,
+                    'in_time' => null,
+                    'status'  => self::STATUS_COMP_OFF, // 'Compensatory Weekly Off'
                 ]);
             } else {
                 $attendance->update(['status' => self::STATUS_COMP_OFF]);
@@ -1119,7 +1071,10 @@ class AttendanceController extends Controller
             DB::commit();
 
             return response()->json(
-                apiSuccessResponse('Comp-off used successfully for ' . $request->use_date, ['comp_off' => $compOff->fresh()]),
+                apiSuccessResponse(
+                    'Comp-off used successfully for ' . $request->use_date,
+                    ['comp_off' => $compOff->fresh()]
+                ),
                 200
             );
         } catch (\Exception $e) {
@@ -1232,6 +1187,8 @@ class AttendanceController extends Controller
             ->where('status', 'used')
             ->whereMonth('used_on', $month)->whereYear('used_on', $year)->count();
 
+        $lwpDays = max(0, $totalWorkingDays - $presentDays - $leaveDays - $compOffDays);
+
         return response()->json(
             apiSuccessResponse('Summary fetched', [
                 'month'               => $month,
@@ -1240,7 +1197,8 @@ class AttendanceController extends Controller
                 'present_days'        => $presentDays,
                 'leave_days'          => (float) $leaveDays,
                 'comp_off_days'       => $compOffDays,
-                'absent_days'         => max(0, $totalWorkingDays - $presentDays - $leaveDays - $compOffDays),
+                'lwp_days'            => $lwpDays,  // renamed from absent_days
+                'absent_days'         => $lwpDays,  // kept for backward compatibility
                 'holidays_this_month' => count($holidays),
             ]),
             200
