@@ -575,7 +575,7 @@
                     ['v'=>'Full Day Present',           'cls'=>'sel-present', 'icon'=>'fa-check-circle',    'col'=>'col-md-6'],
                     ['v'=>'1/2 Present + 1/2 LWP',     'cls'=>'sel-lwp',     'icon'=>'fa-adjust',          'col'=>'col-md-6'],
                     ['v'=>'1/2 Present + 1/2 Leave',   'cls'=>'sel-half',    'icon'=>'fa-adjust',          'col'=>'col-md-6'],
-                    ['v'=>'Allowed Full Day Leave',     'cls'=>'sel-leave',   'icon'=>'fa-calendar-check-o','col'=>'col-md-6'],
+                    ['v'=>'Allowed Full Day Leave',     'cls'=>'sel-leave',   'icon'=>'fa-calendar-o','col'=>'col-md-6'],
                     ['v'=>'LWP (Uninformed Absence)',   'cls'=>'sel-lwp',     'icon'=>'fa-ban',             'col'=>'col-md-6'],
                     ['v'=>'LWP (Unapproved Leave)',     'cls'=>'sel-lwp',     'icon'=>'fa-ban',             'col'=>'col-md-6'],
                     ['v'=>'LWP (Leave in excess of quota)','cls'=>'sel-lwp', 'icon'=>'fa-exclamation-circle','col'=>'col-md-6'],
