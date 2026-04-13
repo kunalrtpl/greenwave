@@ -311,8 +311,10 @@ class AdminAttendanceController extends Controller
             ->where('status',1)->where('type','employee')
             ->orderBy('name')->get();
 
+        $title = "Attendance";
+
         return view('admin.user_attendance.index', compact(
-            'employeeData','allEmployees','month','year','filterDate'
+            'employeeData','allEmployees','month','year','filterDate','title'
         ) + [
             'employees'     => $allEmployees,
             'years'         => $this->getYears(),
