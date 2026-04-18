@@ -227,7 +227,7 @@ class DvrController extends Controller
             }
 
             // 🔹 SAVE DVR
-            $dvr->fill($request->except(['products','trial_ids','id','checkout_button_pressed']));
+            $dvr->fill($request->except(['products','trial_ids','id','checkout_button_pressed','customer_contact_ids']));
             $dvr->user_id = $userId;
             $dvr->save();
 
@@ -265,14 +265,12 @@ class DvrController extends Controller
 
             DB::commit();
 
-            if (isset($data['checkout_button_pressed'])) {
+            if (isset($data['checkout_button_pressed']) && $data['checkout_button_pressed'] == 1 && isset($data['customer_contact_ids']) && !empty($data['customer_contact_ids']) ) {
     
                 // Grab all customer contact IDs linked to this DVR
-                $contactIds = DB::table('user_dvr_customer_contacts')
-                    ->where('user_dvr_id', $dvr->id)
-                    ->pluck('customer_contact_id'); // adjust column name if different
+                $contactIds = $data['customer_contact_ids'];
 
-                if ($contactIds->isNotEmpty()) {
+                if ($contactIds) {
                     $user = User::find($userId);
                     //check if user exists
                     if($user){
