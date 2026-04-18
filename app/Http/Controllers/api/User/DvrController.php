@@ -226,7 +226,7 @@ class DvrController extends Controller
             }
 
             // 🔹 SAVE DVR
-            $dvr->fill($request->except(['products','trial_ids','id']));
+            $dvr->fill($request->except(['products','trial_ids','id','checkout_button_pressed']));
             $dvr->user_id = $userId;
             $dvr->save();
 
@@ -263,6 +263,32 @@ class DvrController extends Controller
             }
 
             DB::commit();
+
+            if (isset($data['checkout_button_pressed'])) {
+    
+                // Grab all customer contact IDs linked to this DVR
+                $contactIds = DB::table('user_dvr_customer_contacts')
+                    ->where('user_dvr_id', $dvr->id)
+                    ->pluck('customer_contact_id'); // adjust column name if different
+
+                if ($contactIds->isNotEmpty()) {
+                    
+                    $contacts = DB::table('customer_contacts')
+                        ->whereIn('id', $contactIds)
+                        ->whereNotNull('mobile_number')
+                        ->where('mobile_number', '!=', '')
+                        ->get(['name', 'mobile_number']);
+
+                    foreach ($contacts as $contact) {
+                        $params = [];
+                        $params['mobile']  = $contact->mobile_number;
+                        //$params['mobile']  = 9815012680;
+                        $params['message'] = "Thanks for meeting {$contact->name} today. We appreciate your time and support. For any help, call us at 737 737 0059. -GREENWAVE GLOBAL LTD";
+
+                        sendSms($params);
+                    }
+                }
+            }
 
             return response()->json(
                 apiSuccessResponse(

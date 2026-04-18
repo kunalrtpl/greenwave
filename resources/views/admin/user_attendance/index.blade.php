@@ -10,7 +10,7 @@
     border-radius:4px; padding:14px 18px 10px; margin-bottom:14px;
 }
 .att-filter-card label {
-    font-size:10px; font-weight:700; color:#999;
+    font-size:11px; font-weight:700; color:#999;
     text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:3px;
 }
 .att-filter-card .form-control {
@@ -40,24 +40,25 @@
 .emp-header.is-open { border-radius:4px 4px 0 0; }
 
 .emp-avatar {
-    width:34px; height:34px; border-radius:50%; background:#1e3a5f;
-    color:#fff; font-size:13px; font-weight:700;
+    width:36px; height:36px; border-radius:50%; background:#1e3a5f;
+    color:#fff; font-size:14px; font-weight:700;
     display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-right:10px;
 }
-.emp-name { font-size:13px; font-weight:700; color:#222; }
-.emp-sub  { font-size:11px; color:#aaa; margin-top:1px; }
+.emp-name { font-size:14px; font-weight:700; color:#222; }
+.emp-sub  { font-size:12px; color:#aaa; margin-top:1px; }
 
 /* Per-employee stats pills */
 .emp-stat-pills { display:flex; gap:5px; flex-wrap:wrap; }
 .esp {
-    font-size:10px; font-weight:700; padding:2px 8px; border-radius:8px;
+    font-size:11px; font-weight:700; padding:3px 9px; border-radius:8px;
     display:inline-flex; align-items:center; gap:4px;
 }
-.esp-p  { background:#dff0d8; color:#3c763d; }
-.esp-l  { background:#d9edf7; color:#31708f; }
-.esp-lw { background:#f2dede; color:#a94442; }
-.esp-c  { background:#fef0e6; color:#c0392b; }
-.esp-wd { background:#f4f6f9; color:#666; }
+/* Updated stat pill colors to match new palette */
+.esp-p  { background:#E8F8F1; color:#059669; }
+.esp-l  { background:#FFF4DD; color:#D97706; }
+.esp-lw { background:#FDECEC; color:#DC2626; }
+.esp-c  { background:#F2ECFF; color:#7C3AED; }
+.esp-wd { background:#f4f6f9; color:#555; }
 
 .acc-arrow { color:#ccc; font-size:12px; transition:transform .2s; margin-left:8px; }
 .emp-header.is-open .acc-arrow { transform:rotate(180deg); }
@@ -78,101 +79,102 @@
 }
 .att-table { width:100%; border-collapse:collapse; table-layout:fixed; }
 .att-table col.c0 { width:5px; }
-.att-table col.c1 { width:82px; }
+.att-table col.c1 { width:85px; }
 .att-table col.c2 { width:22%; }
 .att-table col.c3 { width:22%; }
-.att-table col.c4 { width:75px; }
-.att-table col.c5 { width:170px; }
-.att-table col.c6 { width:85px; }
+.att-table col.c4 { width:80px; }
+.att-table col.c5 { width:175px; }
+.att-table col.c6 { width:90px; }
 
 .att-table thead th {
-    background:#2b3a4a; color:rgba(255,255,255,.72);
-    font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.5px;
-    padding:8px 9px; border:none; border-right:1px solid rgba(255,255,255,.06);
+    background:#2b3a4a; color:rgba(255,255,255,.80);
+    font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px;
+    padding:9px 10px; border:none; border-right:1px solid rgba(255,255,255,.06);
 }
 .att-table thead th:first-child { padding:0; border-right:none; }
 .att-table thead th:last-child  { border-right:none; }
 
 .att-table tbody td {
-    padding:9px 9px; border-bottom:1px solid #f0f3f7;
+    padding:10px 10px; border-bottom:1px solid #f0f3f7;
     border-right:1px solid #f0f3f7; vertical-align:top;
-    font-size:12px; color:#444;
+    font-size:13px; color:#333;
 }
 .att-table tbody td:last-child { border-right:none; }
 .att-table tbody tr:last-child td { border-bottom:none; }
 .att-table tbody tr:hover td { background:#fafbfd; }
 
-/* Status bar */
+/* ── Status bar colors (updated) ── */
 .td-bar { padding:0 !important; width:5px; border-right:none !important; }
-.s-bar  { display:block; width:5px; min-height:50px; }
-.s-bar.present  { background:#26c281; }
-.s-bar.half     { background:#f39c12; }
-.s-bar.leave    { background:#3598dc; }
-.s-bar.lwp      { background:#e74c3c; }
-.s-bar.weekly   { background:#95a5a6; }
-.s-bar.holiday  { background:#1abc9c; }
-.s-bar.compoff  { background:#e67e22; }
-.s-bar.future   { background:#e74c3c; }
-.s-bar.notpunched { background:#f39c12; }
+.s-bar  { display:block; width:5px; min-height:52px; }
+.s-bar.present    { background:#10B981; }
+.s-bar.half       { background:linear-gradient(to bottom,#10B981 50%,#F59E0B 50%); }
+.s-bar.halfLwp    { background:linear-gradient(to bottom,#10B981 50%,#EF4444 50%); }
+.s-bar.leave      { background:#F59E0B; }
+.s-bar.lwp        { background:#EF4444; }
+.s-bar.weekly     { background:#8B5CF6; }
+.s-bar.holiday    { background:#8B5CF6; }
+.s-bar.compoff    { background:#8B5CF6; }
+.s-bar.future     { background:#d1d5db; }
+.s-bar.notpunched { background:#EF4444; }
 
 /* Date cell */
-.d-num  { font-size:20px; font-weight:800; color:#1a2333; line-height:1; }
-.d-mon  { font-size:10px; color:#888; font-weight:600; margin-top:2px; }
-.d-dow  { font-size:9px; color:#bbb; }
-.day-tag { display:inline-block; font-size:8px; font-weight:700; padding:1px 5px; border-radius:8px; margin-top:3px; }
+.d-num  { font-size:22px; font-weight:800; color:#1a2333; line-height:1; }
+.d-mon  { font-size:11px; color:#888; font-weight:600; margin-top:2px; }
+.d-dow  { font-size:10px; color:#bbb; }
+.day-tag { display:inline-block; font-size:9px; font-weight:700; padding:1px 5px; border-radius:8px; margin-top:3px; }
 .t-today { background:#e8f4fd; color:#2573b0; border:1px solid #c3dff5; }
-.t-sun   { background:#fde8e8; color:#c0392b; }
-.t-hol   { background:#e8fdf5; color:#0f766e; }
+.t-sun   { background:#FDECEC; color:#DC2626; }
+.t-hol   { background:#F2ECFF; color:#7C3AED; }
 
 /* Punch */
 .punch-line { display:flex; align-items:flex-start; gap:4px; margin-bottom:3px; }
-.punch-dir  { font-size:8px; font-weight:700; padding:2px 4px; border-radius:2px; flex-shrink:0; margin-top:1px; letter-spacing:.4px; }
-.dir-in  { background:#dff0d8; color:#3c763d; }
-.dir-out { background:#f2dede; color:#a94442; }
-.p-time  { font-size:12px; font-weight:700; color:#222; line-height:1.2; }
-.p-place { font-size:10px; color:#555; word-break:break-word; }
-.p-addr  { font-size:9px; color:#aaa; word-break:break-word; }
-.p-gps   { font-size:9px; color:#ccc; font-family:monospace; }
-.p-ref   { font-size:9px; color:#3598dc; font-weight:600; margin-top:2px; }
-.p-other { font-size:9px; color:#aaa; font-style:italic; }
+.punch-dir  { font-size:9px; font-weight:700; padding:2px 5px; border-radius:2px; flex-shrink:0; margin-top:1px; letter-spacing:.4px; }
+.dir-in  { background:#E8F8F1; color:#059669; }
+.dir-out { background:#FDECEC; color:#DC2626; }
+.p-time  { font-size:13px; font-weight:700; color:#111; line-height:1.2; }
+.p-place { font-size:11px; color:#555; word-break:break-word; }
+.p-addr  { font-size:10px; color:#aaa; word-break:break-word; }
+.p-gps   { font-size:10px; color:#ccc; font-family:monospace; }
+.p-ref   { font-size:10px; color:#3598dc; font-weight:600; margin-top:2px; }
+.p-other { font-size:10px; color:#aaa; font-style:italic; }
 .punch-sep { border:none; border-top:1px dashed #e5e5e5; margin:5px 0; }
-.no-punch  { color:#ccc; font-size:16px; }
-.out-pend  { font-size:10px; font-weight:600; color:#e67e22; }
-.missed-t  { font-size:9px; color:#c0392b; }
+.no-punch  { color:#ccc; font-size:18px; }
+.out-pend  { font-size:11px; font-weight:700; color:#D97706; background:#FFF4DD; border-radius:3px; padding:2px 7px; display:inline-block; margin-top:2px; }
+.missed-t  { font-size:10px; color:#DC2626; }
 
 /* Duration */
-.dur-val  { font-size:13px; font-weight:700; color:#333; }
-.dur-lbl  { display:inline-block; font-size:9px; color:#aaa; background:#f4f6f9; padding:1px 5px; border-radius:6px; margin-top:2px; }
-.open-lbl { font-size:9px; font-weight:600; color:#e67e22; }
+.dur-val  { font-size:14px; font-weight:700; color:#222; }
+.dur-lbl  { display:inline-block; font-size:10px; color:#aaa; background:#f4f6f9; padding:1px 5px; border-radius:6px; margin-top:2px; }
+.open-lbl { font-size:11px; font-weight:700; color:#D97706; background:#FFF4DD; border-radius:3px; padding:2px 7px; display:inline-block; }
 
-/* Status + leave info */
+/* ── Updated status badge colors ── */
 .s-badge {
-    display:inline-block; font-size:10px; font-weight:700;
-    padding:3px 8px; border-radius:10px; white-space:nowrap;
+    display:inline-block; font-size:11px; font-weight:700;
+    padding:3px 9px; border-radius:10px; white-space:nowrap;
 }
-.sb-present    { background:#dff0d8; color:#3c763d; }
-.sb-half       { background:#fcf8e3; color:#8a6d3b; }
-.sb-leave      { background:#d9edf7; color:#31708f; }
-.sb-lwp        { background:#f2dede; color:#a94442; }
-.sb-weekly     { background:#f4f6f9; color:#777; }
-.sb-holiday    { background:#d4efeb; color:#0f766e; }
-.sb-compoff    { background:#fef0e6; color:#c0392b; }
-.sb-future     { background:#f8f8f8; color:#a94442; }
-.sb-notpunched { background:#fff3cd; color:#856404; }
+.sb-present    { background:#E8F8F1; color:#059669; }
+.sb-half       { background:#FFF4DD; color:#D97706; }
+.sb-leave      { background:#FFF4DD; color:#D97706; }
+.sb-lwp        { background:#FDECEC; color:#DC2626; }
+.sb-weekly     { background:#F2ECFF; color:#7C3AED; }
+.sb-holiday    { background:#F2ECFF; color:#7C3AED; }
+.sb-compoff    { background:#F2ECFF; color:#7C3AED; }
+.sb-future     { background:#f4f6f9; color:#DC2626; }
+.sb-notpunched { background:#FDECEC; color:#DC2626; }
 
 /* Leave info in status cell */
 .leave-info-tag {
     display:inline-flex; align-items:center; gap:4px;
-    font-size:9px; font-weight:700; padding:2px 7px; border-radius:8px;
+    font-size:10px; font-weight:700; padding:2px 7px; border-radius:8px;
     background:#eaf3fc; color:#1a5f9c; border:1px solid #bcd8ef; margin-top:4px;
 }
 /* Audit note */
-.audit-note { font-size:9px; color:#aaa; font-style:italic; margin-top:3px; line-height:1.4; }
+.audit-note { font-size:10px; color:#aaa; font-style:italic; margin-top:3px; line-height:1.4; }
 
 /* Update btn */
 .btn-att-upd {
     background:#f4f6f9; color:#2d6faa; border:1px solid #d5e8f5;
-    border-radius:3px; padding:5px 9px; font-size:11px; font-weight:600;
+    border-radius:3px; padding:6px 10px; font-size:12px; font-weight:600;
     cursor:pointer; transition:all .15s; font-family:inherit; white-space:nowrap;
 }
 .btn-att-upd:hover { background:#2d6faa; color:#fff; border-color:#2d6faa; }
@@ -194,13 +196,13 @@
     transition:all .15s; margin-bottom:5px; font-size:12px; font-weight:600; color:#444;
 }
 .st-opt:hover { border-color:#1e3a5f; background:#f0f4f9; color:#1e3a5f; }
-.st-opt.sel-present { border-color:#5cb85c !important; background:#dff0d8 !important; color:#3c763d !important; }
-.st-opt.sel-half    { border-color:#f0ad4e !important; background:#fcf8e3 !important; color:#8a6d3b !important; }
-.st-opt.sel-leave   { border-color:#5bc0de !important; background:#d9edf7 !important; color:#31708f !important; }
-.st-opt.sel-lwp     { border-color:#d9534f !important; background:#f2dede !important; color:#a94442 !important; }
-.st-opt.sel-weekly  { border-color:#aaa    !important; background:#f4f6f9 !important; color:#777   !important; }
-.st-opt.sel-holiday { border-color:#1abc9c !important; background:#d4efeb !important; color:#0f766e !important; }
-.st-opt.sel-compoff { border-color:#e67e22 !important; background:#fef0e6 !important; color:#c0392b !important; }
+.st-opt.sel-present { border-color:#10B981 !important; background:#E8F8F1 !important; color:#059669 !important; }
+.st-opt.sel-half    { border-color:#F59E0B !important; background:#FFF4DD !important; color:#D97706 !important; }
+.st-opt.sel-leave   { border-color:#F59E0B !important; background:#FFF4DD !important; color:#D97706 !important; }
+.st-opt.sel-lwp     { border-color:#EF4444 !important; background:#FDECEC !important; color:#DC2626 !important; }
+.st-opt.sel-weekly  { border-color:#8B5CF6 !important; background:#F2ECFF !important; color:#7C3AED !important; }
+.st-opt.sel-holiday { border-color:#8B5CF6 !important; background:#F2ECFF !important; color:#7C3AED !important; }
+.st-opt.sel-compoff { border-color:#8B5CF6 !important; background:#F2ECFF !important; color:#7C3AED !important; }
 
 /* Quota picker */
 .quota-picker { background:#eaf4fd; border:1px solid #bcd8ee; border-radius:3px; padding:11px; margin-bottom:11px; }
@@ -212,8 +214,8 @@
 }
 .qi:last-child { margin-bottom:0; }
 .qi:hover,.qi.sel { border-color:#3598dc; background:#f0f7fd; }
-.qi.low  { border-color:#f0ad4e; }
-.qi.none { border-color:#d9534f; opacity:.8; }
+.qi.low  { border-color:#F59E0B; }
+.qi.none { border-color:#EF4444; opacity:.8; }
 .qi-left { display:flex; align-items:center; gap:7px; }
 .qi-code { font-size:9px; font-weight:700; padding:2px 6px; border-radius:8px; }
 .qi-name { font-size:12px; font-weight:600; color:#333; }
@@ -221,13 +223,13 @@
 .qi-rem  { font-size:14px; font-weight:700; }
 .qi-lbl  { font-size:8px; color:#aaa; text-transform:uppercase; }
 .qi-warn { font-size:9px; font-weight:600; }
-.qi-unlimited { font-size:11px; font-weight:700; color:#8e44ad; }
+.qi-unlimited { font-size:11px; font-weight:700; color:#8B5CF6; }
 .qi-radio{ margin-right:3px; }
 
-.m-err { background:#f2dede; border-left:3px solid #d9534f; border-radius:3px; padding:8px 12px; font-size:12px; color:#a94442; margin-top:8px; }
+.m-err { background:#FDECEC; border-left:3px solid #EF4444; border-radius:3px; padding:8px 12px; font-size:12px; color:#DC2626; margin-top:8px; }
 
 /* Stats note */
-.stats-note { font-size:9px; color:#aaa; margin-top:3px; font-style:italic; }
+.stats-note { font-size:10px; color:#aaa; margin-top:3px; font-style:italic; }
 </style>
 
 <div class="page-content-wrapper">
@@ -239,8 +241,8 @@
     </ul>
 
     <div style="margin-bottom:10px;">
-        <h3 style="margin:0 0 2px;font-size:17px;font-weight:700;color:#222;">Attendance Management</h3>
-        <p style="margin:0;font-size:11px;color:#999;">View, verify and manage employee daily attendance records</p>
+        <h3 style="margin:0 0 2px;font-size:18px;font-weight:700;color:#222;">Attendance Management</h3>
+        <p style="margin:0;font-size:12px;color:#999;">View, verify and manage employee daily attendance records</p>
     </div>
 
     {{-- ── FILTER ── --}}
@@ -322,10 +324,8 @@
             <div class="date-pills">
                 <span style="font-size:11px;color:#aaa;font-weight:600;margin-right:4px;">Jump to:</span>
                 @php $todayStr=\Carbon\Carbon::today()->toDateString(); $yestStr=\Carbon\Carbon::yesterday()->toDateString(); @endphp
-                <a href="{{ url('admin/attendance') }}?month={{ $month }}&year={{ $year }}&date={{ $todayStr }}{{ request('employee_id') ? '&employee_id='.request('employee_id') : '' }}"
-                   class="date-pill {{ $filterDate===$todayStr ? 'active' : '' }}">Today</a>
-                <a href="{{ url('admin/attendance') }}?month={{ $month }}&year={{ $year }}&date={{ $yestStr }}{{ request('employee_id') ? '&employee_id='.request('employee_id') : '' }}"
-                   class="date-pill {{ $filterDate===$yestStr ? 'active' : '' }}">Yesterday</a>
+                <a href="{{ url('admin/attendance') }}?month={{ now()->month }}&year={{ now()->year }}&date={{ $todayStr }}{{ request('employee_id') ? '&employee_id='.request('employee_id') : '' }}"class="date-pill {{ $filterDate===$todayStr ? 'active' : '' }}">Today</a>
+                <a href="{{ url('admin/attendance') }}?month={{ now()->month }}&year={{ now()->year }}&date={{ $yestStr }}{{ request('employee_id') ? '&employee_id='.request('employee_id') : '' }}"class="date-pill {{ $filterDate===$yestStr ? 'active' : '' }}">Yesterday</a>
                 <a href="{{ url('admin/attendance') }}?month={{ $month }}&year={{ $year }}&date={{ request('employee_id') ? '&employee_id='.request('employee_id') : '' }}"
                    class="date-pill {{ is_null($filterDate) ? 'active' : '' }}">Full Month</a>
             </div>
@@ -388,25 +388,32 @@
                     $recs= $day['records'];
                     $car = $day['carbon'];
 
+                    // ── Side bar class ──
                     $barCls = 'future';
-                    if ($st === 'Full Day Present')               $barCls = 'present';
-                    elseif ($st === 'Not Punched Yet')            $barCls = 'notpunched';
-                    elseif (str_contains($st??'','Leave'))        $barCls = 'leave';
-                    elseif (str_contains($st??'','1/2 LWP'))      $barCls = 'lwp';
-                    elseif (str_contains($st??'','LWP'))          $barCls = 'lwp';
-                    elseif ($st === 'Weekly Off')                 $barCls = 'weekly';
-                    elseif (str_contains($st??'','Holiday'))      $barCls = 'holiday';
-                    elseif (str_contains($st??'','Compensatory')) $barCls = 'compoff';
+                    if ($st === 'Full Day Present')                   $barCls = 'present';
+                    elseif ($st === 'Not Punched Yet')                $barCls = 'notpunched';
+                    elseif ($st === '1/2 Present + 1/2 Leave')       $barCls = 'half';
+                    elseif ($st === '1/2 Present + 1/2 LWP')         $barCls = 'halfLwp';
+                    elseif (str_contains($st??'','Leave'))            $barCls = 'leave';
+                    elseif (str_contains($st??'','LWP'))              $barCls = 'lwp';
+                    elseif ($st === 'Weekly Off')                     $barCls = 'weekly';
+                    elseif (str_contains($st??'','Holiday'))          $barCls = 'holiday';
+                    elseif (str_contains($st??'','Compensatory'))     $barCls = 'compoff';
 
+                    // ── Badge class ──
                     $bc = 'sb-future';
-                    if ($st === 'Full Day Present')               $bc = 'sb-present';
-                    elseif ($st === 'Not Punched Yet')            $bc = 'sb-notpunched';
-                    elseif (str_contains($st??'','+ 1/2 Leave'))  $bc = 'sb-half';
-                    elseif (str_contains($st??'','Leave'))        $bc = 'sb-leave';
-                    elseif (str_contains($st??'','LWP'))          $bc = 'sb-lwp';
-                    elseif ($st === 'Weekly Off')                 $bc = 'sb-weekly';
-                    elseif (str_contains($st??'','Holiday'))      $bc = 'sb-holiday';
-                    elseif (str_contains($st??'','Compensatory')) $bc = 'sb-compoff';
+                    if ($st === 'Full Day Present')                   $bc = 'sb-present';
+                    elseif ($st === 'Not Punched Yet')                $bc = 'sb-notpunched';
+                    elseif ($st === '1/2 Present + 1/2 Leave')       $bc = 'sb-half';
+                    elseif ($st === '1/2 Present + 1/2 LWP')         $bc = 'sb-lwp';
+                    elseif (str_contains($st??'','Leave'))            $bc = 'sb-leave';
+                    elseif (str_contains($st??'','LWP'))              $bc = 'sb-lwp';
+                    elseif ($st === 'Weekly Off')                     $bc = 'sb-weekly';
+                    elseif (str_contains($st??'','Holiday'))          $bc = 'sb-holiday';
+                    elseif (str_contains($st??'','Compensatory'))     $bc = 'sb-compoff';
+
+                    // Is this a "present" day with open/pending OUT?
+                    $isPresent = ($st === 'Full Day Present' || $st === '1/2 Present + 1/2 Leave' || $st === '1/2 Present + 1/2 LWP');
                 @endphp
                 <tr id="row-{{ $emp->id }}-{{ $day['date'] }}">
                     <td class="td-bar"><span class="s-bar {{ $barCls }}"></span></td>
@@ -466,14 +473,20 @@
                                         @elseif($r->out_dealer_name ?? null)<div class="p-ref"><i class="fa fa-handshake-o"></i> {{ $r->out_dealer_name }}</div>@endif
                                     </div>
                                 </div>
-                                @elseif(!$r->missed)
+                                @elseif($isPresent && !$r->missed)
+                                    {{-- OUT Pending shown for present days ──────────────── --}}
                                     <div class="out-pend"><i class="fa fa-clock-o"></i> OUT Pending</div>
-                                @else
+                                @elseif($r->missed)
                                     <div class="missed-t"><i class="fa fa-exclamation-triangle"></i> Missed</div>
                                 @endif
                             @endforeach
                         @else
-                            <span class="no-punch">&mdash;</span>
+                            {{-- No records but present status → show OUT Pending ── --}}
+                            @if($isPresent)
+                                <div class="out-pend"><i class="fa fa-clock-o"></i> OUT Pending</div>
+                            @else
+                                <span class="no-punch">&mdash;</span>
+                            @endif
                         @endif
                     </td>
 
@@ -483,6 +496,9 @@
                             <div class="dur-val">{{ $day['duration'] }}</div>
                             <span class="dur-lbl">worked</span>
                         @elseif($day['is_open'])
+                            {{-- Open shown when checked in but no out yet ── --}}
+                            <div class="open-lbl"><i class="fa fa-clock-o"></i> Open</div>
+                        @elseif($isPresent && empty($recs))
                             <div class="open-lbl"><i class="fa fa-clock-o"></i> Open</div>
                         @else
                             <span style="color:#ddd;">&mdash;</span>
@@ -498,10 +514,10 @@
                             @if($day['leave_info'])
                                 @php $lv = $day['leave_info']; @endphp
                                 <div style="margin-top:4px;">
-                                    <span class="leave-info-tag">
+                                    <small>
                                         <i class="fa fa-balance-scale"></i>
                                         {{ $lv->lt_code }}: {{ $lv->quota_deducted }} day deducted
-                                    </span>
+                                    </small>
                                 </div>
                             @endif
 
@@ -572,16 +588,16 @@
                 {{-- Status options — only the canonical 10 statuses --}}
                 @php
                 $stOpts = [
-                    ['v'=>'Full Day Present',           'cls'=>'sel-present', 'icon'=>'fa-check-circle',    'col'=>'col-md-6'],
-                    ['v'=>'1/2 Present + 1/2 LWP',     'cls'=>'sel-lwp',     'icon'=>'fa-adjust',          'col'=>'col-md-6'],
-                    ['v'=>'1/2 Present + 1/2 Leave',   'cls'=>'sel-half',    'icon'=>'fa-adjust',          'col'=>'col-md-6'],
-                    ['v'=>'Allowed Full Day Leave',     'cls'=>'sel-leave',   'icon'=>'fa-calendar-o','col'=>'col-md-6'],
-                    ['v'=>'LWP (Uninformed Absence)',   'cls'=>'sel-lwp',     'icon'=>'fa-ban',             'col'=>'col-md-6'],
-                    ['v'=>'LWP (Unapproved Leave)',     'cls'=>'sel-lwp',     'icon'=>'fa-ban',             'col'=>'col-md-6'],
-                    ['v'=>'LWP (Leave in excess of quota)','cls'=>'sel-lwp', 'icon'=>'fa-exclamation-circle','col'=>'col-md-6'],
-                    ['v'=>'Allowed Holiday',            'cls'=>'sel-holiday', 'icon'=>'fa-sun-o',           'col'=>'col-md-6'],
-                    ['v'=>'Compensatory Weekly Off',    'cls'=>'sel-compoff', 'icon'=>'fa-exchange',        'col'=>'col-md-6'],
-                    ['v'=>'Weekly Off',                 'cls'=>'sel-weekly',  'icon'=>'fa-home',            'col'=>'col-md-6'],
+                    ['v'=>'Full Day Present',              'cls'=>'sel-present', 'icon'=>'fa-check-circle',       'col'=>'col-md-6'],
+                    ['v'=>'1/2 Present + 1/2 LWP',        'cls'=>'sel-lwp',     'icon'=>'fa-adjust',             'col'=>'col-md-6'],
+                    ['v'=>'1/2 Present + 1/2 Leave',      'cls'=>'sel-half',    'icon'=>'fa-adjust',             'col'=>'col-md-6'],
+                    ['v'=>'Allowed Full Day Leave',        'cls'=>'sel-leave',   'icon'=>'fa-calendar-o',         'col'=>'col-md-6'],
+                    ['v'=>'LWP (Uninformed Absence)',      'cls'=>'sel-lwp',     'icon'=>'fa-ban',                'col'=>'col-md-6'],
+                    ['v'=>'LWP (Unapproved Leave)',        'cls'=>'sel-lwp',     'icon'=>'fa-ban',                'col'=>'col-md-6'],
+                    ['v'=>'LWP (Leave in excess of quota)','cls'=>'sel-lwp',    'icon'=>'fa-exclamation-circle', 'col'=>'col-md-6'],
+                    ['v'=>'Allowed Holiday',               'cls'=>'sel-holiday', 'icon'=>'fa-sun-o',              'col'=>'col-md-6'],
+                    ['v'=>'Compensatory Weekly Off',       'cls'=>'sel-compoff', 'icon'=>'fa-exchange',           'col'=>'col-md-6'],
+                    ['v'=>'Weekly Off',                    'cls'=>'sel-weekly',  'icon'=>'fa-home',               'col'=>'col-md-6'],
                 ];
                 @endphp
 
@@ -625,7 +641,7 @@ var quotaCache = null;
 
 function attNotify(t,m){
     if(typeof toastr!=='undefined'){toastr[t](m);return;}
-    var c={success:'#26c281',error:'#e74c3c',warning:'#f39c12',info:'#1e3a5f'};
+    var c={success:'#10B981',error:'#EF4444',warning:'#F59E0B',info:'#1e3a5f'};
     var el=document.createElement('div'); el.innerHTML=m;
     el.style.cssText='position:fixed;top:20px;right:20px;z-index:99999;background:'+(c[t]||'#1e3a5f')+';color:#fff;padding:10px 16px;border-radius:4px;font-size:13px;font-weight:600;box-shadow:0 2px 10px rgba(0,0,0,.2);max-width:300px;opacity:0;transition:opacity .3s;';
     document.body.appendChild(el);
@@ -675,7 +691,7 @@ function loadQuota(){
         url:'{{ url("admin/attendance/quota-info") }}',type:'GET',
         data:{user_id:$('#m-user-id').val(),date:$('#m-date').val(),attendance_id:$('#m-att-id').val()},
         success:function(r){if(r.success){quotaCache=r.quota;renderQuota(r.quota,r.existing_leave);}},
-        error:function(){document.getElementById('quotaList').innerHTML='<div style="color:#a94442;font-size:12px;padding:8px;">Failed to load quota.</div>';}
+        error:function(){document.getElementById('quotaList').innerHTML='<div style="color:#DC2626;font-size:12px;padding:8px;">Failed to load quota.</div>';}
     });
 }
 
@@ -684,7 +700,7 @@ function renderQuota(quota,existingLeave){
     var half=(val==='1/2 Present + 1/2 Leave');
     var deduct=half?0.5:1.0;
     var exId=existingLeave?existingLeave.leave_type_id:null;
-    var cmap={SL:'background:#f2dede;color:#a94442',CL:'background:#dff0d8;color:#3c763d',EL:'background:#d9edf7;color:#31708f',ML:'background:#e8d5f5;color:#6b21a8',LWP:'background:#e8d5f5;color:#6b21a8'};
+    var cmap={SL:'background:#FDECEC;color:#DC2626',CL:'background:#E8F8F1;color:#059669',EL:'background:#FFF4DD;color:#D97706',ML:'background:#F2ECFF;color:#7C3AED',LWP:'background:#FDECEC;color:#DC2626'};
     var html='';
     quota.forEach(function(q){
         var sel=exId&&exId==q.id;
@@ -692,16 +708,16 @@ function renderQuota(quota,existingLeave){
         var low=!isUnlimited&&q.remaining>0&&q.remaining<deduct;
         var none=!isUnlimited&&q.remaining<=0;
         var cls='qi'+(sel?' sel':'')+(low?' low':'')+(none?' none':'');
-        var rc=none?'#d9534f':(low?'#f0ad4e':'#26c281');
-        var cs=cmap[q.code]||'background:#f4f6f9;color:#777';
+        var rc=none?'#EF4444':(low?'#F59E0B':'#10B981');
+        var cs=cmap[q.code]||'background:#f4f6f9;color:#555';
         html+='<div class="'+cls+'" onclick="selQ(this,'+q.id+')">';
         html+='<div class="qi-left"><input type="radio" class="qi-radio" name="lt_radio" value="'+q.id+'"'+(sel?' checked':'')+' style="cursor:pointer;">';
         html+='<span class="qi-code" style="'+cs+'">'+q.code+'</span><span class="qi-name">'+q.name+'</span></div>';
         html+='<div class="qi-right">';
         if(isUnlimited){html+='<div class="qi-unlimited">&#8734;</div><div class="qi-lbl">Unlimited</div>';}
         else{html+='<div class="qi-rem" style="color:'+rc+';">'+q.remaining.toFixed(1)+'</div><div class="qi-lbl">days left</div>';}
-        if(low)  html+='<div class="qi-warn" style="color:#f0ad4e;"><i class="fa fa-exclamation-triangle"></i> Low</div>';
-        if(none) html+='<div class="qi-warn" style="color:#d9534f;"><i class="fa fa-times-circle"></i> None</div>';
+        if(low)  html+='<div class="qi-warn" style="color:#F59E0B;"><i class="fa fa-exclamation-triangle"></i> Low</div>';
+        if(none) html+='<div class="qi-warn" style="color:#EF4444;"><i class="fa fa-times-circle"></i> None</div>';
         html+='</div></div>';
     });
     document.getElementById('quotaList').innerHTML=html||'<div style="color:#aaa;font-size:12px;padding:8px;">No leave types found.</div>';
@@ -752,10 +768,16 @@ $('#btnSaveAtt').on('click',function(){
     $.ajax({url:url,type:'POST',data:data,
         success:function(r){
             if(r.success){
-                var bmap={'Full Day Present':'sb-present','1/2 Present + 1/2 Leave':'sb-half',
-                    '1/2 Present + 1/2 LWP':'sb-lwp','Allowed Full Day Leave':'sb-leave',
-                    'Weekly Off':'sb-weekly','Compensatory Weekly Off':'sb-compoff',
-                    'Allowed Holiday':'sb-holiday','Not Punched Yet':'sb-notpunched'};
+                var bmap={
+                    'Full Day Present':'sb-present',
+                    '1/2 Present + 1/2 Leave':'sb-half',
+                    '1/2 Present + 1/2 LWP':'sb-lwp',
+                    'Allowed Full Day Leave':'sb-leave',
+                    'Weekly Off':'sb-weekly',
+                    'Compensatory Weekly Off':'sb-compoff',
+                    'Allowed Holiday':'sb-holiday',
+                    'Not Punched Yet':'sb-notpunched'
+                };
                 var bc=bmap[newStatus]||(newStatus.includes('LWP')?'sb-lwp':'sb-future');
                 var key=userId+'-'+date;
                 var badge=document.getElementById('sbadge-'+key);
@@ -763,10 +785,16 @@ $('#btnSaveAtt').on('click',function(){
                 else{var cell=document.getElementById('scell-'+key);if(cell)cell.innerHTML='<span class="s-badge '+bc+'" id="sbadge-'+key+'">'+newStatus+'</span>';}
 
                 // Update bar
-                var smap={'Full Day Present':'present','Allowed Full Day Leave':'leave',
-                    '1/2 Present + 1/2 Leave':'leave','Weekly Off':'weekly',
-                    'Compensatory Weekly Off':'compoff','Allowed Holiday':'holiday',
-                    'Not Punched Yet':'notpunched'};
+                var smap={
+                    'Full Day Present':'present',
+                    'Allowed Full Day Leave':'leave',
+                    '1/2 Present + 1/2 Leave':'half',
+                    '1/2 Present + 1/2 LWP':'halfLwp',
+                    'Weekly Off':'weekly',
+                    'Compensatory Weekly Off':'compoff',
+                    'Allowed Holiday':'holiday',
+                    'Not Punched Yet':'notpunched'
+                };
                 var barCls=smap[newStatus]||(newStatus.includes('LWP')?'lwp':'future');
                 var bar=document.querySelector('#row-'+key+' .s-bar');
                 if(bar)bar.className='s-bar '+barCls;
@@ -798,8 +826,23 @@ $('#btnSaveAtt').on('click',function(){
     });
 });
 
-document.getElementById('sel-date').addEventListener('change',function(){
-    if(this.value){var d=new Date(this.value);document.getElementById('sel-month').value=d.getMonth()+1;document.getElementById('sel-year').value=d.getFullYear();}
+// When user picks a specific date → sync month/year dropdowns
+document.getElementById('sel-date').addEventListener('change', function() {
+    if (this.value) {
+        var d = new Date(this.value);
+        document.getElementById('sel-month').value = d.getMonth() + 1;
+        document.getElementById('sel-year').value  = d.getFullYear();
+    }
+});
+
+// When user changes Month → clear the date input (submits as date= empty = Full Month)
+document.getElementById('sel-month').addEventListener('change', function() {
+    document.getElementById('sel-date').value = '';
+});
+
+// When user changes Year → clear the date input (submits as date= empty = Full Month)
+document.getElementById('sel-year').addEventListener('change', function() {
+    document.getElementById('sel-date').value = '';
 });
 </script>
 @endsection

@@ -23,6 +23,8 @@ use App\CustomerProduct;
 use App\DealerProduct;
 use Validator;
 use Carbon\Carbon;
+use App\Mail\DealerPOApprovedMail;
+use Illuminate\Support\Facades\Mail;
 class OrdersController extends Controller
 {
     //
@@ -561,8 +563,123 @@ class OrdersController extends Controller
         PurchaseOrder::where('id',$data['purchase_order_id'])->update(['po_status'=>'completed']);
         return redirect()->back()->with('Request has been recorded successfully');
     }
+    
 
-    public function UpdateDealerPoQty(Request $request){
+    // ─────────────────────────────────────────────────────────────
+    // UPDATED METHOD
+    // ─────────────────────────────────────────────────────────────
+
+    public function UpdateDealerPoQty(Request $request)
+    {
+        if ($request->isMethod('post')) {
+            $data = $request->all();
+
+            DB::beginTransaction();
+
+            $subtotal = 0;
+
+            // ── Validation pass ──────────────────────────────────────────────
+            foreach ($data['item_ids'] as $ikey => $itemid) {
+                $itemDetails = PurchaseOrderItem::find($itemid);
+
+                if ($data['actual_qtys'][$ikey] > $itemDetails['qty']) {
+                    return redirect()->back()->with(
+                        'flash_message_error',
+                        'You have entered wrong qty'
+                    );
+                }
+
+                if ($data['product_links'][$ikey] == 0 && $data['actual_qtys'][$ikey] > 0) {
+                    return redirect()->back()->with(
+                        'flash_message_error',
+                        'You can not accept an order from non linked product'
+                    );
+                }
+            }
+
+            // ── Save pass ────────────────────────────────────────────────────
+            foreach ($data['item_ids'] as $ikey => $itemid) {
+                $itemDetails = PurchaseOrderItem::find($itemid);
+
+                // Update editable price & discounts
+                $dealerPrice = isset($data['dealer_prices'][$ikey])     ? (float) $data['dealer_prices'][$ikey]     : $itemDetails->product_price;
+                $qtyDisc     = isset($data['qty_discounts'][$ikey])     ? (float) $data['qty_discounts'][$ikey]     : $itemDetails->dealer_qty_discount;
+                $specDisc    = isset($data['special_discounts'][$ikey]) ? (float) $data['special_discounts'][$ikey] : $itemDetails->dealer_special_discount;
+                $basicDisc   = isset($data['basic_discounts'][$ikey])   ? (float) $data['basic_discounts'][$ikey]   : $itemDetails->dealer_basic_discount;
+
+                $totalDiscount      = $qtyDisc + $specDisc + $basicDisc;
+                $calculatedNetPrice = $dealerPrice * (1 - $totalDiscount / 100);
+
+                $itemDetails->product_price           = $dealerPrice;
+                $itemDetails->dealer_qty_discount     = $qtyDisc;
+                $itemDetails->dealer_special_discount = $specDisc;
+                $itemDetails->dealer_basic_discount   = $basicDisc;
+                $itemDetails->net_price               = $calculatedNetPrice;
+                $itemDetails->actual_qty              = $data['actual_qtys'][$ikey];
+                $itemDetails->comments                = $data['comments'][$ikey];
+                $itemDetails->dispatched_qty          = 0;
+                $itemDetails->save();
+
+                $subtotal += $calculatedNetPrice * $data['actual_qtys'][$ikey];
+
+                // Dealer pending orders
+                $dealerProd = DB::table('dealer_products')
+                    ->where(['dealer_id' => $data['dealer_id'], 'product_id' => $itemDetails->product_id])
+                    ->first();
+
+                if ($dealerProd) {
+                    $dealerProduct = DealerProduct::find($dealerProd->id);
+                    $pendingOrders = $dealerProd->pending_orders;
+                } else {
+                    $dealerProduct             = new DealerProduct;
+                    $dealerProduct->dealer_id  = $data['dealer_id'];
+                    $dealerProduct->product_id = $itemDetails->product_id;
+                    $pendingOrders             = 0;
+                }
+
+                $dealerProduct->pending_orders = $pendingOrders + $data['actual_qtys'][$ikey];
+                $dealerProduct->save();
+            }
+
+            // ── Update PO totals ─────────────────────────────────────────────
+            $updatePo              = PurchaseOrder::find($data['purchase_order_id']);
+            $updatePo->price       = $subtotal;
+            $gstVal                = (($subtotal * $updatePo->gst_per) / 100);
+            $updatePo->gst         = $gstVal;
+            $updatePo->grand_total = $subtotal + $gstVal;
+            $updatePo->po_edited   = 'yes';
+            $updatePo->po_status   = 'approved';
+            $updatePo->save();
+
+            DB::commit();
+
+            // ── Send Approval Email to Dealer ────────────────────────────────
+            // Reload PO with all relationships so email template has fresh data
+            $poForEmail = PurchaseOrder::with([
+                'dealer',
+                'orderitems.product',
+                'orderitems.packingsize',
+            ])->find($data['purchase_order_id']);
+
+            $dealerEmail = $poForEmail->dealer->email ?? null;
+            
+            $dealerEmail = "mkanum786@gmail.com";
+            if ($dealerEmail) {
+                try {
+                    Mail::to($dealerEmail)->send(new DealerPOApprovedMail($poForEmail));
+                } catch (\Exception $e) {
+                    // Log the error but do not fail the request
+                    \Log::error('DealerPOApprovedMail failed: ' . $e->getMessage());
+                }
+            }
+            // ── End Email ────────────────────────────────────────────────────
+
+            return Redirect::to('/admin/dealer-orders')
+                ->with('flash_message_success', 'Purchase Order has been approved successfully');
+        }
+    }
+
+    /*public function UpdateDealerPoQty(Request $request){
         if($request->isMethod('post')){
             $data = $request->all();
             //echo "<pre>"; print_r($data); die;
@@ -614,7 +731,7 @@ class OrdersController extends Controller
             DB::commit();
             return redirect::to('/admin/dealer-orders')->with('flash_message_success','Purchase Order Qty has been updates successfully');
         }
-    }
+    }*/
 
     public function POdispatchPlanning(Request $Request){
         Session::put('active','POdispatchPlanning'); 

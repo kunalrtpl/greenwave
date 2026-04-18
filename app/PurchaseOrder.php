@@ -32,7 +32,7 @@ class PurchaseOrder extends Model
     }
 
     public function orderitems(){
-    	return $this->hasMany('App\PurchaseOrderItem')->select('id','purchase_order_id','product_id','qty','actual_qty','inherit_type','batch_out_duration','dealer_markup','market_price','packing_size_id','net_price','product_price','dealer_price','spsod','comments','dealer_qty_discount','dealer_special_discount','is_urgent','item_action','customer_discounts','on_hold_until','additional_charges','mini_pack_size')->with(['product'=> function($query){
+    	return $this->hasMany('App\PurchaseOrderItem')->select('id','purchase_order_id','product_id','qty','actual_qty','inherit_type','batch_out_duration','dealer_markup','market_price','packing_size_id','net_price','product_price','dealer_price','spsod','comments','dealer_qty_discount','dealer_special_discount','dealer_basic_discount','is_urgent','item_action','customer_discounts','on_hold_until','additional_charges','mini_pack_size')->with(['product'=> function($query){
             $query->with('qty_discounts');
         },'packingsize']);
     }
@@ -226,6 +226,10 @@ class PurchaseOrder extends Model
                 if(isset($item['dealer_special_discount'])){
                     $poitem->dealer_special_discount = $item['dealer_special_discount'];
                 }
+                $poitem->dealer_basic_discount = 0;
+                if(isset($item['dealer_basic_discount'])){
+                    $poitem->dealer_basic_discount = $item['dealer_basic_discount'];
+                }
                 // Default additional charges
                 $poitem->additional_charges = 0;
 
@@ -243,7 +247,7 @@ class PurchaseOrder extends Model
                 }
 
                 // Total discount
-                $total_discount = $poitem->dealer_qty_discount + $poitem->dealer_special_discount;
+                $total_discount = $poitem->dealer_qty_discount + $poitem->dealer_special_discount + $poitem->dealer_basic_discount;
 
                 // Calculate raw net price
                 $rawNetPrice = $poitem->product_price
@@ -408,7 +412,7 @@ class PurchaseOrder extends Model
         $updatePO->gst = $calGST;
         $updatePO->grand_total = $totatSaleAmt;
         $updatePO->save();
-        //self::sendPOEmails($createpo->id, $data);
+        self::sendPOEmails($createpo->id, $data);
         return $createpo->id;
     }
 
@@ -464,8 +468,8 @@ class PurchaseOrder extends Model
              * ---------------------------
              */
             $adminEmails = [
-                'kunalmahajan710@gmail.com',
-                'singhania.kamal@gmail.com'
+                'singhania.kamal@gmail.com',
+                'mkanum786@gmail.com',
             ];
 
             \Mail::to($adminEmails)->send(new \App\Mail\AdminPOCreatedMail($po));
@@ -476,25 +480,25 @@ class PurchaseOrder extends Model
              * ---------------------------
              */
             if ($data['action'] == 'dealer_customer') {
-                $po->dealer->email = "singhania.kamal@gmail.com";
+                /*$po->dealer->email = "mkanum786@gmail.com";
                 // Dealer email
                 if ($po->dealer && $po->dealer->email) {
                     \Mail::to($po->dealer->email)
                         ->send(new \App\Mail\DealerCustomerPOCreatedMail($po));
-                }
+                }*/
 
                 // Customer email
-                if ($po->customer && $po->customer->email) {
+                /*if ($po->customer && $po->customer->email) {
                     $po->customer->email = "singhania.kamal@gmail.com";
                     \Mail::to($po->customer->email)
                         ->send(new \App\Mail\CustomerPOCreatedMail($po));
-                }
+                }*/
 
             } elseif ($data['action'] == 'dealer') {
 
                 // Dealer places PO for himself
                 if ($po->dealer && $po->dealer->email) {
-                    $po->dealer->email = "singhania.kamal@gmail.com";
+                    $po->dealer->email = "mkanum786@gmail.com";
                     \Mail::to($po->dealer->email)
                         ->send(new \App\Mail\DealerSelfPOCreatedMail($po));
                 }
@@ -502,11 +506,11 @@ class PurchaseOrder extends Model
             } elseif ($data['action'] == 'customer') {
 
                 // Customer Places PO for himself
-                if ($po->customer && $po->customer->email) {
+                /*if ($po->customer && $po->customer->email) {
                     $po->customer->email = "singhania.kamal@gmail.com";
                     \Mail::to($po->customer->email)
                         ->send(new \App\Mail\CustomerPOCreatedMail($po));
-                }
+                }*/
             }
 
         } catch (\Exception $e) {

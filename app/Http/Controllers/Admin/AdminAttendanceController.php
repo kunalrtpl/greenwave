@@ -15,9 +15,6 @@ use Carbon\Carbon;
 use Session;
 use PDF; // barryvdh/laravel-dompdf
 
-/**
- * AdminAttendanceController
- */
 class AdminAttendanceController extends Controller
 {
     const ST_PRESENT     = 'Full Day Present';
@@ -63,7 +60,6 @@ class AdminAttendanceController extends Controller
             ->where('app_access', 'Yes')
             ->whereRaw("FIND_IN_SET('attendance', app_roles)");
 
-
         if ($request->filled('employee_id')) {
             $empQuery->where('id', $request->employee_id);
         }
@@ -84,7 +80,6 @@ class AdminAttendanceController extends Controller
 
         $employeeIds = $employees->pluck('id')->toArray();
 
-        // Attendance records for display (may be date-filtered)
         $baseQuery = DB::table('user_attendances as ua')
             ->leftJoin('customers as cin',               'ua.in_customer_id',                    '=', 'cin.id')
             ->leftJoin('customers as cout',              'ua.out_customer_id',                   '=', 'cout.id')
@@ -119,7 +114,6 @@ class AdminAttendanceController extends Controller
 
         $attRecords = $baseQuery->get();
 
-        // Full month attendance for stats (always full month, no date filter)
         $fullMonthRecords = DB::table('user_attendances as ua')
             ->select('ua.user_id', 'ua.in_date', 'ua.status')
             ->whereIn('ua.user_id', $employeeIds)
@@ -140,7 +134,6 @@ class AdminAttendanceController extends Controller
             $attByUserDate[$rec->user_id][$ds][] = $rec;
         }
 
-        // Leaves linked to attendances
         $attIds = $attRecords->pluck('id')->toArray();
         $linkedLeaves = [];
         if (!empty($attIds)) {
@@ -157,14 +150,12 @@ class AdminAttendanceController extends Controller
 
         $holidays = $this->getHolidaysForMonth($month, $year);
 
-        // All month dates for stats
         $allMonthDates = [];
         $limit = $endOfMonth->lt($today) ? $endOfMonth : $today;
         for ($d = $startOfMonth->copy(); $d->lte($limit); $d->addDay()) {
             $allMonthDates[] = $d->toDateString();
         }
 
-        // Date grid for display
         $employeeData = collect();
 
         $datesToShow = [];
@@ -181,8 +172,6 @@ class AdminAttendanceController extends Controller
 
         foreach ($employees as $emp) {
             $empDates = [];
-
-            // Stats: ALWAYS computed over full month
             $presentCount = 0;
             $leaveCount   = 0;
             $lwpCount     = 0;
@@ -196,33 +185,24 @@ class AdminAttendanceController extends Controller
                 $isFuture   = $dateCarbon->gt($today);
                 $isToday    = $dateCarbon->isToday();
 
-                if (!$isSunday && !$isHoliday && !$isFuture) {
-                    $workingDays++;
-                }
+                if (!$isSunday && !$isHoliday && !$isFuture) $workingDays++;
 
                 $monthRecs = $fullMonthByUserDate[$emp->id][$ds] ?? [];
                 if (!empty($monthRecs)) {
                     $mainRec        = end($monthRecs);
                     $computedStatus = $mainRec->status ?? self::ST_PRESENT;
-                } elseif ($isHoliday) {
-                    $computedStatus = self::ST_HOLIDAY;
-                } elseif ($isSunday) {
-                    $computedStatus = self::ST_WEEKLY_OFF;
-                } elseif ($isToday) {
-                    $computedStatus = 'Not Punched Yet';
-                } elseif (!$isFuture) {
-                    $computedStatus = self::ST_LWP_UNINF;
-                } else {
-                    $computedStatus = null;
-                }
+                } elseif ($isHoliday)   { $computedStatus = self::ST_HOLIDAY; }
+                elseif ($isSunday)      { $computedStatus = self::ST_WEEKLY_OFF; }
+                elseif ($isToday)       { $computedStatus = 'Not Punched Yet'; }
+                elseif (!$isFuture)     { $computedStatus = self::ST_LWP_UNINF; }
+                else                    { $computedStatus = null; }
 
-                if ($computedStatus === self::ST_PRESENT)                    $presentCount++;
-                elseif (in_array($computedStatus, self::LEAVE_STATUSES))     $leaveCount++;
-                elseif (in_array($computedStatus, self::LWP_STATUSES))       $lwpCount++;
-                elseif ($computedStatus === self::ST_COMP_OFF)               $compOffCount++;
+                if ($computedStatus === self::ST_PRESENT)                $presentCount++;
+                elseif (in_array($computedStatus, self::LEAVE_STATUSES)) $leaveCount++;
+                elseif (in_array($computedStatus, self::LWP_STATUSES))   $lwpCount++;
+                elseif ($computedStatus === self::ST_COMP_OFF)           $compOffCount++;
             }
 
-            // Display rows
             foreach ($datesToShow as $ds) {
                 $dateCarbon = Carbon::parse($ds);
                 $isSunday   = ($dateCarbon->dayOfWeek === 0);
@@ -237,22 +217,11 @@ class AdminAttendanceController extends Controller
                 if (!empty($records)) {
                     $mainRecord     = end($records);
                     $computedStatus = $mainRecord->status ?? self::ST_PRESENT;
-                } elseif ($isHoliday) {
-                    $computedStatus = self::ST_HOLIDAY;
-                    $mainRecord     = null;
-                } elseif ($isSunday) {
-                    $computedStatus = self::ST_WEEKLY_OFF;
-                    $mainRecord     = null;
-                } elseif ($isToday) {
-                    $computedStatus = 'Not Punched Yet';
-                    $mainRecord     = null;
-                } elseif ($isPast) {
-                    $computedStatus = self::ST_LWP_UNINF;
-                    $mainRecord     = null;
-                } else {
-                    $computedStatus = null;
-                    $mainRecord     = null;
-                }
+                } elseif ($isHoliday) { $computedStatus = self::ST_HOLIDAY;    $mainRecord = null; }
+                elseif ($isSunday)    { $computedStatus = self::ST_WEEKLY_OFF; $mainRecord = null; }
+                elseif ($isToday)     { $computedStatus = 'Not Punched Yet';   $mainRecord = null; }
+                elseif ($isPast)      { $computedStatus = self::ST_LWP_UNINF;  $mainRecord = null; }
+                else                  { $computedStatus = null;                $mainRecord = null; }
 
                 $duration = null;
                 if (!empty($records)) {
@@ -574,9 +543,7 @@ class AdminAttendanceController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────
-    // GET  admin/attendance/export-pdf/{employeeId}
-    //      Generates a proper PDF using barryvdh/laravel-dompdf
-    //      Always exports FULL MONTH regardless of date filter
+    // GET  admin/attendance/export-pdf / export-pdf/{employeeId}
     // ─────────────────────────────────────────────────────────────
     public function exportPdf(Request $request, $employeeId = null)
     {
@@ -587,12 +554,9 @@ class AdminAttendanceController extends Controller
         $startOfMonth = Carbon::create($year, $month, 1)->startOfMonth();
         $endOfMonth   = $startOfMonth->copy()->endOfMonth();
 
-        // Build employee query
         $empQuery = DB::table('users')
             ->select('id','name','mobile','base_city')
-            ->where('status', 1)
-            ->where('type', 'employee')
-            ->orderBy('name');
+            ->where('status', 1)->where('type', 'employee')->orderBy('name');
 
         if ($employeeId) {
             $empQuery->where('id', $employeeId);
@@ -607,22 +571,17 @@ class AdminAttendanceController extends Controller
             abort(404, 'Employee not found.');
         }
 
-        // Full month attendance records — no date filter ever
+        // ── All leave types (for quota section) ──────────────────
+        $leaveTypes = LeaveType::where('is_active', true)->orderBy('sort_order')->get();
+
         $attRecords = DB::table('user_attendances as ua')
             ->leftJoin('customers as cin',  'ua.in_customer_id',  '=', 'cin.id')
             ->leftJoin('customers as cout', 'ua.out_customer_id', '=', 'cout.id')
             ->leftJoin('users as chgby',    'ua.status_changed_by','=','chgby.id')
-            ->select(
-                'ua.*',
-                'cin.name  as in_customer_name',
-                'cout.name as out_customer_name',
-                'chgby.name as changed_by_name'
-            )
+            ->select('ua.*','cin.name as in_customer_name','cout.name as out_customer_name','chgby.name as changed_by_name')
             ->whereIn('ua.user_id', $employeeIds)
-            ->whereMonth('ua.in_date', $month)
-            ->whereYear('ua.in_date',  $year)
-            ->orderBy('ua.in_date', 'asc')
-            ->orderBy('ua.in_time', 'asc')
+            ->whereMonth('ua.in_date', $month)->whereYear('ua.in_date', $year)
+            ->orderBy('ua.in_date','asc')->orderBy('ua.in_time','asc')
             ->get();
 
         $attByUserDate = [];
@@ -633,7 +592,7 @@ class AdminAttendanceController extends Controller
 
         $holidays = $this->getHolidaysForMonth($month, $year);
 
-        // Always show full month in PDF
+        // Full month date range
         $datesToShow = [];
         $limit = $endOfMonth->lt($today) ? $endOfMonth : $today;
         for ($d = $startOfMonth->copy(); $d->lte($limit); $d->addDay()) {
@@ -650,7 +609,7 @@ class AdminAttendanceController extends Controller
             $presentCount = $leaveCount = $lwpCount = $compOffCount = $workingDays = 0;
 
             foreach ($datesToShow as $ds) {
-                $dc        = Carbon::parse($ds);
+                $dc       = Carbon::parse($ds);
                 $isSunday  = ($dc->dayOfWeek === 0);
                 $isHoliday = isset($holidays[$ds]);
                 $isPast    = $dc->lt($today);
@@ -664,19 +623,12 @@ class AdminAttendanceController extends Controller
                 if (!empty($records)) {
                     $mainRecord     = end($records);
                     $computedStatus = $mainRecord->status ?? self::ST_PRESENT;
-                } elseif ($isHoliday) {
-                    $computedStatus = self::ST_HOLIDAY;    $mainRecord = null;
-                } elseif ($isSunday) {
-                    $computedStatus = self::ST_WEEKLY_OFF; $mainRecord = null;
-                } elseif ($isToday) {
-                    $computedStatus = 'Not Punched Yet';   $mainRecord = null;
-                } elseif ($isFuture) {
-                    $computedStatus = null;                $mainRecord = null;
-                } else {
-                    $computedStatus = self::ST_LWP_UNINF;  $mainRecord = null;
-                }
+                } elseif ($isHoliday) { $computedStatus = self::ST_HOLIDAY;    $mainRecord = null; }
+                elseif ($isSunday)    { $computedStatus = self::ST_WEEKLY_OFF; $mainRecord = null; }
+                elseif ($isToday)     { $computedStatus = 'Not Punched Yet';   $mainRecord = null; }
+                elseif ($isFuture)    { $computedStatus = null;                $mainRecord = null; }
+                else                  { $computedStatus = self::ST_LWP_UNINF;  $mainRecord = null; }
 
-                // Duration
                 $totalMins = 0;
                 foreach ($records as $r) {
                     if ($r->in_time && $r->out_time) {
@@ -687,28 +639,55 @@ class AdminAttendanceController extends Controller
                         } catch (\Exception $e) {}
                     }
                 }
-                $duration = $totalMins > 0
-                    ? floor($totalMins/60).'h '.($totalMins%60).'m'
-                    : null;
+                $duration = $totalMins > 0 ? floor($totalMins/60).'h '.($totalMins%60).'m' : null;
 
-                if ($computedStatus === self::ST_PRESENT)                    $presentCount++;
-                elseif (in_array($computedStatus, self::LEAVE_STATUSES))     $leaveCount++;
-                elseif (in_array($computedStatus, self::LWP_STATUSES))       $lwpCount++;
-                elseif ($computedStatus === self::ST_COMP_OFF)               $compOffCount++;
+                if ($computedStatus === self::ST_PRESENT)                $presentCount++;
+                elseif (in_array($computedStatus, self::LEAVE_STATUSES)) $leaveCount++;
+                elseif (in_array($computedStatus, self::LWP_STATUSES))   $lwpCount++;
+                elseif ($computedStatus === self::ST_COMP_OFF)           $compOffCount++;
 
                 $empDates[] = [
-                    'ds'            => $ds,
-                    'dc'            => $dc,
-                    'records'       => $records,
-                    'mainRecord'    => $mainRecord,
-                    'computedStatus'=> $computedStatus,
-                    'duration'      => $duration,
-                    'isSunday'      => $isSunday,
-                    'isHoliday'     => $isHoliday,
-                    'isFuture'      => $isFuture,
-                    'isToday'       => $isToday,
-                    'holiday_name'  => $holidays[$ds] ?? null,
+                    'ds'             => $ds,
+                    'dc'             => $dc,
+                    'records'        => $records,
+                    'mainRecord'     => $mainRecord,
+                    'computedStatus' => $computedStatus,
+                    'duration'       => $duration,
+                    'isSunday'       => $isSunday,
+                    'isHoliday'      => $isHoliday,
+                    'isFuture'       => $isFuture,
+                    'isToday'        => $isToday,
+                    'holiday_name'   => $holidays[$ds] ?? null,
                 ];
+            }
+
+            // ── Load quota for this employee / FY ─────────────────
+            $fy           = $this->getFinancialYear(Carbon::create($year, $month, 1)->toDateString());
+            $quotaDetails = [];
+            foreach ($leaveTypes as $lt) {
+                if ($lt->has_quota) {
+                    $quota = UserLeaveQuota::where('user_id', $emp->id)
+                        ->where('leave_type_id', $lt->id)
+                        ->where('financial_year', $fy)->first();
+                    $quotaDetails[] = [
+                        'code'      => $lt->code,
+                        'name'      => $lt->name,
+                        'total'     => $quota ? (float) $quota->total_quota : 0.0,
+                        'used'      => $quota ? (float) $quota->used_quota  : 0.0,
+                        'remaining' => $quota ? max(0, (float)$quota->total_quota - (float)$quota->used_quota) : 0.0,
+                        'unlimited' => false,
+                    ];
+                } else {
+                    // ML and no-quota types — unlimited
+                    $quotaDetails[] = [
+                        'code'      => $lt->code,
+                        'name'      => $lt->name,
+                        'total'     => null,
+                        'used'      => null,
+                        'remaining' => null,
+                        'unlimited' => true,
+                    ];
+                }
             }
 
             $employeeData->push([
@@ -719,6 +698,8 @@ class AdminAttendanceController extends Controller
                 'lwp_count'      => $lwpCount,
                 'comp_off_count' => $compOffCount,
                 'working_days'   => $workingDays,
+                'financial_year' => $fy,
+                'quota_details'  => $quotaDetails,
             ]);
         }
 
@@ -726,29 +707,25 @@ class AdminAttendanceController extends Controller
         $filterLabel = "Full Month — {$monthName}";
         $generatedAt = Carbon::now()->format('d M Y, h:i A');
 
-        // Render the DomPDF-optimised blade view
         $view = view('admin.user_attendance.pdf', compact(
             'employeeData', 'monthName', 'filterLabel', 'generatedAt', 'month', 'year'
         ));
 
-        // Build PDF via DomPDF — landscape A4 for wide attendance table
         $pdf = PDF::loadHTML($view->render())
             ->setPaper('a4', 'landscape')
             ->setOptions([
-                'defaultFont'       => 'sans-serif',
+                'defaultFont'          => 'sans-serif',
                 'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled'   => false,
-                'dpi'               => 120,
-                'defaultMediaType'  => 'print',
+                'isRemoteEnabled'      => false,
+                'dpi'                  => 120,
+                'defaultMediaType'     => 'print',
             ]);
 
-        // Filename
         $empName  = $employees->count() === 1
             ? preg_replace('/[^A-Za-z0-9_]/', '_', $employees->first()->name)
             : 'All_Employees';
         $filename = "Attendance_{$empName}_{$monthName}.pdf";
 
-        // Force download
         return $pdf->download($filename);
     }
 
@@ -799,8 +776,7 @@ class AdminAttendanceController extends Controller
                     $i->where('is_recurring', true)->whereRaw("DATE_FORMAT(date,'%m')=?", [$monthPad]);
                 });
             })
-            ->select('name','date','is_recurring')
-            ->get();
+            ->select('name','date','is_recurring')->get();
 
         $map = [];
         foreach ($rows as $h) {

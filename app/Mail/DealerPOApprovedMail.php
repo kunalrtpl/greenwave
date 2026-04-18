@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Mail;
 
 use App\PurchaseOrder;
@@ -6,7 +7,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class AdminPOCreatedMail extends Mailable
+class DealerPOApprovedMail extends Mailable
 {
     use Queueable, SerializesModels;
 
@@ -19,7 +20,7 @@ class AdminPOCreatedMail extends Mailable
 
     public function build()
     {
-        return $this->subject('New Purchase Order Received - ' . $this->po->po_ref_no_string)
-                    ->view('emails.purchase_order.admin'); // ← changed from ->markdown() to ->view()
+        return $this->subject('Order Approved - ' . $this->po->po_ref_no_string)
+                    ->view('emails.purchase_order.dealer_po_approved');
     }
 }
