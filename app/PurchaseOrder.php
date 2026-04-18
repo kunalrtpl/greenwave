@@ -469,6 +469,7 @@ class PurchaseOrder extends Model
              */
             $adminEmails = [
                 'singhania.kamal@gmail.com',
+                'tejaswini@greenwavegloabl.com',
                 'mkanum786@gmail.com',
             ];
 
