@@ -5,6 +5,7 @@ namespace App\Http\Controllers\api\User;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\AuthToken;
+use App\User;
 use App\UserDvr;
 use App\UserDvrProduct;
 use App\Trial;
@@ -272,20 +273,23 @@ class DvrController extends Controller
                     ->pluck('customer_contact_id'); // adjust column name if different
 
                 if ($contactIds->isNotEmpty()) {
-                    
-                    $contacts = DB::table('customer_contacts')
-                        ->whereIn('id', $contactIds)
-                        ->whereNotNull('mobile_number')
-                        ->where('mobile_number', '!=', '')
-                        ->get(['name', 'mobile_number']);
+                    $user = User::find($userId);
+                    //check if user exists
+                    if($user){
+                        $contacts = DB::table('customer_contacts')
+                            ->whereIn('id', $contactIds)
+                            ->whereNotNull('mobile_number')
+                            ->where('mobile_number', '!=', '')
+                            ->get(['name', 'mobile_number']);
 
-                    foreach ($contacts as $contact) {
-                        $params = [];
-                        $params['mobile']  = $contact->mobile_number;
-                        //$params['mobile']  = 9815012680;
-                        $params['message'] = "Thanks for meeting {$contact->name} today. We appreciate your time and support. For any help, call us at 737 737 0059. -GREENWAVE GLOBAL LTD";
+                        foreach ($contacts as $contact) {
+                            $params = [];
+                            $params['mobile']  = $contact->mobile_number;
+                            //$params['mobile']  = 9815012680;
+                            $params['message'] = "Thanks for meeting {$user->name} today. We appreciate your time and support. For any help, call us at 737 737 0059. -GREENWAVE GLOBAL LTD";
 
-                        sendSms($params);
+                            sendSms($params);
+                        }
                     }
                 }
             }
