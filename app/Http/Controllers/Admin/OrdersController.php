@@ -670,7 +670,7 @@ class OrdersController extends Controller
             ])->find($data['purchase_order_id']);
 
             $dealerEmail = $poForEmail->dealer ? $poForEmail->dealer->email : null;
-            $dealerEmail = "kunal1000@yopmail.com";
+            $dealerEmail = "mkanum786@gmail.com";
             EmailService::send(
                 'po_dealer_approved',          // event_key in email_templates table
                 ['po' => $poForEmail],         // passed to blade view
