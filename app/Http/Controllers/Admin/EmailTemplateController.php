@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\EmailTemplate;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-
+use Session;
 class EmailTemplateController extends Controller
 {
     public function index()
