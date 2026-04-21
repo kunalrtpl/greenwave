@@ -12,6 +12,7 @@ use App\DealerProduct;
 use App\UserCustomerShare;
 use DB;
 use App\SampleSubmission;
+use App\Services\EmailService;
 class PurchaseOrder extends Model
 {
     //
@@ -438,84 +439,27 @@ class PurchaseOrder extends Model
     }
 
 
-
-    /**
-     * ------------------------------------------------------------
-     * Send Email Notifications After Purchase Order is Created
-     * ------------------------------------------------------------
-     *
-     * @param int   $poId
-     * @param array $data
-     * @return void
-     */
-    public static function sendPOEmails($poId, $data)
+    public static function sendPOEmails(int $poId, array $data): void
     {
-        try {
-            $po = PurchaseOrder::with([
-                'dealer',
-                'customer',
-                'orderitems.product'
-            ])->find($poId);
+        $po = PurchaseOrder::with(['dealer', 'customer', 'orderitems.product'])->find($poId);
 
-            if (!$po) {
-                \Log::error("PO Email Error: Purchase Order not found. ID: " . $poId);
-                return;
-            }
+        if (!$po) {
+            \Log::error("PO not found for email. ID: {$poId}");
+            return;
+        }
 
-            /**
-             * ---------------------------
-             * Send Admin Notification
-             * ---------------------------
-             */
-            $adminEmails = [
-                'singhania.kamal@gmail.com',
-                'tejaswini@greenwaveglobal.com',
-                'mkanum786@gmail.com',
-            ];
+        // Always — notify admins (TO comes from DB)
+        EmailService::send('po_admin', ['po' => $po]);
 
-            \Mail::to($adminEmails)->send(new \App\Mail\AdminPOCreatedMail($po));
+        if ($data['action'] === 'dealer_customer') {
+            // EmailService::send('po_dealer_customer_dealer',   ['po' => $po], $po->dealer   ? $po->dealer->email   : null);
+            // EmailService::send('po_dealer_customer_customer', ['po' => $po], $po->customer ? $po->customer->email : null);
 
-            /**
-             * ---------------------------
-             * Action-Based Email Rules
-             * ---------------------------
-             */
-            if ($data['action'] == 'dealer_customer') {
-                /*$po->dealer->email = "mkanum786@gmail.com";
-                // Dealer email
-                if ($po->dealer && $po->dealer->email) {
-                    \Mail::to($po->dealer->email)
-                        ->send(new \App\Mail\DealerCustomerPOCreatedMail($po));
-                }*/
+        } elseif ($data['action'] === 'dealer') {
+            EmailService::send('po_dealer_self', ['po' => $po], $po->dealer ? $po->dealer->email : null);
 
-                // Customer email
-                /*if ($po->customer && $po->customer->email) {
-                    $po->customer->email = "singhania.kamal@gmail.com";
-                    \Mail::to($po->customer->email)
-                        ->send(new \App\Mail\CustomerPOCreatedMail($po));
-                }*/
-
-            } elseif ($data['action'] == 'dealer') {
-
-                // Dealer places PO for himself
-                if ($po->dealer && $po->dealer->email) {
-                    $po->dealer->email = "mkanum786@gmail.com";
-                    \Mail::to($po->dealer->email)
-                        ->send(new \App\Mail\DealerSelfPOCreatedMail($po));
-                }
-
-            } elseif ($data['action'] == 'customer') {
-
-                // Customer Places PO for himself
-                /*if ($po->customer && $po->customer->email) {
-                    $po->customer->email = "singhania.kamal@gmail.com";
-                    \Mail::to($po->customer->email)
-                        ->send(new \App\Mail\CustomerPOCreatedMail($po));
-                }*/
-            }
-
-        } catch (\Exception $e) {
-            \Log::error("PO Email Error: " . $e->getMessage());
+        } elseif ($data['action'] === 'customer') {
+            // EmailService::send('po_customer_self', ['po' => $po], $po->customer ? $po->customer->email : null);
         }
     }
 

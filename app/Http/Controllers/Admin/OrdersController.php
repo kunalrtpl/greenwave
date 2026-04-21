@@ -25,6 +25,8 @@ use Validator;
 use Carbon\Carbon;
 use App\Mail\DealerPOApprovedMail;
 use Illuminate\Support\Facades\Mail;
+use App\Services\EmailService;
+
 class OrdersController extends Controller
 {
     //
@@ -293,6 +295,13 @@ class OrdersController extends Controller
             }])->leftjoin('dealers','dealers.id','=','purchase_orders.dealer_id')->wherein('purchase_orders.action',['dealer'])->select('purchase_orders.*','dealers.business_name','dealers.owner_mobile as dealer_mobile','dealers.email as dealer_email');
             if(!empty($data['id'])){
                 $querys = $querys->where('purchase_orders.po_ref_no_string',$data['id']);
+            }
+            if (!empty($data['item_product_id'])) {
+                $querys = $querys->whereIn('purchase_orders.id', function ($query) use ($data) {
+                    $query->select('purchase_order_id')
+                          ->from('purchase_order_items')  // your actual table name
+                          ->where('product_id', $data['item_product_id']);
+                });
             }
             if(!empty($data['order_type'])){
                 if($data['order_type'] == "minipack"){
@@ -653,26 +662,21 @@ class OrdersController extends Controller
 
             DB::commit();
 
-            // ── Send Approval Email to Dealer ────────────────────────────────
-            // Reload PO with all relationships so email template has fresh data
-            $poForEmail = PurchaseOrder::with([
+             // ── Send Approval Email to Dealer ─────────────────────────────────
+            $poForEmail  = PurchaseOrder::with([
                 'dealer',
                 'orderitems.product',
                 'orderitems.packingsize',
             ])->find($data['purchase_order_id']);
 
-            $dealerEmail = $poForEmail->dealer->email ?? null;
-            
-            $dealerEmail = "mkanum786@gmail.com";
-            if ($dealerEmail) {
-                try {
-                    Mail::to($dealerEmail)->send(new DealerPOApprovedMail($poForEmail));
-                } catch (\Exception $e) {
-                    // Log the error but do not fail the request
-                    \Log::error('DealerPOApprovedMail failed: ' . $e->getMessage());
-                }
-            }
-            // ── End Email ────────────────────────────────────────────────────
+            $dealerEmail = $poForEmail->dealer ? $poForEmail->dealer->email : null;
+            $dealerEmail = "kunal1000@yopmail.com";
+            EmailService::send(
+                'po_dealer_approved',          // event_key in email_templates table
+                ['po' => $poForEmail],         // passed to blade view
+                $dealerEmail                   // TO — dynamic from PO
+            );
+            // ── End Email ─────────────────────────────────
 
             return Redirect::to('/admin/dealer-orders')
                 ->with('flash_message_success', 'Purchase Order has been approved successfully');

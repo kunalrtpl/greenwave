@@ -113,7 +113,19 @@
                                             </div>
                                         </td>
                                         <td></td>
-                                        <td></td>
+                                        <td>
+                                        <select class="form-control form-filter input-sm select2" 
+                                                name="item_product_id" 
+                                                style="width:100%">
+                                            <option value="">All Products</option>
+                                            @foreach(products() as $product)
+                                                <option value="{{ $product['id'] }}">
+                                                    {{ $product['product_name'] }} ({{ $product['size'] }})
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </td>
+                                        
                                         <td></td>
                                         <td>
                                             <div class="form-group">

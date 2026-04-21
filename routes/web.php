@@ -466,6 +466,12 @@ Route::post('attendance/{id}/update-status',      'AdminAttendanceController@upd
      ->name('admin.attendance.update-status');
 
 
+
+     Route::get('/email-templates',          'EmailTemplateController@index')->name('admin.email_templates.index');
+Route::get('/email-templates/{id}/edit','EmailTemplateController@edit')->name('admin.email_templates.edit');
+Route::post('/email-templates/{id}',    'EmailTemplateController@update')->name('admin.email_templates.update');
+
+
 	});
 });
 Route::match(['get', 'post'], '/send-notifications', 'Admin\NotificationController@sendNotifications');
