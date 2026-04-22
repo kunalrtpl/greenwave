@@ -103,10 +103,17 @@ class UsersController extends Controller
                        class="btn btn-sm purple margin-top-10" 
                        href="'.route('admin.users.products', $user['id']).'">
                        <i class="fa fa-link"></i>
-                    </a> <a title="Attendance Settings" class="btn btn-sm green-jungle margin-top-10"
-    href="' . route('admin.users.attendance.settings', $user['id']) . '">
-    <i class="fa fa-calendar"></i>
-</a>';
+                    </a> 
+                    <a title="Attendance Settings" class="btn btn-sm green-jungle margin-top-10"
+                            href="' . route('admin.users.attendance.settings', $user['id']) . '">
+                            <i class="fa fa-calendar"></i>
+                    </a>
+                    <a href="'. route('admin.users.app-manual-pdf', $user['id']) . '" 
+                       class="btn btn-info btn-sm margin-top-10" 
+                       title="Download App Manual"
+                       target="_blank">
+                        <i class="fa fa-book"></i>
+                    </a>';
                 }
 
                 if ($resetPinExtraPermission && $user['app_access'] == "Yes" && !empty($user['hash_salt'])) {
@@ -831,6 +838,32 @@ switch ($regis_req['status']) {
         $customerRequest->save();
 
         return response()->json(['message' => 'Verified successfully.']);
+    }
+
+    public function downloadAppManualPdf($id)
+    {
+        // Fetch the user
+        $user = \App\User::findOrFail($id);
+
+        // Parse the app_roles column (comma-separated string)
+        $userRoleKeys = array_map('trim', explode(',', $user->app_roles));
+
+        // Fetch matching roles from app_roles table (type = executive only)
+        $roles = \DB::table('app_roles')
+            ->whereIn('key', $userRoleKeys)
+            ->where('type', 'executive')
+            ->orderBy('sort_order', 'ASC')
+            ->get();
+
+        // Load the blade view and pass data
+        $pdf = \PDF::loadView('admin.users.pdf.app_manual', [
+            'user'  => $user,
+            'roles' => $roles,
+        ]);
+
+        $pdf->setPaper('A4', 'portrait');
+
+        return $pdf->download('App_Manual_' . str_replace(' ', '_', $user->name) . '.pdf');
     }
 
 }

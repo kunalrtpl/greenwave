@@ -84,6 +84,8 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 		    'AttendanceSettingsController@save')
     	->name('admin.users.attendance.settings.save');
 
+    	Route::get('users/{id}/app-manual-pdf', 'UsersController@downloadAppManualPdf')->name('admin.users.app-manual-pdf');
+
 
 		Route::match(['get', 'post'], 'user-reset-pin/{userid}', 'UsersController@resetPin');
 		Route::match(['get', 'post'], '/open-user-dept-modal', 'UsersController@openUserDeptModal');
