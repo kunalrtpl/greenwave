@@ -320,6 +320,7 @@ class PurchaseOrder extends Model
                     $poitem->net_price = round($netPrice, 2);
                     $poitem->product_price = $item['market_price'];
                     $poitem->customer_discounts = json_encode($discountDetails);
+                    
 
                 }
             }else{
@@ -327,6 +328,17 @@ class PurchaseOrder extends Model
                 $poitem->net_price = $item['net_price'];
                 $poitem->product_price = $poitem->market_price;
             }
+
+
+            if($data['action'] == 'customer' || $data['action'] == 'dealer_customer'){
+                $dealerPurchasePrice = PurchaseOrder::getDealerPurchasePrice(
+                    $data['customer_id'],
+                    $item['product_id'],
+                    $data['po_date']
+                );
+                $poitem->dealer_purchase_price = $dealerPurchasePrice;
+            }
+
             $poitem->dealer_markup = $productinfo->dealer_markup;
             $poitem->freight = $productinfo->freight;
             if(isset($item['spsod'])){
@@ -431,6 +443,87 @@ class PurchaseOrder extends Model
     }
 
 
+    /**
+     * Get the dealer purchase price for a product based on customer and PO date.
+     *
+     * Logic:
+     * 1. Check if the customer has business_model = 'Dealer'
+     * 2. Resolve the actual dealer (if sub dealer → use linked_dealer_id)
+     * 3. First try to find the price from past sale invoices (dispatch_date <= po_date)
+     * 4. If not found, fallback to product_pricings table (price_date <= po_date, market_price > 0)
+     * 5. Returns null if no price found in either source
+     *
+     * @param int    $customerId  The customer placing the order
+     * @param int    $productId   The product to price
+     * @param string $poDate      The PO date (Y-m-d) used as the upper bound for lookups
+     * @return float|null
+     */
+    public static function getDealerPurchasePrice($customerId, $productId, $poDate)
+    {
+        $dealerPurchasePrice = null;
+
+        // ── Step 1: Fetch customer and check if business model is 'Dealer' ────────
+        $customer = \App\Customer::where('id', $customerId)->first();
+
+        if (!$customer || $customer->business_model != 'Dealer') {
+            // Not a dealer customer — no dealer purchase price applicable
+            return $dealerPurchasePrice;
+        }
+
+        // ── Step 2: Fetch the dealer linked to this customer ─────────────────────
+        $dealer = \App\Dealer::where('id', $customer->dealer_id)->first();
+
+        if (!$dealer) {
+            // Dealer record not found
+            return $dealerPurchasePrice;
+        }
+
+        // ── Step 3: Resolve actual dealer (sub dealer → use linked_dealer_id) ────
+        // If the dealer is a sub dealer, their pricing is based on the parent/linked dealer
+        $actualDealerId = ($dealer->dealer_type == 'sub dealer' && !empty($dealer->linked_dealer_id))
+            ? $dealer->linked_dealer_id
+            : $dealer->id;
+
+        // ── Step 4: Try sale_invoice_items joined with sale_invoices ──────────────
+        // Find the most recent invoice dispatched to this dealer for this product
+        // where dispatch_date is on or before the PO date
+        $salePrice = \DB::table('sale_invoice_items')
+            ->join('sale_invoices', 'sale_invoice_items.sale_invoice_id', '=', 'sale_invoices.id')
+            ->where('sale_invoices.dealer_id', $actualDealerId)
+            ->where('sale_invoice_items.product_id', $productId)
+            ->where('sale_invoices.dispatch_date', '<=', $poDate)  // Only past or same-day dispatches
+            ->orderBy('sale_invoices.dispatch_date', 'DESC')        // Most recent first
+            ->select('sale_invoice_items.price')
+            ->first();
+
+        if ($salePrice) {
+            // Found a matching invoice — use that price
+            return $salePrice->price;
+        }
+
+        // ── Step 5: Fallback → product_pricings table ─────────────────────────────
+        // Pick the latest pricing record where:
+        //   - price_date is on or before the PO date (no future prices)
+        //   - market_price > 0 (excludes incomplete/draft pricing rows)
+        //   - dealer_price > 0 (must have a valid dealer price)
+        $productPricing = \App\ProductPricing::where('product_id', $productId)
+            ->where('price_date', '<=', $poDate)    // No future-dated prices
+            ->where('market_price', '>', 0)          // Exclude rows with market_price = 0.00
+            ->where('dealer_price', '>', 0)          // Must have a valid dealer price
+            ->orderBy('price_date', 'DESC')          // Most recent valid price first
+            ->first();
+
+        if ($productPricing) {
+            // Found a valid pricing record — use dealer_price
+            return $productPricing->dealer_price;
+        }
+
+        // ── Step 6: Nothing found in either source — return null ─────────────────
+        return $dealerPurchasePrice;
+    }
+
+
+
 
     public static function updateSampleSubmissionOnPO($customerId, $productId, $poDate)
     {
@@ -467,7 +560,7 @@ class PurchaseOrder extends Model
         } elseif ($data['action'] === 'dealer') {
             // Always — notify admins (TO comes from DB)
             EmailService::send('po_admin', ['po' => $po]);
-            
+
             EmailService::send('po_dealer_self', ['po' => $po], $po->dealer ? $po->dealer->email : null);
 
         } elseif ($data['action'] === 'customer') {
