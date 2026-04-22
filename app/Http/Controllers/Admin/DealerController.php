@@ -167,7 +167,7 @@ class DealerController extends Controller
                         'dealer_type'   =>  'bail|required',
                         'business_name'   =>  'bail|required',
                         'name'   =>  'bail|required',
-                        'short_name'   =>  'bail|required',
+                        //'short_name'   =>  'bail|required',
                         'city'   =>  'bail|required',
                         'address'   =>  'bail|required',
                         'email'   => 'bail|email|'.$emailunique,

@@ -340,6 +340,16 @@
         return $financial_year;
     }
 
+    //used in createPO
+    function getFinancialYear() {
+	    if (date('m') > 3) {
+	        $financial_year = date('Y') . "/" . (date('y') + 1); // e.g. 2026/27
+	    } else {
+	        $financial_year = (date('Y') - 1) . "/" . date('y'); // e.g. 2025/26
+	    }
+	    return $financial_year;
+	}
+
     function geClass($markup){
     	$class = \App\ProductClass::where('from','<=',$markup)->where('to','>=',$markup)->where('status',1)->first();
     	if(is_object($class)){

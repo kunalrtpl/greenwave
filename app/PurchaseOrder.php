@@ -78,26 +78,39 @@ class PurchaseOrder extends Model
         }elseif($data['action'] == 'dealer'){
             $parentDealerId = \App\Dealer::getParentDealer($resp['dealer']);
             $resp['dealer']['id'] = $parentDealerId;
-            $createpo->dealer_id   =  $resp['dealer']['id'];
-            $getLastRef = PurchaseOrder::where('action','dealer')->where('dealer_id',$resp['dealer']['id']);
-            if(isset($data['trader_po'])){
-                $createpo->trader_po = 1;  
-                $getLastRef = $getLastRef->where('trader_po',1); 
+            $createpo->dealer_id = $resp['dealer']['id'];
+
+            $currentFinancialYear = getFinancialYear(); // e.g. "2026/27"
+
+            // Base query — NO dealer_id filter, global sequence across all dealers
+            $getLastRef = PurchaseOrder::where('action', 'dealer');
+
+            if (isset($data['trader_po'])) {
+                $createpo->trader_po = 1;
+                $getLastRef = $getLastRef->where('trader_po', 1);
                 $suffix = "TD-";
-            }else{
-                $getLastRef = $getLastRef->where('trader_po',0);
-                $suffix = "";
+            } else {
+                $getLastRef = $getLastRef->where('trader_po', 0);
+                $suffix = "D-";
             }
-            $getLastRef = $getLastRef->orderby('po_ref_no','DESC')->first();
-            $getLastRef = json_decode(json_encode($getLastRef),true);
-            if(!empty($getLastRef)){
-                $refNo = $getLastRef['po_ref_no'] +1;
-            }else{
-                $refNo = 1;
+
+            // Filter by current financial year so counter resets each year
+            $getLastRef = $getLastRef
+                ->where('po_ref_no_string', 'like', '%-' . $currentFinancialYear)
+                ->orderBy('po_ref_no', 'DESC')
+                ->first();
+
+            $getLastRef = json_decode(json_encode($getLastRef), true);
+
+            if (!empty($getLastRef)) {
+                $refNo = $getLastRef['po_ref_no'] + 1;
+            } else {
+                $refNo = 1; // New financial year — reset to 1
             }
-            $dealerinfo = Dealer::where('id',$resp['dealer']['id'])->first();
-            $createpo->po_ref_no   =  $refNo;
-            $createpo->po_ref_no_string   =  $suffix.$dealerinfo->short_name."-".$refNo."/".financialYear();
+
+            $createpo->po_ref_no        = $refNo;
+            $createpo->po_ref_no_string = $suffix . str_pad($refNo, 5, '0', STR_PAD_LEFT) . '-' . $currentFinancialYear;
+            // Result: D-00001-2026/27, D-00002-2026/27, etc.
         }elseif($data['action'] == 'customer'){
             $createpo->customer_id =  $data['customer_id'];
             if(isset($data['dealer_id'])){
@@ -115,7 +128,7 @@ class PurchaseOrder extends Model
                     $refNo = 1;
                 }
                 $createpo->po_ref_no   =  $refNo;
-                $createpo->po_ref_no_string   =  "CUST-".$refNo."/".financialYear();
+                $createpo->po_ref_no_string   =  "C-".$refNo."/".financialYear();
             }
         }elseif($data['action'] == 'customer_employee'){
             $createpo->customer_id =  $data['customer_id'];
@@ -447,15 +460,14 @@ class PurchaseOrder extends Model
             \Log::error("PO not found for email. ID: {$poId}");
             return;
         }
-
-        // Always — notify admins (TO comes from DB)
-        EmailService::send('po_admin', ['po' => $po]);
-
         if ($data['action'] === 'dealer_customer') {
             // EmailService::send('po_dealer_customer_dealer',   ['po' => $po], $po->dealer   ? $po->dealer->email   : null);
             // EmailService::send('po_dealer_customer_customer', ['po' => $po], $po->customer ? $po->customer->email : null);
 
         } elseif ($data['action'] === 'dealer') {
+            // Always — notify admins (TO comes from DB)
+            EmailService::send('po_admin', ['po' => $po]);
+            
             EmailService::send('po_dealer_self', ['po' => $po], $po->dealer ? $po->dealer->email : null);
 
         } elseif ($data['action'] === 'customer') {
