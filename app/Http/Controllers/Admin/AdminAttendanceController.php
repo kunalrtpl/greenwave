@@ -829,7 +829,7 @@ class AdminAttendanceController extends Controller
 
                 $total = $setting
                     ? (float)($setting->annual_quota ?? 0)
-                    : ($isEL ? 5.0 : (float)($lt->default_quota ?? 0));
+                    : ($isEL ? 0.0 : (float)($lt->default_quota ?? 0));
 
                 $toCreate[] = [
                     'user_id'        => $uid,
