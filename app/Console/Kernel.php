@@ -15,6 +15,7 @@ class Kernel extends ConsoleKernel
     protected $commands = [
         //
         \App\Console\Commands\EarnedLeaveAccrualCommand::class,
+        \App\Console\Commands\ScheduleHeartbeat::class,
     ];
 
     /**
@@ -33,6 +34,9 @@ class Kernel extends ConsoleKernel
          ->withoutOverlapping()
          ->runInBackground()
          ->appendOutputTo(storage_path('logs/el-accrual.log'));
+
+
+         $schedule->command('heartbeat:check')->everyMinute();
     }
 
     /**
