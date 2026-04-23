@@ -36,7 +36,7 @@ class Kernel extends ConsoleKernel
          ->appendOutputTo(storage_path('logs/el-accrual.log'));
 
 
-         $schedule->command('heartbeat:check')->everyMinute();
+        //$schedule->command('heartbeat:check')->everyMinute();
     }
 
     /**
