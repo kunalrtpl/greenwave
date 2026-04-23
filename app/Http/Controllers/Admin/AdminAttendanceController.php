@@ -49,8 +49,6 @@ class AdminAttendanceController extends Controller
             $filterDate = $today->toDateString();
         } elseif ($request->get('date') === '') {
             $filterDate = null;
-        } else {
-            $filterDate = $request->get('date');
         }
 
         $startOfMonth = Carbon::create($year, $month, 1)->startOfMonth();

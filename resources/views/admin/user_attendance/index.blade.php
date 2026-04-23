@@ -341,8 +341,7 @@
                 <a href="{{ url('admin/attendance') }}?month={{ now()->month }}&year={{ now()->year }}&date={{ $yestStr }}{{ request('employee_id') ? '&employee_id='.request('employee_id') : '' }}"
                    class="date-pill {{ $filterDate===$yestStr ? 'active' : '' }}">Yesterday</a>
                 {{-- Full Month stays on the browsed month --}}
-                <a href="{{ url('admin/attendance') }}?month={{ $month }}&year={{ $year }}{{ request('employee_id') ? '&employee_id='.request('employee_id') : '' }}"
-                   class="date-pill {{ is_null($filterDate) ? 'active' : '' }}">Full Month</a>
+                <a href="{{ url('admin/attendance') }}?month={{ $month }}&year={{ $year }}&date={{ request('employee_id') ? '&employee_id='.request('employee_id') : '' }}"class="date-pill {{ is_null($filterDate) ? 'active' : '' }}">Full Month</a>
             </div>
         </form>
     </div>
@@ -375,8 +374,15 @@
                     @endif
                 </div>
                 <a href="{{ url('admin/attendance/export-pdf/'.$emp->id) }}?month={{ $month }}&year={{ $year }}"
-                   class="btn-emp-pdf" title="Download PDF">
+                    class="btn-emp-pdf" title="Download PDF">
                     <i class="fa fa-file-pdf-o"></i> PDF
+                </a>
+                <a href="{{ url('admin/users/'.$emp->id.'/attendance-settings') }}"
+                   target="_blank"
+                   class="btn-emp-pdf"
+                   style="background:#f0f7ff;color:#1a5f9c;border-color:#b8d4ef;"
+                   title="Quota / Attendance Settings">
+                    <i class="fa fa-sliders"></i> Quota
                 </a>
                 <i class="fa fa-chevron-down acc-arrow" id="chev-{{ $emp->id }}"
                    onclick="toggleEmp({{ $emp->id }});event.stopPropagation();"></i>
