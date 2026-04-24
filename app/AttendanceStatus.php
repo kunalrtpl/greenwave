@@ -250,27 +250,34 @@ class AttendanceStatus
     }
 
     /**
-     * Compute the correct status for a half-day leave based on context:
-     * - Future date          → HALF_DAY_LEAVE
-     * - Today/Past, punched  → HALF_LEAVE (Present + Leave)
-     * - Today/Past, not punched → HALF_LEAVE_LWP (Leave + LWP)
+     * Compute the correct status for a half-day leave based on context.
+     *
+     * - Future date           → HALF_DAY_LEAVE  (leave planned, not happened yet)
+     * - Today, no punch yet   → HALF_DAY_LEAVE  (day not over, don't penalise yet)
+     * - Today/Past, punched   → HALF_LEAVE      (Present + Leave)
+     * - Past, no punch        → HALF_LEAVE_LWP  (Leave + LWP, day is over)
      */
-    public static function resolveHalfDayLeaveStatus(bool $isFuture, bool $hasPunch): string
-    {
-        if ($isFuture) return self::HALF_DAY_LEAVE;
+    public static function resolveHalfDayLeaveStatus(
+        bool $isFuture,
+        bool $hasPunch,
+        bool $isToday = false
+    ): string {
+        if ($isFuture || ($isToday && !$hasPunch)) return self::HALF_DAY_LEAVE;
         return $hasPunch ? self::HALF_LEAVE : self::HALF_LEAVE_LWP;
     }
 
     /**
-     * Given DB status from a leave-placeholder attendance row,
-     * resync based on whether the employee has actually punched in.
-     * Returns null if no resync needed.
+     * Resync a stored half-day status against actual punch state.
+     * Returns the corrected status string, or null if no change needed.
      */
-    public static function resyncHalfDayStatus(string $currentStatus, bool $hasPunch, bool $isFuture): ?string
-    {
+    public static function resyncHalfDayStatus(
+        string $currentStatus,
+        bool $hasPunch,
+        bool $isFuture,
+        bool $isToday = false
+    ): ?string {
         if (!self::isHalfDay($currentStatus)) return null;
-
-        $correct = self::resolveHalfDayLeaveStatus($isFuture, $hasPunch);
+        $correct = self::resolveHalfDayLeaveStatus($isFuture, $hasPunch, $isToday);
         return $correct !== $currentStatus ? $correct : null;
     }
 }

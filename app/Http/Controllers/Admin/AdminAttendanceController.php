@@ -216,7 +216,7 @@ class AdminAttendanceController extends Controller
                             return !is_null($r->in_time);
                         })->isNotEmpty();
                         
-                        $resynced = AttendanceStatus::resyncHalfDayStatus($computedStatus, $hasPunch, $isFuture);
+                        $resynced = AttendanceStatus::resyncHalfDayStatus($computedStatus, $hasPunch, $isFuture, $isToday);
                         if ($resynced) {
                             DB::table('user_attendances')
                                 ->where('user_id', $emp->id)->whereDate('in_date', $ds)
