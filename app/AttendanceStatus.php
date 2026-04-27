@@ -39,8 +39,8 @@ class AttendanceStatus
     const FULL_LEAVE      = 'Allowed Full Day Leave';
     const LWP_UNINF       = 'LWP (Uninformed Absence)';
     const LWP_UNAPP       = 'LWP (Unapproved Leave)';
-    const LWP_EXCESS      = 'LWP (Leave in excess of quota)';
-    const HOLIDAY         = 'Allowed Holiday';
+    const LWP_EXCESS      = 'LWP (Exceeds Quota)';
+    const HOLIDAY         = 'Holiday';
     const COMP_OFF        = 'Compensatory Weekly Off';
     const WEEKLY_OFF      = 'Weekly Off';
 

@@ -104,23 +104,24 @@
 .emp-n  { font-size: 15px; font-weight: 700; color: #1a2333; }
 .emp-m  { font-size: 13px; color: #7a8a9a; margin-top: 2px; display:flex; align-items:center; gap:4px; }
 .cat-t  { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; margin-top:6px; background:#edf3fb; color:#2d6faa; border:1px solid #cde0f4; }
-.miss-t { 
-    display: inline-flex; 
-    align-items: center; 
-    gap: 3px; 
-    font-size: 11px; 
-    font-weight: 700; 
-    padding: 3px 9px; 
-    border-radius: 20px; 
-    background: #d32f2f; /* Darker red for better contrast */
-    color: #ffffff;      /* Pure white text */
-    border: 1px solid #b71c1c; /* Deep red border to define the edge */
-    margin-left: 4px; 
+.miss-t {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 20px;
+    background: #d32f2f;
+    color: #ffffff;
+    border: 1px solid #b71c1c;
+    margin-left: 4px;
 }
 .missed-reason-txt { display:inline-flex; align-items:center; gap:4px; font-size:11px; color:#c47d00; background:#fff9ee; border:1px solid #ffe0a0; border-radius:6px; padding:3px 10px; margin-top:5px; max-width:190px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:default; }
 .remarks-txt { font-size:12px; color:#8a9ab5; font-style:italic; margin-top:5px; padding-top:5px; border-top:1px dashed #edf1f8; display:flex; align-items:flex-start; gap:4px; }
 
-.date-main { font-size:14px; font-weight:700; color:#1a2333; display:flex; align-items:center; gap:5px; }
+.date-main { font-size:14px; font-weight:700; color:#1a2333; display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+.date-day-badge { font-size:11px; font-weight:600; color:#6a7a8a; background:#f0f3f8; border-radius:4px; padding:1px 7px; margin-left:2px; letter-spacing:.2px; }
 .date-sub  { font-size:12px; color:#8a9ab5; margin-top:2px; display:flex; align-items:center; gap:4px; }
 .a-req  { font-size:17px; font-weight:800; color:#1a2333; }
 .a-apr  { font-size:17px; font-weight:800; color:#1e9e58; }
@@ -130,6 +131,7 @@
 .tr-km   { font-size:13px; font-weight:700; color:#3a7fc1; display:flex; align-items:center; gap:5px; }
 .tr-rt   { font-size:11px; color:#8a9ab5; margin-top:3px; display:flex; align-items:center; gap:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px; }
 
+/* View Visits button — default (green, has visits) */
 .btn-view-visits {
     display:inline-flex; align-items:center; gap:6px;
     background:#edf8f0; color:#1a9a50; border:1.5px solid #b8e6c8; border-radius:7px;
@@ -139,8 +141,16 @@
 }
 .btn-view-visits:hover { background:#1a9a50; color:#fff; border-color:#1a9a50; }
 .btn-view-visits:hover svg path, .btn-view-visits:hover svg circle, .btn-view-visits:hover svg rect { stroke:#fff !important; fill:#fff !important; }
+
+/* View Visits — green badge (has visits) */
 .vc-badge { background:#1a9a50; color:#fff; border-radius:10px; font-size:10px; font-weight:800; padding:1px 7px; min-width:20px; text-align:center; }
 .btn-view-visits:hover .vc-badge { background:#fff; color:#1a9a50; }
+
+/* View Visits — ZERO visits (red style) */
+.btn-view-visits.visits-zero { background:#feeaea; color:#c0392b; border-color:#f5c0c0; }
+.btn-view-visits.visits-zero:hover { background:#c0392b; color:#fff; border-color:#c0392b; }
+.btn-view-visits.visits-zero .vc-badge { background:#e74c3c; color:#fff; }
+.btn-view-visits.visits-zero:hover .vc-badge { background:#fff; color:#c0392b; }
 
 /* Receipt */
 .r-thumb { width:52px; height:52px; border-radius:8px; overflow:hidden; cursor:pointer; position:relative; border:2px solid #e4eaf3; background:#f4f7fb; display:inline-flex; align-items:center; justify-content:center; transition:border-color .2s, transform .2s, box-shadow .2s; vertical-align:middle; margin:2px; }
@@ -463,7 +473,9 @@ function svgico($id, $size=16, $extra='') {
             $altReceiptPath = !empty($expense->alternative_image) ? asset('ExpenseReceipts/'.$expense->user_id.'/'.$expense->alternative_image) : null;
             $qCount   = $queryCounts[$expense->id]       ?? 0;
             $unread   = $unreadQueryCounts[$expense->id] ?? 0;
-            $key = $expense->user_id . '_' . $expense->expense_date;
+            $key      = $expense->user_id . '_' . $expense->expense_date;
+            $vCount   = $visitCounts[$key] ?? 0;
+            $expDate  = \Carbon\Carbon::parse($expense->expense_date);
         @endphp
 
         <div class="exp-grid exp-row s-{{ $sk }}" id="row-{{ $expense->id }}">
@@ -481,7 +493,7 @@ function svgico($id, $size=16, $extra='') {
                     <span class="cat-t">{!! svgico('tag',10,'style="color:#4d8fcc"') !!}{{ $expense->category_name }}</span>
                     @if($expense->missed_entry)
                         <br><br>
-                        <span class="miss-t">{!! svgico('warn',10,'style="color:#c47d00"') !!}Missed</span>
+                        <span class="miss-t">{!! svgico('warn',10,'style="color:#fff"') !!}Missed</span>
                     @endif
                 </div>
                 @if($expense->missed_entry && !empty($expense->missed_entry_reason))
@@ -498,10 +510,14 @@ function svgico($id, $size=16, $extra='') {
                 @endif
             </div>
 
-            {{-- Date + Amount --}}
+            {{-- Date + Amount — CHANGED: added day name badge --}}
             <div class="dc">
-                <div class="date-main">{!! svgico('cal',13,'style="color:#8a9ab5"') !!}{{ \Carbon\Carbon::parse($expense->expense_date)->format('d M Y') }}</div>
-                <div class="date-sub">{!! svgico('clock',11,'style="color:#b0bcc8"') !!}{{ \Carbon\Carbon::parse($expense->created_at)->format('d M, h:i A') }}</div>
+                <div class="date-main">
+                    
+                    {{ $expDate->format('d M Y') }} ({{ $expDate->format('D') }})
+                    <span class="date-day-badge"></span>
+                </div>
+                <div class="date-sub">{{ \Carbon\Carbon::parse($expense->created_at)->format('d M, h:i A') }} ({{ \Carbon\Carbon::parse($expense->created_at)->format('D') }})</div>
                 <div style="margin-top:7px;"><span class="a-req">&#8377;{{ number_format($expense->requested_amount, 2) }}</span></div>
                 @if($expense->is_travel && !empty($expense->travel_km))
                 <div class="travel-sub">
@@ -509,13 +525,14 @@ function svgico($id, $size=16, $extra='') {
                     @if($expense->is_intercity && !empty($expense->intercity_route))
                         <div class="tr-rt">{!! svgico('map',10,'style="color:#b0bcc8"') !!}{{ $expense->intercity_route }}</div>
                     @endif
-                    <button class="btn-view-visits"
+                    {{-- CHANGED: red tint + red badge when 0 visits, green when > 0 --}}
+                    <button class="btn-view-visits {{ $vCount == 0 ? 'visits-zero' : '' }}"
                         data-user-id="{{ $expense->user_id }}"
                         data-date="{{ $expense->expense_date }}"
                         data-employee="{{ $expense->employee_name ?? 'Employee' }}"
                         title="View visits for this date">
-                        {!! svgico('map',13,'style="color:#1a9a50"') !!} View Visits
-                        <span class="vc-badge">{{ $visitCounts[$key] ?? 0 }}</span>
+                        {!! svgico('map',13,'style="color:currentColor"') !!} View Visits
+                        <span class="vc-badge">{{ $vCount }}</span>
                     </button>
                 </div>
                 @endif
@@ -568,7 +585,7 @@ function svgico($id, $size=16, $extra='') {
                 </button>
             </div>
 
-            {{-- Query —always-visible count --}}
+            {{-- Query — CHANGED: hide pill when count is 0 --}}
             <div class="qc">
                 <button class="btn-query btn-open-query {{ $unread>0?'has-unread':'' }}"
                     data-id="{{ $expense->id }}"
@@ -577,7 +594,11 @@ function svgico($id, $size=16, $extra='') {
                     title="Queries">
                     @if($unread>0)<span class="q-unread-dot"></span>@endif
                     {!! svgico('msg',15,'style="color:currentColor"') !!}
-                    <span class="q-count-pill" id="qcount-{{ $expense->id }}">{{ $unread>0?($unread>99?'99+':$unread):($qCount>99?'99+':$qCount) }}</span>
+                    <span class="q-count-pill"
+                          id="qcount-{{ $expense->id }}"
+                          style="{{ ($unread == 0 && $qCount == 0) ? 'display:none;' : '' }}">
+                        {{ $unread>0?($unread>99?'99+':$unread):($qCount>99?'99+':$qCount) }}
+                    </span>
                 </button>
             </div>
 
@@ -922,7 +943,7 @@ $(document).ready(function(){
         });
     });
 
-    /* ── Query modal — count always visible ── */
+    /* ── Query modal ── */
     $(document).on('click','.btn-open-query',function(){
         var id=$(this).data('id'), name=$(this).data('employee');
         $('#q_expense_id').val(id); $('#q_expense_id_label').text(id); $('#q_employee_name').text(name);
@@ -939,9 +960,15 @@ $(document).ready(function(){
                         var html=''; $.each(r.queries,function(i,q){ html+=renderBubble(q); });
                         $('#qChatBox').html(html); scrollChatBottom();
                     }
-                    /* Mark read: remove unread style + dot, but keep count showing total */
+                    /* Mark read: remove unread style + dot, update count pill */
                     $('#qbtn-'+id).removeClass('has-unread').find('.q-unread-dot').remove();
-                    $('#qcount-'+id).text(r.queries.length>99?'99+':r.queries.length);
+                    var total = r.queries.length;
+                    var $pill = $('#qcount-'+id);
+                    if(total > 0){
+                        $pill.text(total>99?'99+':total).show();
+                    } else {
+                        $pill.hide();
+                    }
                 }
             },
             error:function(){ $('#qChatBox').html('<div class="q-empty"><svg width="28" height="28" style="color:#e74c3c"><use href="#ico-warn"/></svg><span>Failed to load.</span></div>'); }
@@ -959,8 +986,9 @@ $(document).ready(function(){
                     $('#qChatBox .q-empty').remove();
                     $('#qChatBox').append(renderBubble(r.query)); scrollChatBottom();
                     $('#q_message').val('');
-                    var newTotal=r.total||parseInt($('#qcount-'+id).text())+1;
-                    $('#qcount-'+id).text(newTotal>99?'99+':newTotal);
+                    var newTotal = r.total || parseInt($('#qcount-'+id).text()||'0') + 1;
+                    /* CHANGED: show pill and update count when query is sent */
+                    $('#qcount-'+id).text(newTotal>99?'99+':newTotal).show();
                     notify('success','Query sent!');
                 } else { notify('error',r.message||'Failed to send.'); }
             },

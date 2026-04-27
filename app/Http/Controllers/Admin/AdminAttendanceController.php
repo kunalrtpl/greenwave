@@ -279,12 +279,14 @@ class AdminAttendanceController extends Controller
                 'leave_count'    => round($leaveCount, 1),
                 'lwp_count'      => round($lwpCount, 1),
                 'comp_off_count' => $compOffCount,
-                'working_days'   => $workingDays,
+                'working_days'   => round($presentCount + $leaveCount + $lwpCount, 1),
             ]);
         }
 
         $allEmployees = DB::table('users')->select('id', 'name', 'mobile')
-            ->where('status', 1)->where('type', 'employee')->orderBy('name')->get();
+            ->where('status', 1)->where('type', 'employee')
+            ->whereRaw("FIND_IN_SET('attendance', app_roles)")
+            ->orderBy('name')->get();
 
         return view('admin.user_attendance.index', compact(
             'employeeData', 'allEmployees', 'month', 'year', 'filterDate'
@@ -704,7 +706,7 @@ class AdminAttendanceController extends Controller
                 'leave_count'    => round($leaveCount, 1),
                 'lwp_count'      => round($lwpCount, 1),
                 'comp_off_count' => $compOffCount,
-                'working_days'   => $workingDays,
+                'working_days'   => round($presentCount + $leaveCount + $lwpCount, 1),
                 'financial_year' => $fy,
                 'quota_details'  => $quotaDetails,
             ]);

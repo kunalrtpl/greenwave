@@ -99,6 +99,7 @@ class UserExpenseController extends Controller
             ->select('id', 'name', 'mobile')
             ->where('status', 1)
             ->where('type', 'employee')
+            ->whereRaw("FIND_IN_SET('travel_n_expenses', app_roles)")
             ->orderBy('name')
             ->get();
 

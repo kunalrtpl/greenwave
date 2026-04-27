@@ -591,13 +591,13 @@
                     'Present'                          => ['icon'=>'fa-check-circle',       'cls'=>'sel-present'],
                     '1/2 Present + 1/2 LWP'           => ['icon'=>'fa-adjust',             'cls'=>'sel-lwp'],
                     '1/2 Present + 1/2 Leave'         => ['icon'=>'fa-adjust',             'cls'=>'sel-half'],
-                    '1/2 Day Leave'                    => ['icon'=>'fa-calendar-minus-o',   'cls'=>'sel-leave'],
+                    '1/2 Day Leave'                    => ['icon'=>'fa-calendar-o',   'cls'=>'sel-leave'],
                     '1/2 Leave + 1/2 LWP'             => ['icon'=>'fa-adjust',             'cls'=>'sel-lwp'],
                     'Allowed Full Day Leave'           => ['icon'=>'fa-calendar-o',         'cls'=>'sel-leave'],
                     'LWP (Uninformed Absence)'         => ['icon'=>'fa-ban',                'cls'=>'sel-lwp'],
                     'LWP (Unapproved Leave)'           => ['icon'=>'fa-ban',                'cls'=>'sel-lwp'],
-                    'LWP (Leave in excess of quota)'   => ['icon'=>'fa-exclamation-circle', 'cls'=>'sel-lwp'],
-                    'Allowed Holiday'                  => ['icon'=>'fa-sun-o',              'cls'=>'sel-holiday'],
+                    'LWP (Exceeds Quota)'   => ['icon'=>'fa-exclamation-circle', 'cls'=>'sel-lwp'],
+                    'Holiday'                  => ['icon'=>'fa-sun-o',              'cls'=>'sel-holiday'],
                     'Compensatory Weekly Off'          => ['icon'=>'fa-exchange',           'cls'=>'sel-compoff'],
                     'Weekly Off'                       => ['icon'=>'fa-home',               'cls'=>'sel-weekly'],
                 ];
@@ -608,6 +608,9 @@
                     @php
                         $meta = $stMeta[$stVal] ?? ['icon'=>'fa-circle', 'cls'=>''];
                     @endphp
+                    @if($loop->index > 0 && $loop->index % 2 === 0)
+                        <div class="clearfix"></div>
+                    @endif
                     <div class="col-md-6" style="margin-bottom:4px;">
                         <div class="st-opt" data-v="{{ $stVal }}" data-cls="{{ $meta['cls'] }}" onclick="pickSt(this)">
                             <i class="fa {{ $meta['icon'] }}" style="margin-right:5px;width:14px;text-align:center;"></i>{{ $stVal }}
