@@ -152,8 +152,9 @@
                 <div class="greeting-box">
                     <div class="greeting-name">Dear {{ $po->dealer->name ?? ($po->dealer->business_name ?? 'Valued Dealer') }},</div>
                     <div class="greeting-body">
-                        Your Purchase Order has been successfully received and is now under review by our team.
-                        Here is a summary of the items you ordered. We will notify you as soon as it is processed.
+                        Your Purchase Order has been successfully received and is now under review by our team. Here is a summary of the items you ordered. We will notify you as soon as it is processed.
+
+                        Please note that prices are subject to change based on availability. Final pricing will be confirmed and shared with you once your Purchase Order has been approved.
                     </div>
                 </div>
             </td>
@@ -265,16 +266,16 @@
                             <tr>
                                 <td valign="top" style="width: 33%; padding-right: 8px;">
                                     <div class="next-card">
-                                        <div class="next-card-icon">📥</div>
-                                        <div class="next-card-title">Received</div>
-                                        <div class="next-card-body">PO logged in our system</div>
+                                        <div class="next-card-icon">🔍</div>
+                                        <div class="next-card-title">Under Review</div>
+                                        <div class="next-card-body">Team verifies quantities</div>
                                     </div>
                                 </td>
                                 <td valign="top" style="width: 33%; padding-right: 8px;">
                                     <div class="next-card">
-                                        <div class="next-card-icon">🔍</div>
-                                        <div class="next-card-title">Under Review</div>
-                                        <div class="next-card-body">Team verifies quantities</div>
+                                        <div class="next-card-icon">✅</div>
+                                        <div class="next-card-title">Approved</div>
+                                        <div class="next-card-body">PO confirmed & pricing shared</div>
                                     </div>
                                 </td>
                                 <td valign="top" style="width: 33%;">

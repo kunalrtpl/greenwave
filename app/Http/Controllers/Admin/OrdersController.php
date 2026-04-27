@@ -577,7 +577,6 @@ class OrdersController extends Controller
     // ─────────────────────────────────────────────────────────────
     // UPDATED METHOD
     // ─────────────────────────────────────────────────────────────
-
     public function UpdateDealerPoQty(Request $request)
     {
         if ($request->isMethod('post')) {
@@ -631,6 +630,36 @@ class OrdersController extends Controller
 
                 $subtotal += $calculatedNetPrice * $data['actual_qtys'][$ikey];
 
+                // ── ProductPricing entry 
+
+                $today = \Carbon\Carbon::today()->toDateString(); // e.g. 2026-04-27
+
+                // Fetch the latest existing pricing for this product
+                // whose price_date is <= today (ignore future-dated entries)
+                $latestPricing = DB::table('product_pricings')
+                    ->where('product_id', $itemDetails->product_id)
+                    ->where('price_date', '<=', $today)
+                    ->orderBy('price_date', 'desc')
+                    ->orderBy('id', 'desc')
+                    ->first();
+
+                // Only insert if dealer_price differs from last known price
+                // (avoids duplicate entries if same price was already saved)
+                $lastKnownPrice = $latestPricing ? (float) $latestPricing->dealer_price : null;
+                if ($lastKnownPrice === null || $lastKnownPrice != $dealerPrice) {
+                    DB::table('product_pricings')->insert([
+                        'product_id'    => $itemDetails->product_id,
+                        'dealer_price'  => $dealerPrice,
+                        'market_price'  => 0,
+                        'dealer_markup' => 0,
+                        'price_date'    => $today,
+                        'created_at'    => \Carbon\Carbon::now(),
+                        'updated_at'    => \Carbon\Carbon::now(),
+                    ]);
+                }
+                
+                // ── End ProductPricing ───────────────────────────────────────
+
                 // Dealer pending orders
                 $dealerProd = DB::table('dealer_products')
                     ->where(['dealer_id' => $data['dealer_id'], 'product_id' => $itemDetails->product_id])
@@ -662,7 +691,7 @@ class OrdersController extends Controller
 
             DB::commit();
 
-             // ── Send Approval Email to Dealer ─────────────────────────────────
+            // ── Send Approval Email to Dealer ─────────────────────────────────
             $poForEmail  = PurchaseOrder::with([
                 'dealer',
                 'orderitems.product',
@@ -670,11 +699,11 @@ class OrdersController extends Controller
             ])->find($data['purchase_order_id']);
 
             $dealerEmail = $poForEmail->dealer ? $poForEmail->dealer->email : null;
-            $dealerEmail = "mkanum786@gmail.com";
+            $dealerEmail = "mkanum786@gmail.com"; // later on we need to change
             EmailService::send(
-                'po_dealer_approved',          // event_key in email_templates table
-                ['po' => $poForEmail],         // passed to blade view
-                $dealerEmail                   // TO — dynamic from PO
+                'po_dealer_approved',
+                ['po' => $poForEmail],
+                $dealerEmail
             );
             // ── End Email ─────────────────────────────────
 
