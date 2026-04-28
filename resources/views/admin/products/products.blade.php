@@ -90,7 +90,15 @@
                                         <td>
                                             <input type="text" class="form-control form-filter input-sm" name="product_name" placeholder="Product Name">
                                         </td>
-                                        <td></td>
+                                        <td>
+                                            <div class="form-group">
+                                                <select class="form-control form-filter input-sm" name="not_available">
+                                                    <option value="-1">All</option>
+                                                    <option value="1">Yes</option>
+                                                    <option value="0">No</option>
+                                                </select>
+                                            </div>
+                                        </td>
                                         <td></td>
                                         <td></td>
                                         <!-- <td></td> -->

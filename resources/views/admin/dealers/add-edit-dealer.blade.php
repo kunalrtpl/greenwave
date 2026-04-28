@@ -57,7 +57,7 @@
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label class="col-md-3 control-label">Dealer Authentication <span class="asteric">*</span></label>
+                                    <label class="col-md-3 control-label">Authorized Dealer <span class="asteric">*</span></label>
                                     <div class="col-md-4" style="margin-top:8px;">
                                         <label>
                                             <input type="radio" name="is_authenticated" value="1" 

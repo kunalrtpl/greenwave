@@ -44,6 +44,9 @@ class ProductsController extends Controller
             if(!empty($data['hsn_code'])){
                 $querys = $querys->where('hsn_code','like','%'.$data['hsn_code'].'%');
             }
+            if(isset($data['not_available']) && $data['not_available'] >= 0){
+                $querys = $querys->where('not_available', $data['not_available']);
+            }
             if(!empty($data['status'])){
                 if($data['status'] =="Active"){
                     $querys = $querys->where('status',1);
