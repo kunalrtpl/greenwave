@@ -65,9 +65,9 @@
                                         <th class="text-right">
                                             Dealer Price
                                         </th>
-                                        <th class="text-right">
+                                        <!-- <th class="text-right">
                                             Market Price
-                                        </th>
+                                        </th> -->
                                         <th class="text-center">
                                             Status
                                         </th>
@@ -93,7 +93,7 @@
                                         <td></td>
                                         <td></td>
                                         <td></td>
-                                        <td></td>
+                                        <!-- <td></td> -->
                                         <td>
                                             <div class="form-group">
                                                 <select class="form-control form-filter input-sm" name="status">

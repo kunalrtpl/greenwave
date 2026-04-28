@@ -168,7 +168,7 @@ class ProductsController extends Controller
                     $not_available_checkbox,   // <--- NEW column here
                     (!empty($product['version']) ?  $product['version'] : ''),
                     '<div style="text-align:right;">'.$dealer_price.'</div>',
-                    '<div style="text-align:right;">'.$market_price.'</div>',
+                    /*'<div style="text-align:right;">'.$market_price.'</div>',*/
                     '<div  id="'.$product['id'].'" rel="products" class="bootstrap-switch  bootstrap-switch-'.$checked.'  bootstrap-switch-wrapper bootstrap-switch-animate toogle_switch">
                     <div class="bootstrap-switch-container" ><span class="bootstrap-switch-handle-on bootstrap-switch-primary">&nbsp;Active&nbsp;&nbsp;</span><label class="bootstrap-switch-label">&nbsp;</label><span class="bootstrap-switch-handle-off bootstrap-switch-default">&nbsp;Inactive&nbsp;</span></div></div>',   
                     $actionValues
