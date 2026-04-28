@@ -236,13 +236,6 @@
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label class="col-md-3 control-label">Travel Charges (Per KM). </label>
-                                    <div class="col-md-4">
-                                        <input  type="number" placeholder="Travel Charges (Per KM)" name="travel_charges_per_km" style="color:gray" class="form-control" value="{{(!empty($empdata['travel_charges_per_km']))?$empdata['travel_charges_per_km']: '' }}"/>
-                                        <h4 class="text-center text-danger pt-3" style="display: none;" id="Employee-travel_charges_per_km"></h4>
-                                    </div>
-                                </div>
-                                <div class="form-group">
                                     <label class="col-md-3 control-label">Status <span class="asteric">*</span></label>
                                     <div class="col-md-4" style="margin-top:8px;">
                                         <?php $statusArr = array('1'=>'Active','0'=>'Inactive') ?>
@@ -443,8 +436,6 @@
                                     </select>
                                 </div>
                             </div>
-
-                            
                             <span id="AppAccessArea" @if(isset($empdata['app_access']) && $empdata['app_access'] =="Yes") @else style="display:none;" @endif>
                                 <div class="form-group">
                                     <label class="col-md-3 control-label">Modules to Access? <b class="red">({{count($selAppRoles)}})</b> <span class="asteric">*</span></label>
@@ -482,6 +473,13 @@
                                             </div>
                                         </div>
                                        
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-md-3 control-label">Travel Charges (Per KM). </label>
+                                    <div class="col-md-4">
+                                        <input  type="number" placeholder="Travel Charges (Per KM)" name="travel_charges_per_km" style="color:gray" class="form-control" value="{{(!empty($empdata['travel_charges_per_km']))?$empdata['travel_charges_per_km']: '' }}"/>
+                                        <h4 class="text-center text-danger pt-3" style="display: none;" id="Employee-travel_charges_per_km"></h4>
                                     </div>
                                 </div>
                             </span>

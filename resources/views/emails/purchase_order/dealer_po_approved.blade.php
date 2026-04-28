@@ -195,7 +195,7 @@
         <tr>
             <td class="section">
                 <div class="greeting-box">
-                    <div class="greeting-name">Dear {{ $po->dealer->business_name ?? ($po->dealer->name ?? 'Valued Dealer') }},</div>
+                    <div class="greeting-name">Dear Dealer,</div>
                     <div class="greeting-body">
                         Great news! Your Purchase Order has been <strong>reviewed and approved</strong> by our team.
                         Please find the complete order summary below including approved quantities and pricing details.
@@ -487,7 +487,7 @@
                     </div>
                     <div class="footer-divider"></div>
                     <div class="footer-text">
-                        For any queries regarding your approved order, please contact us.
+                        For any queries or support, please contact Greenwave Office Team.
                     </div>
                     <div class="footer-note">This is an automated email from Greenwave System. Please do not reply.</div>
                 </div>

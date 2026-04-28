@@ -150,11 +150,11 @@
         <tr>
             <td class="section">
                 <div class="greeting-box">
-                    <div class="greeting-name">Dear {{ $po->dealer->name ?? ($po->dealer->business_name ?? 'Valued Dealer') }},</div>
+                    <div class="greeting-name">Dear Dealer,</div>
                     <div class="greeting-body">
                         Your Purchase Order has been successfully received and is now under review by our team. Here is a summary of the items you ordered. We will notify you as soon as it is processed.
 
-                        Please note that prices are subject to change based on availability. Final pricing will be confirmed and shared with you once your Purchase Order has been approved.
+                        Please note that prices are subject to change based on availability. Final pricing & approved quantity will be confirmed and shared with you once your PO is approved.
                     </div>
                 </div>
             </td>
@@ -303,8 +303,7 @@
                     </div>
                     <div class="footer-divider"></div>
                     <div class="footer-text">
-                        For any queries, please contact your account manager<br>
-                        or your nearest Greenwave office.
+                        For any queries or support, please contact Greenwave Office Team.
                     </div>
                     <div class="footer-note">This is an automated email from Greenwave System. Please do not reply.</div>
                 </div>
