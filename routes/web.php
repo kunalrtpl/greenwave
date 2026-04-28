@@ -225,6 +225,7 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 		Route::match(['get', 'post'], '/get-product-inherit-layout', 'ProductsController@getProductInheritLayout');
 		Route::match(['get', 'post'], '/add-more-raw-material', 'ProductsController@addMoreRawMaterial');
 		Route::match(['get', 'post'], '/calculate-rm-cost', 'ProductsController@calculateRMCost');
+		Route::post('/products/toggle-not-available', 'ProductsController@toggleNotAvailable');
 		/*Product Routes Ends*/
 
 

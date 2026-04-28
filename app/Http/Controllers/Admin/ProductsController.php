@@ -150,11 +150,22 @@ class ProductsController extends Controller
                         }
                     }
                 }
+
+                // Add this before the version entry in records["data"][]
+                $not_available_checkbox = '<div style="text-align:center;">
+                    <input type="checkbox" 
+                           class="not_available_toggle" 
+                           data-id="'.$product['id'].'" 
+                           '.($product['not_available'] == 1 ? 'checked' : '').'
+                    >
+                </div>';
+
                 $records["data"][] = array(      
                     '<div style="text-align:center;">'.$num.'</div>',
                     $pro_type,
                     $product['product_name']
                     . '<br><small>Order Size id: ' . $product['packing_size_id'] . '</small>',
+                    $not_available_checkbox,   // <--- NEW column here
                     (!empty($product['version']) ?  $product['version'] : ''),
                     '<div style="text-align:right;">'.$dealer_price.'</div>',
                     '<div style="text-align:right;">'.$market_price.'</div>',
@@ -170,6 +181,17 @@ class ProductsController extends Controller
         }
         $title = "Products";
         return View::make('admin.products.products')->with(compact('title'));
+    }
+
+    public function toggleNotAvailable(Request $request)
+    {
+        $product = Product::find($request->product_id);
+        if ($product) {
+            $product->not_available = $request->not_available;
+            $product->save();
+            return response()->json(['status' => 'success']);
+        }
+        return response()->json(['status' => 'error'], 404);
     }
 
     public function addEditProduct(Request $request,$productid=NULL){

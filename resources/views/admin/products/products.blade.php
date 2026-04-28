@@ -55,6 +55,7 @@
                                         <th>
                                             Product Name
                                         </th>
+                                        <th class="text-center">Not Available</th> 
                                          <th>
                                             Version
                                         </th>
@@ -92,6 +93,7 @@
                                         <td></td>
                                         <td></td>
                                         <td></td>
+                                        <td></td>
                                         <td>
                                             <div class="form-group">
                                                 <select class="form-control form-filter input-sm" name="status">
@@ -120,6 +122,28 @@
     </div>
 </div>
 <script type="text/javascript">
+    $(document).on('change', '.not_available_toggle', function() {
+        var productId = $(this).data('id');
+        var value = $(this).is(':checked') ? 1 : 0;
+
+        $.ajax({
+            url: '/admin/products/toggle-not-available',
+            type: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}',
+                product_id: productId,
+                not_available: value
+            },
+            success: function(response) {
+                if(response.status == 'success') {
+                    // optional: show a small toast or do nothing
+                }
+            },
+            error: function() {
+                alert('Failed to update. Please try again.');
+            }
+        });
+    });
     window.history.pushState("", "", "/admin/products");
 </script>
 @stop
