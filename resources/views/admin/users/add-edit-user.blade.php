@@ -372,6 +372,45 @@
                             @endif
                             <hr class="bold-hr">
                             <div class="form-group">
+                                <label class="col-md-3 control-label"> Show Weightage <span class="asteric">*</span></label>
+                                <div class="col-md-4">
+                                    <select class="form-control" name="show_weightage">
+                                        <option value="">Please Select</option>
+                                        @foreach(classes() as $form=> $showWeightage)
+                                            <option value="{{$showWeightage}}" @if(empty($empdata) ) @if($pkey==1) selected @endif @else @if($empdata['show_weightage'] ==$showWeightage) selected @endif @endif>{{$showWeightage}}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="col-md-3 control-label">
+                                    Conveyance Selection Allowed <span class="asteric">*</span>
+                                </label>
+                                <div class="col-md-4">
+                                    <select class="form-control" name="conveyance_selection_allowed">
+                                        <option value="">Please Select</option>
+
+                                        <option value="1"
+                                            @if(empty($empdata))
+                                                selected
+                                            @else
+                                                @if($empdata['conveyance_selection_allowed'] == 1) selected @endif
+                                            @endif>
+                                            Yes
+                                        </option>
+
+                                        <option value="0"
+                                            @if(!empty($empdata))
+                                                @if($empdata['conveyance_selection_allowed'] == 0) selected @endif
+                                            @endif>
+                                            No
+                                        </option>
+
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
                                 <label class="col-md-3 control-label"> Web Access</label>
                                 <div class="col-md-4">
                                     <select class="form-control" name="web_access" required>
@@ -382,7 +421,7 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="form-group" id="web-password-group" style="display: none;">
+                            <!-- <div class="form-group" id="web-password-group" style="display: none;">
                                 <label class="col-md-3 control-label">Web Password</label>
                                 <div class="col-md-4">
                                     <input type="password" placeholder="Password" name="password" style="color:gray" class="form-control"/>
@@ -391,7 +430,7 @@
                                     @endif
                                     <h4 class="text-center text-danger pt-3" style="display: none;" id="Employee-password"></h4>
                                 </div>
-                            </div>
+                            </div> -->
 
                             <div class="form-group">
                                 <label class="col-md-3 control-label"> App Access</label>
@@ -407,83 +446,6 @@
 
                             
                             <span id="AppAccessArea" @if(isset($empdata['app_access']) && $empdata['app_access'] =="Yes") @else style="display:none;" @endif>
-                                <div class="form-group">
-                                    <label class="col-md-3 control-label"> Show Weightage <span class="asteric">*</span></label>
-                                    <div class="col-md-4">
-                                        <select class="form-control" name="show_weightage">
-                                            <option value="">Please Select</option>
-                                            @foreach(classes() as $form=> $showWeightage)
-                                                <option value="{{$showWeightage}}" @if(empty($empdata) ) @if($pkey==1) selected @endif @else @if($empdata['show_weightage'] ==$showWeightage) selected @endif @endif>{{$showWeightage}}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-3 control-label"> Show Class <span class="asteric">*</span></label>
-                                    <div class="col-md-4">
-                                        <select class="form-control" name="show_class">
-                                            <option value="">Please Select</option>
-                                            @foreach(classes() as $pkey=> $showclass)
-                                                <option value="{{$showclass}}" @if(empty($empdata) ) @if($pkey==1) selected @endif @else @if($empdata['show_class'] ==$showclass) selected @endif @endif>{{$showclass}}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-3 control-label">
-                                        Conveyance Selection Allowed <span class="asteric">*</span>
-                                    </label>
-                                    <div class="col-md-4">
-                                        <select class="form-control" name="conveyance_selection_allowed">
-                                            <option value="">Please Select</option>
-
-                                            <option value="1"
-                                                @if(empty($empdata))
-                                                    selected
-                                                @else
-                                                    @if($empdata['conveyance_selection_allowed'] == 1) selected @endif
-                                                @endif>
-                                                Yes
-                                            </option>
-
-                                            <option value="0"
-                                                @if(!empty($empdata))
-                                                    @if($empdata['conveyance_selection_allowed'] == 0) selected @endif
-                                                @endif>
-                                                No
-                                            </option>
-
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-3 control-label">
-                                        Should Verify Visit <span class="asteric">*</span>
-                                    </label>
-                                    <div class="col-md-4">
-                                        <select class="form-control" name="should_verify_visit">
-                                            <option value="">Please Select</option>
-
-                                            <option value="1"
-                                                @if(empty($empdata))
-                                                    selected
-                                                @else
-                                                    @if($empdata['should_verify_visit'] == 1) selected @endif
-                                                @endif>
-                                                Yes
-                                            </option>
-
-                                            <option value="0"
-                                                @if(!empty($empdata))
-                                                    @if($empdata['should_verify_visit'] == 0) selected @endif
-                                                @endif>
-                                                No
-                                            </option>
-
-                                        </select>
-                                    </div>
-                                </div>
-
                                 <div class="form-group">
                                     <label class="col-md-3 control-label">Modules to Access? <b class="red">({{count($selAppRoles)}})</b> <span class="asteric">*</span></label>
                                     <div class="col-md-6">

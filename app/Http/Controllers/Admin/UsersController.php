@@ -254,17 +254,17 @@ class UsersController extends Controller
                     $user->mobile = $data['mobile'];
                     $user->status = $data['status'];
                     $user->pan = $data['pan'];
-                    $user->show_class = $data['show_class'];
+                    //$user->show_class = $data['show_class'];
                     $user->show_weightage = $data['show_weightage'];
                     $user->driving_license = $data['driving_license'];
                     $user->salary_account_no = $data['salary_account_no'];
                     $user->web_access = $data['web_access'];
                     $user->app_access = $data['app_access'];
                     $user->conveyance_selection_allowed = $data['conveyance_selection_allowed'];
-                    $user->should_verify_visit = $data['should_verify_visit'];
-                    if(!empty($data['password'])){
+                    //$user->should_verify_visit = $data['should_verify_visit'];
+                    /*if(!empty($data['password'])){
                         $user->password = bcrypt($data['password']);
-                    }
+                    }*/
                     if($request->hasFile('image')){
                         $file = $request->file('image');
                         $img = Image::make($file);
