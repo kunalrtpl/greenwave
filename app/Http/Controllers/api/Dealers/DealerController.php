@@ -110,6 +110,11 @@ class DealerController extends Controller
             $dealer = Dealer::with(['contact_persons','linked_products','parent_dealer_info'])->where(['owner_mobile'=>$data['mobile']])->first();
             if(is_object($dealer)){
                 if($data['step'] == 1){
+                    
+                    if($dealer->is_authenticated == 0){
+                        $data['mobile'] = $dealer->auth_mobile;
+                    }
+
                     if($data['mobile'] == "9898989898" || $data['mobile'] == "9876543210" || $data['mobile'] =="9988771234" || $data['mobile'] =="7887880136"){
                         $otp = 123456;
                     }else{

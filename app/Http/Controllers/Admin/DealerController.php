@@ -175,10 +175,12 @@ class DealerController extends Controller
                         /*'owner_name'   =>  'bail|required',*/
                         //'base_sale_margin_lock'   =>  'bail|required',
                         'owner_mobile' => 'bail|required|numeric|digits:10|'.$mobileunique,
-                        'payment_term' => 'bail|numeric',
+                        'payment_term' => 'bail|required|numeric',
                         'security_amount' => 'bail|regex:/^\d+(\.\d{1,2})?$/',
                         'credit_multiple' => 'bail|regex:/^\d+(\.\d{1,2})?$/',
                         'credit_allowed' => 'bail|regex:/^\d+(\.\d{1,2})?$/',
+                        'is_authenticated' => 'bail|required|in:0,1',
+                        'auth_mobile'      => 'bail|nullable|numeric|digits:10',
                         /*'base_sale_level_to_archive' => 'bail|required_if:base_sale_margin_lock,==,Applicable|nullable|regex:/^\d+(\.\d{1,2})?$/',
                         'freight' => 'bail|required|regex:/^\d+(\.\d{1,2})?$/',
                         'interest_rate_on_security' => 'bail|required|regex:/^\d+(\.\d{1,2})?$/|lte:99',
@@ -242,6 +244,15 @@ class DealerController extends Controller
                     if (isset($data['operating_cities'])) {
                         $operatingCities = $data['operating_cities'];
                         unset($data['operating_cities']); // IMPORTANT
+                    }
+                    // Set default auth_mobile if is_authenticated is 0 but no auth_mobile provided
+                    if (isset($data['is_authenticated']) && $data['is_authenticated'] == 0) {
+                        if (empty($data['auth_mobile'])) {
+                            $data['auth_mobile'] = $data['owner_mobile'] ?? '7837329321';
+                        }
+                    } else {
+                        // If authenticated = yes, clear auth_mobile
+                        $data['auth_mobile'] = null;
                     }
                     foreach($data as $dkey=> $dealerinfo){
                         $dealer->$dkey = $dealerinfo;
