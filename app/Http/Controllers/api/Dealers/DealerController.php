@@ -467,7 +467,7 @@ class DealerController extends Controller
 		    return response()->json(apiErrorResponse($message),422); 
     	}
     }
-
+    //using this in app
     public function V2customers(Request $request)
     {
         if (!$request->isMethod('post')) {
@@ -491,6 +491,13 @@ class DealerController extends Controller
             'dealer.contact_persons',
             'dealer.linked_products.product.pricings',
         ])
+        ->select(
+            'id','name','contact_person_name','mobile','email','dealer_id',
+            'category','activity','address','payment_term','payment_term_type',
+            'payment_discount','is_spsod','is_monthly_turnover_discount',
+            'customer_product_type','business_model','status','latitude',
+            'longitude','location_address','business_card','business_card_two'
+        )
         ->whereIn('dealer_id', $dealerIds)
         ->where('status', 1)
         ->get();
@@ -541,17 +548,17 @@ class DealerController extends Controller
                     ] : null,
                 ]),
                 'dealer' => $customer->dealer ? [
-                    'id'             => $customer->dealer->id,
-                    'business_name'  => $customer->dealer->business_name,
-                    'name'           => $customer->dealer->name,
-                    'city'           => $customer->dealer->city,
-                    'basic_discount' => $customer->dealer->basic_discount,
-                    'payment_term'   => $customer->dealer->payment_term,
-                    'freight'        => $customer->dealer->freight,
-                    'show_class'     => $customer->dealer->show_class,
-                    'product_types'  => $customer->dealer->product_types,
-                    'linked_dealers' => $customer->dealer->linked_dealers,
-                    'app_roles'      => $customer->dealer->app_roles,
+                    'id'              => $customer->dealer->id,
+                    'business_name'   => $customer->dealer->business_name,
+                    'name'            => $customer->dealer->name,
+                    'city'            => $customer->dealer->city,
+                    'basic_discount'  => $customer->dealer->basic_discount,
+                    'payment_term'    => $customer->dealer->payment_term,
+                    'freight'         => $customer->dealer->freight,
+                    'show_class'      => $customer->dealer->show_class,
+                    'product_types'   => $customer->dealer->product_types,
+                    'linked_dealers'  => $customer->dealer->linked_dealers,
+                    'app_roles'       => $customer->dealer->app_roles,
                     'contact_persons' => $customer->dealer->contact_persons->map(fn($c) => [
                         'id'          => $c->id,
                         'name'        => $c->name,
@@ -582,8 +589,17 @@ class DealerController extends Controller
         $productsQuery = Product::with([
             'productpacking',
             'pricings',
-            'product_stages'
-        ])->where('status', 1);
+            'product_stages',
+        ])
+        ->select(
+            'id','product_name','product_code','short_description','suggested_dosage',
+            'physical_form','is_trader_product','moq','shelf_life','stage',
+            'show_class','show_weightage','gots_certification','zdhc_certification',
+            'zdhc_pid','oekotex_certified','packing_size_id','packing_type_id',
+            'technical_literature','msds','additional_information','status',
+            'product_detail_id','product_detail_info'
+        )
+        ->where('status', 1);
 
         if (!empty($data['product_types'])) {
             $productsQuery->whereIn('is_trader_product', explode(',', $data['product_types']));
@@ -608,6 +624,7 @@ class DealerController extends Controller
                 'gots_certification'     => $product->gots_certification,
                 'zdhc_certification'     => $product->zdhc_certification,
                 'zdhc_pid'               => $product->zdhc_pid,
+                'oekotex_certified'      => $product->oekotex_certified,
                 'additional_information' => $product->additional_information,
                 'medias'                 => $product->medias,
                 'certificates'           => $product->certificates,
@@ -635,16 +652,27 @@ class DealerController extends Controller
                 ]),
             ];
         });
-        
-
 
         $discounts = \App\ProductDiscount::get();
 
-        return response()->json(apiSuccessResponse('Customers Fetched successfully', [
+        $responseData = apiSuccessResponse('Customers Fetched successfully', [
             'customers'         => $getCustomers,
             'products'          => $products,
             'product_discounts' => $discounts,
-        ]), 200);
+        ]);
+
+        return response()->stream(function () use ($responseData) {
+            if (ob_get_level() > 0) {
+                ob_end_flush();
+            }
+            echo json_encode($responseData);
+            flush();
+        }, 200, [
+            'Content-Type'      => 'application/json',
+            'X-Accel-Buffering' => 'no',
+            'Cache-Control'     => 'no-cache',
+            'Connection'        => 'keep-alive',
+        ]);
     }
 
     public function purchaseOrder(Request $request){
