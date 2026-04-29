@@ -424,59 +424,222 @@ class DealerController extends Controller
         }
     }
 
-    public function customers(Request $request)
+    //not using in current app
+    public function customers(Request $request){
+    	if($request->isMethod('post')){
+			$resp = $this->resp;
+    		if($resp['status']){
+                $data = $request->all();
+    			if(isset($resp['dealer'])){
+    				$message ='Customers Fetched successfully';
+                    $dealerIds = Dealer::getParentChildDealers($resp['dealer']);
+    				$getCustomers = Customer::with(['corporate_discount','product_discounts','employees','user_customer_shares','dealer'])->whereIN('dealer_id',$dealerIds)->where('status',1)->get();
+                    $products = Product::with(['productpacking','pricings','product_stages'])->where('status',1);
+                    if(isset($data['product_types']) && !empty($data['product_types'])) {
+                        $productTypes = explode(',',$data['product_types']);
+                        $products = $products->whereIn('is_trader_product',$productTypes);
+                    }else{
+                        $products = $products->where('is_trader_product',0);
+                    }
+                    $products = $products->get();
+                    $products = json_decode(json_encode($products),true);
+                    foreach($products as $pkey => $product){
+                        foreach($product['pricings'] as $pricekey=> $proprice){
+                            $class = geClass($proprice['dealer_markup']);
+                            $products[$pkey]['pricings'][$pricekey]['class'] =$class; 
+                        }
+                    }
+    				$result['customers'] = $getCustomers;
+                    $result['products'] = $products;
+                    $discounts = \App\ProductDiscount::get();
+                    $result['product_discounts'] = $discounts;
+    				return response()->json(apiSuccessResponse($message,$result),200);
+    			}else{
+    				$message = "Unable to fetch. PLease try again after sometime";
+		    		return response()->json(apiErrorResponse($message),422);
+    			}
+    		}else{
+    			$message = "Unable to fetch. PLease try again after sometime";
+		    	return response()->json(apiErrorResponse($message),422);
+    		}
+    	}else{
+    		$message = "GET not supported for this route";
+		    return response()->json(apiErrorResponse($message),422); 
+    	}
+    }
+
+    public function V2customers(Request $request)
     {
         if (!$request->isMethod('post')) {
             return response()->json(apiErrorResponse("GET not supported for this route"), 422);
         }
 
         $resp = $this->resp;
-
         if (!$resp['status'] || !isset($resp['dealer'])) {
             return response()->json(apiErrorResponse("Unable to fetch. Please try again after sometime"), 422);
         }
 
         $data = $request->all();
 
-        // Step 1: Get dealer IDs
         $dealerIds = Dealer::getParentChildDealers($resp['dealer']);
 
-        // Step 2: Fetch customers with eager loading
         $getCustomers = Customer::with([
             'corporate_discount',
             'product_discounts',
             'employees',
-            'user_customer_shares',
-            'dealer'
+            'user_customer_shares.user',
+            'dealer.contact_persons',
+            'dealer.linked_products.product.pricings',
         ])
         ->whereIn('dealer_id', $dealerIds)
         ->where('status', 1)
         ->get();
 
-        // Step 3: Build products query
-        $productsQuery = Product::with([
-            'productpacking',
-            'pricings',
-            'product_stages'
-        ])->where('status', 1);
+        $getCustomers = $getCustomers->map(function ($customer) {
+            return [
+                'id'                           => $customer->id,
+                'name'                         => $customer->name,
+                'contact_person_name'          => $customer->contact_person_name,
+                'mobile'                       => $customer->mobile,
+                'email'                        => $customer->email,
+                'dealer_id'                    => $customer->dealer_id,
+                'category'                     => $customer->category,
+                'activity'                     => $customer->activity,
+                'address'                      => $customer->address,
+                'payment_term'                 => $customer->payment_term,
+                'payment_term_type'            => $customer->payment_term_type,
+                'payment_discount'             => $customer->payment_discount,
+                'is_spsod'                     => $customer->is_spsod,
+                'is_monthly_turnover_discount' => $customer->is_monthly_turnover_discount,
+                'customer_product_type'        => $customer->customer_product_type,
+                'business_model'               => $customer->business_model,
+                'status'                       => $customer->status,
+                'latitude'                     => $customer->latitude,
+                'longitude'                    => $customer->longitude,
+                'location_address'             => $customer->location_address,
+                'business_card_url'            => $customer->business_card_url,
+                'business_card_two_url'        => $customer->business_card_two_url,
+                'corporate_discount'           => $customer->corporate_discount,
+                'product_discounts'            => $customer->product_discounts,
+                'employees'                    => $customer->employees->map(fn($e) => [
+                    'id'          => $e->id,
+                    'name'        => $e->name,
+                    'mobile'      => $e->mobile,
+                    'designation' => $e->designation,
+                ]),
+                'user_customer_shares' => $customer->user_customer_shares->map(fn($s) => [
+                    'id'            => $s->id,
+                    'user_id'       => $s->user_id,
+                    'share'         => $s->share,
+                    'user_date'     => $s->user_date,
+                    'average_sales' => $s->average_sales,
+                    'user'          => $s->user ? [
+                        'id'          => $s->user->id,
+                        'name'        => $s->user->name,
+                        'mobile'      => $s->user->mobile,
+                        'designation' => $s->user->designation,
+                    ] : null,
+                ]),
+                'dealer' => $customer->dealer ? [
+                    'id'             => $customer->dealer->id,
+                    'business_name'  => $customer->dealer->business_name,
+                    'name'           => $customer->dealer->name,
+                    'city'           => $customer->dealer->city,
+                    'basic_discount' => $customer->dealer->basic_discount,
+                    'payment_term'   => $customer->dealer->payment_term,
+                    'freight'        => $customer->dealer->freight,
+                    'show_class'     => $customer->dealer->show_class,
+                    'product_types'  => $customer->dealer->product_types,
+                    'linked_dealers' => $customer->dealer->linked_dealers,
+                    'app_roles'      => $customer->dealer->app_roles,
+                    'contact_persons' => $customer->dealer->contact_persons->map(fn($c) => [
+                        'id'          => $c->id,
+                        'name'        => $c->name,
+                        'mobile'      => $c->mobile,
+                        'designation' => $c->designation,
+                    ]),
+                    'linked_products' => $customer->dealer->linked_products->map(fn($lp) => [
+                        'id'         => $lp->id,
+                        'dealer_id'  => $lp->dealer_id,
+                        'product_id' => $lp->product_id,
+                        'product'    => $lp->product ? [
+                            'id'           => $lp->product->id,
+                            'product_name' => $lp->product->product_name,
+                            'product_code' => $lp->product->product_code,
+                            'pricings'     => $lp->product->pricings->map(fn($p) => [
+                                'id'            => $p->id,
+                                'market_price'  => $p->market_price,
+                                'dealer_price'  => $p->dealer_price,
+                                'dealer_markup' => $p->dealer_markup,
+                                'price_date'    => $p->price_date,
+                            ]),
+                        ] : null,
+                    ]),
+                ] : null,
+            ];
+        });
+        $products = null;
+        if(isset($data['is_products'])){
 
-        if (!empty($data['product_types'])) {
-            $productTypes = explode(',', $data['product_types']);
-            $productsQuery->whereIn('is_trader_product', $productTypes);
-        } else {
-            $productsQuery->where('is_trader_product', 0);
+            $productsQuery = Product::with([
+                'productpacking',
+                'pricings',
+                'product_stages'
+            ])->where('status', 1);
+
+            if (!empty($data['product_types'])) {
+                $productsQuery->whereIn('is_trader_product', explode(',', $data['product_types']));
+            } else {
+                $productsQuery->where('is_trader_product', 0);
+            }
+
+            $products = $productsQuery->get()->map(function ($product) {
+                return [
+                    'id'                     => $product->id,
+                    'product_name'           => $product->product_name,
+                    'product_code'           => $product->product_code,
+                    'short_description'      => $product->short_description,
+                    'suggested_dosage'       => $product->suggested_dosage,
+                    'physical_form'          => $product->physical_form,
+                    'is_trader_product'      => $product->is_trader_product,
+                    'moq'                    => $product->moq,
+                    'shelf_life'             => $product->shelf_life,
+                    'stage'                  => $product->stage,
+                    'show_class'             => $product->show_class,
+                    'show_weightage'         => $product->show_weightage,
+                    'gots_certification'     => $product->gots_certification,
+                    'zdhc_certification'     => $product->zdhc_certification,
+                    'zdhc_pid'               => $product->zdhc_pid,
+                    'additional_information' => $product->additional_information,
+                    'medias'                 => $product->medias,
+                    'certificates'           => $product->certificates,
+                    'product_gst'            => $product->product_gst,
+                    'productpacking'         => $product->productpacking ? [
+                        'id'   => $product->productpacking->id,
+                        'type' => $product->productpacking->type,
+                        'size' => $product->productpacking->size,
+                    ] : null,
+                    'pricings'       => $product->pricings->map(function ($pricing) {
+                        return [
+                            'id'            => $pricing->id,
+                            'product_id'    => $pricing->product_id,
+                            'market_price'  => $pricing->market_price,
+                            'dealer_price'  => $pricing->dealer_price,
+                            'dealer_markup' => $pricing->dealer_markup,
+                            'price_date'    => $pricing->price_date,
+                            'class'         => geClass($pricing->dealer_markup),
+                        ];
+                    }),
+                    'product_stages' => $product->product_stages->map(fn($s) => [
+                        'id'         => $s->id,
+                        'stage'      => $s->stage,
+                        'entry_date' => $s->entry_date,
+                    ]),
+                ];
+            });
         }
 
-        $products = $productsQuery->get();
 
-        // Step 4: Attach class using geClass() — now uses static cache internally (1 DB call total)
-        $products->each(function ($product) {
-            $product->pricings->each(function ($pricing) {
-                $pricing->class = geClass($pricing->dealer_markup);
-            });
-        });
-
-        // Step 5: Fetch product discounts
         $discounts = \App\ProductDiscount::get();
 
         return response()->json(apiSuccessResponse('Customers Fetched successfully', [

@@ -143,6 +143,11 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 	        Route::post('/get-dealer-products', 'LinkingController@dealerLinkedProducts');
 	        Route::post('/update-dealer-products', 'LinkingController@saveDealerProducts');
 
+
+	        Route::group(['prefix' => 'v2'], function () {
+	        	Route::match(['get', 'post'], '/customers','DealerController@V2customers'); 
+	        });
+
 		});
 	});
 
