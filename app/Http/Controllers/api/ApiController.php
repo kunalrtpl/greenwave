@@ -227,25 +227,56 @@ class ApiController extends Controller
         return response()->json(apiSuccessResponse($message,$result),200);
     }
 
-    public function generateProductPdf(Request $request){
+    public function generateProductPdf(Request $request)
+    {
         $data = $request->all();
-        foreach($data['data'] as $ckey => $catInfo){
-            foreach($catInfo['sub_cats'] as $subkey=> $subCatInfo){
-                $products = Product::with(['packing_type','latestProductPricing','productpacking'])->select('id','product_name','short_description','product_code','suggested_dosage','packing_type_id','packing_size_id')->wherein('id',$subCatInfo['product_ids'])->orderby('product_name','ASC')->get();
-                $products = json_decode(json_encode($products),true);
-                $data['data'][$ckey]['sub_cats'][$subkey]['products'] = $products;
+        $createdBy = $request->input('created_by', '');
+        // Step 1: Collect all product IDs from all categories and subcategories
+        $allProductIds = [];
+        foreach ($data['data'] as $catInfo) {
+            foreach ($catInfo['sub_cats'] as $subCatInfo) {
+                $allProductIds = array_merge($allProductIds, $subCatInfo['product_ids']);
             }
         }
-        //echo "<pre>"; print_r($data); die;
-        ini_set('memory_limit','256M');
-        $filename = "Product_PDF.pdf";
-        PDF::loadView('product_pdf',compact('data'))->save('ProductPdfs/'.$filename);
-        $filepath = url('ProductPdfs/'.$filename);
-        $result['pdf_url'] = $filepath;
-        $message = "Pdf has been fetched successfully";
-        return response()->json(apiSuccessResponse($message,$result),200);
-    }
+        $allProductIds = array_unique($allProductIds);
 
+        // Step 2: Single query to fetch all products at once
+        $allProducts = Product::with([
+                            'packing_type',
+                            'latestProductPricing',
+                            'productpacking'
+                        ])
+                        ->select('id', 'product_name', 'short_description', 'product_code', 'suggested_dosage', 'packing_type_id', 'packing_size_id')
+                        ->whereIn('id', $allProductIds)
+                        ->orderBy('product_name', 'ASC')
+                        ->get()
+                        ->keyBy('id')
+                        ->toArray();
+
+        // Step 3: Map already-fetched products back to their subcategories (no DB hits)
+        foreach ($data['data'] as $ckey => $catInfo) {
+            foreach ($catInfo['sub_cats'] as $subkey => $subCatInfo) {
+                $subProducts = array_intersect_key($allProducts, array_flip($subCatInfo['product_ids']));
+                
+                // Re-sort by product_name since keyBy loses order
+                usort($subProducts, fn($a, $b) => strcmp($a['product_name'], $b['product_name']));
+                
+                $data['data'][$ckey]['sub_cats'][$subkey]['products'] = array_values($subProducts);
+            }
+        }
+
+        ini_set('memory_limit', '256M');
+
+        $filename = "Product_PDF.pdf";
+        PDF::loadView('product_pdf', compact('data','createdBy'))->save('ProductPdfs/' . $filename);
+
+        $filepath = url('ProductPdfs/' . $filename);
+
+        return response()->json(
+            apiSuccessResponse("Pdf has been fetched successfully", ['pdf_url' => $filepath]),
+            200
+        );
+    }
 
     public function saveQuickEnquiry(Request $request){
         $validator = Validator::make($request->all(), [

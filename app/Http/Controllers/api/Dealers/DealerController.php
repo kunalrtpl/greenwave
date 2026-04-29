@@ -424,47 +424,66 @@ class DealerController extends Controller
         }
     }
 
-    public function customers(Request $request){
-    	if($request->isMethod('post')){
-			$resp = $this->resp;
-    		if($resp['status']){
-                $data = $request->all();
-    			if(isset($resp['dealer'])){
-    				$message ='Customers Fetched successfully';
-                    $dealerIds = Dealer::getParentChildDealers($resp['dealer']);
-    				$getCustomers = Customer::with(['corporate_discount','product_discounts','employees','user_customer_shares','dealer'])->whereIN('dealer_id',$dealerIds)->where('status',1)->get();
-                    $products = Product::with(['productpacking','pricings','product_stages'])->where('status',1);
-                    if(isset($data['product_types']) && !empty($data['product_types'])) {
-                        $productTypes = explode(',',$data['product_types']);
-                        $products = $products->whereIn('is_trader_product',$productTypes);
-                    }else{
-                        $products = $products->where('is_trader_product',0);
-                    }
-                    $products = $products->get();
-                    $products = json_decode(json_encode($products),true);
-                    foreach($products as $pkey => $product){
-                        foreach($product['pricings'] as $pricekey=> $proprice){
-                            $class = geClass($proprice['dealer_markup']);
-                            $products[$pkey]['pricings'][$pricekey]['class'] =$class; 
-                        }
-                    }
-    				$result['customers'] = $getCustomers;
-                    $result['products'] = $products;
-                    $discounts = \App\ProductDiscount::get();
-                    $result['product_discounts'] = $discounts;
-    				return response()->json(apiSuccessResponse($message,$result),200);
-    			}else{
-    				$message = "Unable to fetch. PLease try again after sometime";
-		    		return response()->json(apiErrorResponse($message),422);
-    			}
-    		}else{
-    			$message = "Unable to fetch. PLease try again after sometime";
-		    	return response()->json(apiErrorResponse($message),422);
-    		}
-    	}else{
-    		$message = "GET not supported for this route";
-		    return response()->json(apiErrorResponse($message),422); 
-    	}
+    public function customers(Request $request)
+    {
+        if (!$request->isMethod('post')) {
+            return response()->json(apiErrorResponse("GET not supported for this route"), 422);
+        }
+
+        $resp = $this->resp;
+
+        if (!$resp['status'] || !isset($resp['dealer'])) {
+            return response()->json(apiErrorResponse("Unable to fetch. Please try again after sometime"), 422);
+        }
+
+        $data = $request->all();
+
+        // Step 1: Get dealer IDs
+        $dealerIds = Dealer::getParentChildDealers($resp['dealer']);
+
+        // Step 2: Fetch customers with eager loading
+        $getCustomers = Customer::with([
+            'corporate_discount',
+            'product_discounts',
+            'employees',
+            'user_customer_shares',
+            'dealer'
+        ])
+        ->whereIn('dealer_id', $dealerIds)
+        ->where('status', 1)
+        ->get();
+
+        // Step 3: Build products query
+        $productsQuery = Product::with([
+            'productpacking',
+            'pricings',
+            'product_stages'
+        ])->where('status', 1);
+
+        if (!empty($data['product_types'])) {
+            $productTypes = explode(',', $data['product_types']);
+            $productsQuery->whereIn('is_trader_product', $productTypes);
+        } else {
+            $productsQuery->where('is_trader_product', 0);
+        }
+
+        $products = $productsQuery->get();
+
+        // Step 4: Attach class using geClass() — now uses static cache internally (1 DB call total)
+        $products->each(function ($product) {
+            $product->pricings->each(function ($pricing) {
+                $pricing->class = geClass($pricing->dealer_markup);
+            });
+        });
+
+        // Step 5: Fetch product discounts
+        $discounts = \App\ProductDiscount::get();
+
+        return response()->json(apiSuccessResponse('Customers Fetched successfully', [
+            'customers'         => $getCustomers,
+            'products'          => $products,
+            'product_discounts' => $discounts,
+        ]), 200);
     }
 
     public function purchaseOrder(Request $request){
