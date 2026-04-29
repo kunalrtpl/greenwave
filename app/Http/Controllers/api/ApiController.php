@@ -268,6 +268,12 @@ class ApiController extends Controller
         ini_set('memory_limit', '256M');
 
         $filename = "Product_PDF.pdf";
+        $filePath = public_path('ProductPdfs/' . $filename);
+        // Delete existing file if it exists
+        if (file_exists($filePath)) {
+            unlink($filePath);
+        }
+        
         PDF::loadView('product_pdf', compact('data','createdBy'))->save('ProductPdfs/' . $filename);
 
         $filepath = url('ProductPdfs/' . $filename);
