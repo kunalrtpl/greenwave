@@ -578,66 +578,64 @@ class DealerController extends Controller
                 ] : null,
             ];
         });
-        $products = null;
-        if(isset($data['is_products'])){
 
-            $productsQuery = Product::with([
-                'productpacking',
-                'pricings',
-                'product_stages'
-            ])->where('status', 1);
+        $productsQuery = Product::with([
+            'productpacking',
+            'pricings',
+            'product_stages'
+        ])->where('status', 1);
 
-            if (!empty($data['product_types'])) {
-                $productsQuery->whereIn('is_trader_product', explode(',', $data['product_types']));
-            } else {
-                $productsQuery->where('is_trader_product', 0);
-            }
-
-            $products = $productsQuery->get()->map(function ($product) {
-                return [
-                    'id'                     => $product->id,
-                    'product_name'           => $product->product_name,
-                    'product_code'           => $product->product_code,
-                    'short_description'      => $product->short_description,
-                    'suggested_dosage'       => $product->suggested_dosage,
-                    'physical_form'          => $product->physical_form,
-                    'is_trader_product'      => $product->is_trader_product,
-                    'moq'                    => $product->moq,
-                    'shelf_life'             => $product->shelf_life,
-                    'stage'                  => $product->stage,
-                    'show_class'             => $product->show_class,
-                    'show_weightage'         => $product->show_weightage,
-                    'gots_certification'     => $product->gots_certification,
-                    'zdhc_certification'     => $product->zdhc_certification,
-                    'zdhc_pid'               => $product->zdhc_pid,
-                    'additional_information' => $product->additional_information,
-                    'medias'                 => $product->medias,
-                    'certificates'           => $product->certificates,
-                    'product_gst'            => $product->product_gst,
-                    'productpacking'         => $product->productpacking ? [
-                        'id'   => $product->productpacking->id,
-                        'type' => $product->productpacking->type,
-                        'size' => $product->productpacking->size,
-                    ] : null,
-                    'pricings'       => $product->pricings->map(function ($pricing) {
-                        return [
-                            'id'            => $pricing->id,
-                            'product_id'    => $pricing->product_id,
-                            'market_price'  => $pricing->market_price,
-                            'dealer_price'  => $pricing->dealer_price,
-                            'dealer_markup' => $pricing->dealer_markup,
-                            'price_date'    => $pricing->price_date,
-                            'class'         => geClass($pricing->dealer_markup),
-                        ];
-                    }),
-                    'product_stages' => $product->product_stages->map(fn($s) => [
-                        'id'         => $s->id,
-                        'stage'      => $s->stage,
-                        'entry_date' => $s->entry_date,
-                    ]),
-                ];
-            });
+        if (!empty($data['product_types'])) {
+            $productsQuery->whereIn('is_trader_product', explode(',', $data['product_types']));
+        } else {
+            $productsQuery->where('is_trader_product', 0);
         }
+
+        $products = $productsQuery->get()->map(function ($product) {
+            return [
+                'id'                     => $product->id,
+                'product_name'           => $product->product_name,
+                'product_code'           => $product->product_code,
+                'short_description'      => $product->short_description,
+                'suggested_dosage'       => $product->suggested_dosage,
+                'physical_form'          => $product->physical_form,
+                'is_trader_product'      => $product->is_trader_product,
+                'moq'                    => $product->moq,
+                'shelf_life'             => $product->shelf_life,
+                'stage'                  => $product->stage,
+                'show_class'             => $product->show_class,
+                'show_weightage'         => $product->show_weightage,
+                'gots_certification'     => $product->gots_certification,
+                'zdhc_certification'     => $product->zdhc_certification,
+                'zdhc_pid'               => $product->zdhc_pid,
+                'additional_information' => $product->additional_information,
+                'medias'                 => $product->medias,
+                'certificates'           => $product->certificates,
+                'product_gst'            => $product->product_gst,
+                'productpacking'         => $product->productpacking ? [
+                    'id'   => $product->productpacking->id,
+                    'type' => $product->productpacking->type,
+                    'size' => $product->productpacking->size,
+                ] : null,
+                'pricings'       => $product->pricings->map(function ($pricing) {
+                    return [
+                        'id'            => $pricing->id,
+                        'product_id'    => $pricing->product_id,
+                        'market_price'  => $pricing->market_price,
+                        'dealer_price'  => $pricing->dealer_price,
+                        'dealer_markup' => $pricing->dealer_markup,
+                        'price_date'    => $pricing->price_date,
+                        'class'         => geClass($pricing->dealer_markup),
+                    ];
+                }),
+                'product_stages' => $product->product_stages->map(fn($s) => [
+                    'id'         => $s->id,
+                    'stage'      => $s->stage,
+                    'entry_date' => $s->entry_date,
+                ]),
+            ];
+        });
+        
 
 
         $discounts = \App\ProductDiscount::get();

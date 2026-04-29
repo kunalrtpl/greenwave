@@ -51,7 +51,8 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::match(['get', 'post'], '/add-on-users','DealerController@addOnUsers'); 
 			Route::match(['get', 'post'], '/add-edit-add-on-user','DealerController@addEditAddOnUser'); 
 			Route::match(['get', 'post'], '/delete-add-on-user','DealerController@deleteAddonUser'); 
-			Route::match(['get', 'post'], '/customers','DealerController@customers'); 
+			//Route::match(['get', 'post'], '/customers','DealerController@customers'); 
+			Route::match(['get', 'post'], '/customers','DealerController@V2customers'); 
 			Route::match(['get', 'post'], '/purchase-order','DealerController@purchaseOrder'); 
 			Route::match(['get', 'post'], '/trader-purchase-order','DealerController@traderPurchaseOrder'); 
 			Route::match(['get', 'post'], '/purchase-orders','DealerController@purchaseorderListing'); 
@@ -142,11 +143,6 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 	        Route::get('/sub-dealers-list', 'LinkingController@linkedDealersList');
 	        Route::post('/get-dealer-products', 'LinkingController@dealerLinkedProducts');
 	        Route::post('/update-dealer-products', 'LinkingController@saveDealerProducts');
-
-
-	        Route::group(['prefix' => 'v2'], function () {
-	        	Route::match(['get', 'post'], '/customers','DealerController@V2customers'); 
-	        });
 
 		});
 	});
