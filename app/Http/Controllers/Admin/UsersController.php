@@ -97,7 +97,7 @@ class UsersController extends Controller
                     <a title="Update Role" class="btn btn-sm yellow margin-top-10" href="'.url('admin/update-role/'.$user['id']).'"> <i class="fa fa-clock-o"></i>
                     </a>';
                 }
-                if ($linkProductsExtraPermission && $user['app_access'] == "Yes" && !empty($user['hash_salt'])) {
+                if ($linkProductsExtraPermission && $user['app_access'] == "Yes") {
                     $actionValues .= '
                     <a  title="Link Products" 
                        class="btn btn-sm purple margin-top-10" 
