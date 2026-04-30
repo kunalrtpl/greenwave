@@ -215,7 +215,7 @@ class UsersController extends Controller
                         //'joining_date'     => 'bail|required|date_format:Y-m-d',
                         //'joining_type' =>'bail|required',
                         //'permanent_from'      => 'required_if:joining_type,==,Permanent|nullable|date_format:Y-m-d',
-                        'password' => $pwdValidation
+                        //'password' => $pwdValidation
                     ]
                 );
                 if($validator->passes()) {
@@ -230,7 +230,11 @@ class UsersController extends Controller
                     }else{
                         $user = User::find($data['employeeid']); 
                     }
-                    $user->product_types = implode(',',$data['product_types']);
+                    if(isset($data['product_types']) && !empty($data['product_types'])){
+                        $user->product_types = implode(',',$data['product_types']);
+                    }else{
+                        $user->product_types = '';
+                    }
                     $user->name = $data['name'];
                     $user->email = $data['email'];
                     $user->designation = $data['designation'];
@@ -261,6 +265,7 @@ class UsersController extends Controller
                     $user->web_access = $data['web_access'];
                     $user->app_access = $data['app_access'];
                     $user->conveyance_selection_allowed = $data['conveyance_selection_allowed'];
+                    $user->probation_period = $data['probation_period'];
                     //$user->should_verify_visit = $data['should_verify_visit'];
                     /*if(!empty($data['password'])){
                         $user->password = bcrypt($data['password']);
@@ -298,47 +303,172 @@ class UsersController extends Controller
                         $user->app_roles = implode(',',$data['app_roles']);
                     }
                     $user->save();
-                    //Delete User Depts
-                    DB::table('user_departments')->where('user_id',$user->id)->delete();
-                    DB::table('user_customers')->where('user_id',$user->id)->delete();
+                    // ── Handle Attachments ─────────────────────────────────────────
+                    if (isset($data['attachments']) && is_array($data['attachments'])) {
+                     
+                        $attachmentDestination = public_path('/images/UserAttachments/');
+                     
+                        // Make sure the directory exists
+                        if (!file_exists($attachmentDestination)) {
+                            mkdir($attachmentDestination, 0755, true);
+                        }
+                     
+                        foreach ($data['attachments'] as $attKey => $attData) {
+                     
+                            $label      = $attData['label']       ?? '';
+                            $existingId = $attData['existing_id'] ?? null;
+                            $showInApp  = isset($attData['show_in_app']) ? 1 : 0;
+                     
+                            if (empty($label)) { continue; }
+                     
+                            if ($request->hasFile("attachments.{$attKey}.file")) {
+                     
+                                $file         = $request->file("attachments.{$attKey}.file");
+                                $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+                                $ext          = $file->getClientOriginalExtension(); // always pdf
+                     
+                                // Sanitise original name and append random string to avoid duplicates
+                                $safeName    = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $originalName);
+                                $storedName  = $safeName . '_' . uniqid() . '.' . $ext;
+                     
+                                $file->move($attachmentDestination, $storedName);
+                     
+                                if ($existingId) {
+                                    // Update existing record — delete old file first
+                                    $oldRecord = DB::table('user_attachments')->where('id', $existingId)->first();
+                                    if ($oldRecord && file_exists($attachmentDestination . $oldRecord->file_path)) {
+                                        @unlink($attachmentDestination . $oldRecord->file_path);
+                                    }
+                                    DB::table('user_attachments')->where('id', $existingId)->update([
+                                        'label'         => $label,
+                                        'original_name' => $file->getClientOriginalName(),
+                                        'file_path'     => $storedName,
+                                        'show_in_app'   => $showInApp,
+                                        'updated_at'    => now(),
+                                    ]);
+                                } else {
+                                    // Insert new record
+                                    DB::table('user_attachments')->insert([
+                                        'user_id'       => $user->id,
+                                        'label'         => $label,
+                                        'original_name' => $file->getClientOriginalName(),
+                                        'file_path'     => $storedName,
+                                        'show_in_app'   => $showInApp,
+                                        'created_at'    => now(),
+                                        'updated_at'    => now(),
+                                    ]);
+                                }
+                     
+                            } elseif ($existingId) {
+                                // No new file uploaded — just update show_in_app toggle
+                                DB::table('user_attachments')->where('id', $existingId)->update([
+                                    'show_in_app' => $showInApp,
+                                    'updated_at'  => now(),
+                                ]);
+                            }
+                            // If no file and no existing_id — new row with no file uploaded, skip silently
+                        }
+                    }
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | REPLACE the user_depts foreach block in saveUser() with this.
+                    |
+                    | ROOT CAUSE:
+                    | dept_regions in the JSON is built by subToRegionMap in JS.
+                    | subToRegionMap is populated by AJAX calls to /get-sub-regions.
+                    | These AJAX calls are async — when rebuildDeptJson() runs on form submit,
+                    | the map may not be ready yet, so dept_regions = [].
+                    |
+                    | THE FIX:
+                    | The form already posts regions[] and subregions[] as separate fields
+                    | (from the select name="regions[]" and name="subregions[]").
+                    | Use those directly in the controller to save user_department_regions.
+                    | No need to rely on dept_regions in the JSON at all.
+                    |--------------------------------------------------------------------------
+                    */
+
+                    // Delete existing dept data
+                    DB::table('user_departments')->where('user_id', $user->id)->delete();
+                    DB::table('user_customers')->where('user_id', $user->id)->delete();
+
+                    // Get the posted regions and subregions directly from form
+                    // These are posted as regions[] and subregions[] from the blade selects
+                    $postedRegions    = isset($data['regions'])    ? (array)$data['regions']    : [];
+                    $postedSubRegions = isset($data['subregions']) ? (array)$data['subregions'] : [];
+
                     foreach ($data['user_depts'] as $key => $userDept) {
-                        $userDeptArr = json_decode($userDept,true);
-                        //echo "<pre>"; print_r($userDeptArr); die;
-                        $userdept = new UserDepartment;
-                        $userdept->user_id = $user->id;
-                        $userdept->department_id  =   $userDeptArr['department_id'];
-                        //$userdept->designation_id =   $userDeptArr['designation_id']; 
-                        $userdept->designation_id =   NULL; 
-                        $userdept->report_to      =   $userDeptArr['report_to']; 
+                        $userDeptArr = json_decode($userDept, true);
+
+                        $userdept                  = new UserDepartment;
+                        $userdept->user_id         = $user->id;
+                        $userdept->department_id   = $userDeptArr['department_id'];
+                        $userdept->designation_id  = NULL;
+                        $userdept->report_to       = $userDeptArr['report_to'];
                         $userdept->save();
-                        if(!empty($userDeptArr['dept_regions'])){
-                            foreach($userDeptArr['dept_regions'] as $userRegion){
-                                $explodeRegion =  explode('#', $userRegion);
-                                $saveUserRegion = new UserDepartmentRegion;
-                                $saveUserRegion->user_id = $user->id;
-                                $saveUserRegion->user_department_id = $userdept->id;
-                                $saveUserRegion->region_id = $explodeRegion[0];
-                                $saveUserRegion->sub_region_id = $explodeRegion[1];
-                                $saveUserRegion->save();
+
+                        // ── Save regions/subregions ────────────────────────────────────
+                        // Use dept_regions from JSON if available (has parentId#subId format).
+                        // Fall back to posted regions[] + subregions[] if dept_regions is empty
+                        // (happens when subToRegionMap wasn't ready when form was submitted).
+
+                        if (!empty($userDeptArr['dept_regions'])) {
+
+                            // dept_regions is populated correctly — use it as before
+                            foreach ($userDeptArr['dept_regions'] as $userRegion) {
+                                $explodeRegion = explode('#', $userRegion);
+                                if (count($explodeRegion) === 2) {
+                                    $saveUserRegion                      = new UserDepartmentRegion;
+                                    $saveUserRegion->user_id             = $user->id;
+                                    $saveUserRegion->user_department_id  = $userdept->id;
+                                    $saveUserRegion->region_id           = $explodeRegion[0];
+                                    $saveUserRegion->sub_region_id       = $explodeRegion[1];
+                                    $saveUserRegion->save();
+                                }
+                            }
+
+                        } elseif (!empty($postedSubRegions)) {
+
+                            // dept_regions was empty (JS map wasn't ready) — fall back to
+                            // the directly posted subregions[] and find their parent regions
+                            // from the regions table.
+
+                            $subRegionRows = DB::table('regions')
+                                ->whereIn('id', $postedSubRegions)
+                                ->get();
+
+                            foreach ($subRegionRows as $subRegionRow) {
+                                // Only save if the parent region was also selected
+                                // (or if no regions were explicitly posted, save all)
+                                if (empty($postedRegions) || in_array($subRegionRow->parent_id, $postedRegions)) {
+                                    $saveUserRegion                     = new UserDepartmentRegion;
+                                    $saveUserRegion->user_id            = $user->id;
+                                    $saveUserRegion->user_department_id = $userdept->id;
+                                    $saveUserRegion->region_id          = $subRegionRow->parent_id;
+                                    $saveUserRegion->sub_region_id      = $subRegionRow->id;
+                                    $saveUserRegion->save();
+                                }
                             }
                         }
-                        if(!empty($userDeptArr['products'])){
-                            foreach($userDeptArr['products'] as $productInfo){
-                                $saveUserPro = new UserDepartmentProduct;
-                                $saveUserPro->user_id = $user->id;
-                                $saveUserPro->user_department_id = $userdept->id;
-                                $saveUserPro->product_id = $productInfo;
+
+                        // ── Products ───────────────────────────────────────────────────
+                        if (!empty($userDeptArr['products'])) {
+                            foreach ($userDeptArr['products'] as $productInfo) {
+                                $saveUserPro                      = new UserDepartmentProduct;
+                                $saveUserPro->user_id             = $user->id;
+                                $saveUserPro->user_department_id  = $userdept->id;
+                                $saveUserPro->product_id          = $productInfo;
                                 $saveUserPro->save();
                             }
                         }
-                        if(!empty($userDeptArr['customer_ids'])){
-                            foreach($userDeptArr['customer_ids'] as $custid){
-                                //echo $custid; die;
-                                $saveUserCustomer = new UserCustomer;
-                                $saveUserCustomer->customer_id = $custid;
-                                //$saveUserCustomer->designation_id = $userDeptArr['designation_id'];
-                                $saveUserCustomer->designation_id = null;
-                                $saveUserCustomer->user_id     = $user->id;
+
+                        // ── Customers ──────────────────────────────────────────────────
+                        if (!empty($userDeptArr['customer_ids'])) {
+                            foreach ($userDeptArr['customer_ids'] as $custid) {
+                                $saveUserCustomer                  = new UserCustomer;
+                                $saveUserCustomer->customer_id     = $custid;
+                                $saveUserCustomer->designation_id  = null;
+                                $saveUserCustomer->user_id         = $user->id;
                                 $saveUserCustomer->save();
                             }
                         }
