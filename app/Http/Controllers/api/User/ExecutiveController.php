@@ -3586,4 +3586,52 @@ class ExecutiveController extends Controller
             }
         }
     }
+
+    public function downloadAppManualPdf()
+    {
+        $resp = $this->resp;
+        if($resp['status'] && isset($resp['user'])){
+            $user = \App\User::findOrFail($resp['user']['id']);
+
+            // Parse the app_roles column (comma-separated string)
+            $userRoleKeys = array_map('trim', explode(',', $user->app_roles));
+
+            // Fetch matching roles from app_roles table (type = executive only)
+            $roles = \DB::table('app_roles')
+                ->whereIn('key', $userRoleKeys)
+                ->where('type', 'executive')
+                ->orderBy('sort_order', 'ASC')
+                ->get();
+
+            // Fixed filename per user — reused/overwritten each time
+            $filename = 'App_Manual_' . $user->id . '_' . str_replace(' ', '_', $user->name) . '.pdf';
+            $folder   = public_path('app_manuals');
+            $fullPath = $folder . '/' . $filename;
+
+            // Ensure directory exists
+            if (!file_exists($folder)) {
+                mkdir($folder, 0755, true);
+            }
+
+            // Delete old file if exists (unlink first)
+            if (file_exists($fullPath)) {
+                unlink($fullPath);
+            }
+
+            // Generate and save PDF
+            $pdf = \PDF::loadView('admin.users.pdf.app_manual', [
+                'user'  => $user,
+                'roles' => $roles,
+            ]);
+            $pdf->setPaper('A4', 'portrait');
+            $pdf->save($fullPath);
+
+            // Return public URL
+            $url = url('app_manuals/' . $filename);
+
+            return response()->json(apiSuccessResponse('App manual generated successfully', [
+                'pdf_url' => $url,
+            ]), 200);
+        }
+    }
 }
