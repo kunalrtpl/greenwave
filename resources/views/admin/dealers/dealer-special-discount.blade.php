@@ -2,7 +2,6 @@
 @section('content')
 
 <style>
-    /* FLOATING SAVE BAR STYLES */
     .floating-save-bar {
         position: fixed;
         bottom: 0;
@@ -17,7 +16,6 @@
         text-align: center;
     }
     
-    /* Spacing for the bottom of the page so content isn't hidden by the bar */
     .page-content { padding-bottom: 100px !important; }
     
     .btn-save-float {
@@ -29,7 +27,6 @@
         box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3);
     }
 
-    /* Highlight rows that have a discount */
     .has-discount {
         background-color: #f9fff9 !important;
     }
@@ -43,7 +40,7 @@
     <div class="page-content">
         <div class="page-head">
             <div class="page-title">
-                <h1>Dealers Management </h1>
+                <h1>Dealers Management</h1>
             </div>
         </div>
         <ul class="page-breadcrumb breadcrumb">
@@ -52,7 +49,7 @@
                 <i class="fa fa-circle"></i>
             </li>
             <li>
-                <a href="{{ url('admin/dealers') }}">Dealers </a>
+                <a href="{{ url('admin/dealers') }}">Dealers</a>
             </li>
         </ul>
 
@@ -78,7 +75,7 @@
                         </div>
                     </div>
                     <div class="portlet-body form">
-                        <form role="form" class="form-horizontal" method="post" action="{{url('/admin/dealer-special-discount/'.$dealerid)}}" enctype="multipart/form-data" autocomplete="off">
+                        <form role="form" class="form-horizontal" method="post" action="{{ url('/admin/dealer-special-discount/'.$dealerid) }}" enctype="multipart/form-data" autocomplete="off">
                             <input type="hidden" name="_token" value="{{ csrf_token() }}" />
                             
                             <div class="form-body">
@@ -91,19 +88,20 @@
                                     </thead>
                                     <tbody>
                                         @php
-                                            // 1. Pre-fetch discounts to avoid double queries and enable sorting
-                                            $productsWithData = collect($products)->map(function($product) use ($dealerid) {
-                                                $info = \App\DealerSpecialDiscount::getSpecialDis($product['id'], $dealerid);
-                                                $product['current_discount'] = is_object($info) ? $info->discount : null;
-                                                return $product;
-                                            })->sortByDesc('current_discount');
-                                        @endphp
+    $productsWithData = collect($products)->map(function($product) use ($dealerid) {
+        $info = \App\DealerSpecialDiscount::getSpecialDis($product->id, $dealerid);
+        $product->current_discount = is_object($info) ? (float)$info->discount : 0;
+        return $product;
+    })->sortBy(function($product) {
+        return [-$product->current_discount, $product->product_name];
+    });
+@endphp
 
                                         @foreach($productsWithData as $product)
-                                            <tr class="{{ $product['current_discount'] > 0 ? 'has-discount' : '' }}">
+                                            <tr class="{{ $product->current_discount > 0 ? 'has-discount' : '' }}">
                                                 <td>
-                                                    {{$product['product_name']}}
-                                                    @if($product['current_discount'] > 0)
+                                                    {{ $product->product_name }}
+                                                    @if($product->current_discount > 0)
                                                         <span class="label label-success" style="margin-left:10px;">Active Discount</span>
                                                     @endif
                                                 </td>
@@ -112,8 +110,8 @@
                                                            placeholder="Enter Discount" 
                                                            class="form-control discount-input" 
                                                            type="number" 
-                                                           name="discounts[{{$product['id']}}]" 
-                                                           value="{{ $product['current_discount'] }}">
+                                                           name="discounts[{{ $product->id }}]" 
+                                                           value="{{ $product->current_discount }}">
                                                 </td>
                                             </tr>
                                         @endforeach

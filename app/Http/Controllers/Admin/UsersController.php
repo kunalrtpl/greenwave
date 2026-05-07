@@ -59,7 +59,7 @@ class UsersController extends Controller
             $iTotalRecords = $querys->where($conditions)->count();
             $querys =  $querys->where($conditions)
                 	->skip($iDisplayStart)->take($iDisplayLength)
-                	->OrderBy('id','Desc')
+                	->OrderBy('name','ASC')
                 	->get();
             $sEcho = intval($_REQUEST['draw']);
             $records = array();
