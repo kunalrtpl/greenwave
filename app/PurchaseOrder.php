@@ -561,7 +561,8 @@ class PurchaseOrder extends Model
             // Always — notify admins (TO comes from DB)
             EmailService::send('po_admin', ['po' => $po]);
 
-            EmailService::send('po_dealer_self', ['po' => $po], $po->dealer ? $po->dealer->email : null);
+            $emails = getDealerTemplateRecipients('po_dealer_self', $po->dealer);
+            EmailService::send('po_dealer_self', ['po' => $po], $emails);
 
         } elseif ($data['action'] === 'customer') {
             // EmailService::send('po_customer_self', ['po' => $po], $po->customer ? $po->customer->email : null);

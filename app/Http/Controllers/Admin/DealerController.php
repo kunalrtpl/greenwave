@@ -745,81 +745,147 @@ class DealerController extends Controller
         return view('admin.dealers.users.dealer_users')->with(compact('title','dealerUsers','dealerId'));
     }
 
-    public function addEditDealerUser(Request $request,$dealerid=null){
-        $selAppRoles = array();
-        if(!empty($dealerid)){
-            $dealerdata = Dealer::where('id',$dealerid)->first();
-            $dealerdata = json_decode(json_encode($dealerdata),true);
-            if(!empty($dealerdata['app_roles'])){
-                $selAppRoles = explode(',',$dealerdata['app_roles']);
+
+    // ============================================================
+    // In your DealerController (or wherever these methods live)
+    // ============================================================
+
+    /**
+     * Show Add / Edit form for a Dealer User.
+     * CHANGES: loads dealer email_templates and selected IDs.
+     */
+    public function addEditDealerUser(Request $request, $dealerid = null)
+    {
+        $selAppRoles       = [];
+        $selEmailTemplates = [];   // <-- NEW
+
+        if (!empty($dealerid)) {
+            $dealerdata = Dealer::where('id', $dealerid)->first();
+            $dealerdata = json_decode(json_encode($dealerdata), true);
+
+            if (!empty($dealerdata['app_roles'])) {
+                $selAppRoles = explode(',', $dealerdata['app_roles']);
             }
-            $title ="Edit";
+
+            // NEW — restore previously saved email-template selections
+            if (!empty($dealerdata['email_templates'])) {
+                $selEmailTemplates = array_map('intval', explode(',', $dealerdata['email_templates']));
+            }
+
+            $title         = 'Edit';
             $parentDealerId = $dealerdata['parent_id'];
-        }else{
+        } else {
             $parentDealerId = $_GET['dealer_id'];
-            $title ="Add";
-            $dealerdata =array();
+            $title         = 'Add';
+            $dealerdata    = [];
         }
-        $parentDealer = Dealer::where('id',$parentDealerId)->first();
-        $parentShowClass = $parentDealer->show_class;
-        $parentDealerAppRoles = explode(',',$parentDealer->app_roles);
-        $app_roles = DB::table('app_roles')->where('type','dealer')->wherein('key',$parentDealerAppRoles)->orderby('sort_order','asc')->get();
-        $appRoles = json_decode(json_encode($app_roles),true);
-        return view('admin.dealers.users.add_edit_dealer_user')->with(compact('title','dealerdata','selAppRoles','parentDealerId','appRoles','parentShowClass'));
+
+        $parentDealer        = Dealer::where('id', $parentDealerId)->first();
+        $parentShowClass     = $parentDealer->show_class;
+        $parentDealerAppRoles = explode(',', $parentDealer->app_roles);
+
+        $app_roles = DB::table('app_roles')
+            ->where('type', 'dealer')
+            ->whereIn('key', $parentDealerAppRoles)
+            ->orderBy('sort_order', 'asc')
+            ->get();
+        $appRoles = json_decode(json_encode($app_roles), true);
+
+        // NEW — fetch all dealer email templates
+        $emailTemplates = DB::table('email_templates')
+            ->where('template_for', 'dealer')
+            ->orderBy('id', 'asc')
+            ->get();
+        $dealerEmailTemplates = json_decode(json_encode($emailTemplates), true);
+
+        return view('admin.dealers.users.add_edit_dealer_user')->with(compact(
+            'title',
+            'dealerdata',
+            'selAppRoles',
+            'parentDealerId',
+            'appRoles',
+            'parentShowClass',
+            'dealerEmailTemplates',   // <-- NEW
+            'selEmailTemplates'       // <-- NEW
+        ));
     }
 
-    public function saveDealerUser(Request $request){
-        if($request->ajax()){
+    /**
+     * Save (insert / update) a Dealer User.
+     * CHANGES: validates and persists email_templates selection.
+     */
+    public function saveDealerUser(Request $request)
+    {
+        if ($request->ajax()) {
             $data = $request->all();
-            if($data['dealerid']==""){
-                $type ="add";
-                $emailunique = "unique:dealers,email";
-                $mobileunique = "unique:dealers,owner_mobile";
-            }else{ 
-                $type ="update";
-                $emailunique = "unique:dealers,email,".$data['dealerid'];
-                $mobileunique = "unique:dealers,owner_mobile,".$data['dealerid'];
+
+            if ($data['dealerid'] == '') {
+                $type          = 'add';
+                $emailUnique   = 'unique:dealers,email';
+                $mobileUnique  = 'unique:dealers,owner_mobile';
+            } else {
+                $type          = 'update';
+                $emailUnique   = 'unique:dealers,email,'   . $data['dealerid'];
+                $mobileUnique  = 'unique:dealers,owner_mobile,' . $data['dealerid'];
             }
+
             $validator = Validator::make($request->all(), [
-                    'dealer_type'   =>  'bail|required',
-                    'name'   =>  'bail|required',
-                    'designation'   =>  'bail',
-                    'email'   => 'bail|email|'.$emailunique,
-                    'owner_mobile' => 'bail|required|numeric|digits:10|'.$mobileunique,
-                ]
-            );
-            if($validator->passes()) {
+                'dealer_type'  => 'bail|required',
+                'name'         => 'bail|required',
+                'designation'  => 'bail',
+                'email'        => 'bail|email|' . $emailUnique,
+                'owner_mobile' => 'bail|required|numeric|digits:10|' . $mobileUnique,
+                // NEW — each submitted template ID must exist in email_templates table as a dealer template
+                'email_templates'   => 'nullable|array',
+                'email_templates.*' => 'integer|exists:email_templates,id',
+            ]);
+
+            if ($validator->passes()) {
                 $data = $request->all();
                 unset($data['_token']);
-                if($type =="add"){
-                    $dealer = new Dealer; 
-                    //$dealer->create($data);
-                }else{
-                    $dealer = Dealer::find($data['dealerid']);
-                    //$dealer->update($data); 
-                }
-                $dealer->parent_id = $data['parent_id'];
-                $dealer->name = $data['name'];
-                $dealer->designation = $data['designation'];
-                $dealer->department = $data['department'];
-                $dealer->email = $data['email'];
+
+                $dealer = ($type === 'add') ? new Dealer() : Dealer::find($data['dealerid']);
+
+                $dealer->parent_id    = $data['parent_id'];
+                $dealer->name         = $data['name'];
+                $dealer->designation  = $data['designation'];
+                $dealer->department   = $data['department'];
+                $dealer->email        = $data['email'];
                 $dealer->owner_mobile = $data['owner_mobile'];
-                $dealer->dealer_type = $data['dealer_type'];
-                $dealer->status = $data['status'];
-                $dealer->show_class = "No";
-                if(isset($data['show_class'])){
-                     $dealer->show_class = $data['show_class'];
+                $dealer->dealer_type  = $data['dealer_type'];
+                $dealer->status       = $data['status'];
+
+                $dealer->show_class = 'No';
+                if (isset($data['show_class'])) {
+                    $dealer->show_class = $data['show_class'];
                 }
-                $dealer->app_roles = "";
-                if(isset($data['app_roles'])){
-                    $dealer->app_roles = implode(',',$data['app_roles']);
+
+                $dealer->app_roles = '';
+                if (isset($data['app_roles'])) {
+                    $dealer->app_roles = implode(',', $data['app_roles']);
                 }
+
+                // NEW — save selected email template IDs as comma-separated string
+                $dealer->email_templates = '';
+                if (!empty($data['email_templates'])) {
+                    $dealer->email_templates = implode(',', $data['email_templates']);
+                }
+
                 $dealer->save();
-                $redirectTo = url('/admin/dealer-users/'.$data['parent_id']);
-                return response()->json(['status'=>true,'message'=>'ok','url'=>$redirectTo]);
-            }else{
-                return response()->json(['status'=>false,'errors'=>$validator->messages()]);
+
+                $redirectTo = url('/admin/dealer-users/' . $data['parent_id']);
+
+                return response()->json([
+                    'status'  => true,
+                    'message' => 'ok',
+                    'url'     => $redirectTo,
+                ]);
             }
+
+            return response()->json([
+                'status' => false,
+                'errors' => $validator->messages(),
+            ]);
         }
     }
 

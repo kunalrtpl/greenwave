@@ -13,10 +13,10 @@ class EmailService
      * Send an email by event key.
      *
      * @param string            $eventKey
-     * @param array             $mailData   Data passed to blade view
-     * @param string|array|null $to         If null, uses to_emails from DB
+     * @param array             $mailData   Data passed to the blade view & placeholder parser
+     * @param string|array|null $to         Override recipients; null = use to_emails from DB
      */
-    public static function send($eventKey, $mailData = [], $to = null)
+    public static function send(string $eventKey, array $mailData = [], $to = null): void
     {
         try {
             $template = EmailTemplate::getActive($eventKey);
@@ -26,23 +26,51 @@ class EmailService
                 return;
             }
 
-            $recipients = self::resolveRecipients($template, $to);
-
-            if (empty($recipients)) {
-                Log::warning("EmailService: No recipients for [{$eventKey}]. Skipping.");
-                return;
-            }
-
-            Mail::to($recipients)->send(new DynamicMail($template, $mailData));
-
-            Log::info("EmailService: Sent [{$eventKey}]", ['recipients' => $recipients]);
+            self::sendTemplate($template, $mailData, $to);
 
         } catch (\Exception $e) {
             Log::error("EmailService: Failed [{$eventKey}] — " . $e->getMessage());
         }
     }
 
-    protected static function resolveRecipients($template, $to)
+    /**
+     * Send an email using an already-resolved EmailTemplate model.
+     *
+     * Useful when you have the template object directly (e.g. when iterating
+     * child-dealer notification templates) and don't need another DB lookup.
+     *
+     * @param EmailTemplate     $template
+     * @param array             $mailData
+     * @param string|array|null $to         Override recipients; null = use to_emails from DB
+     */
+    public static function sendTemplate(EmailTemplate $template, array $mailData = [], $to = null): void
+    {
+        try {
+            $recipients = self::resolveRecipients($template, $to);
+
+            if (empty($recipients)) {
+                Log::warning("EmailService: No recipients for template [{$template->event_key}] (id={$template->id}). Skipping.");
+                return;
+            }
+
+            Mail::to($recipients)->send(new DynamicMail($template, $mailData));
+
+            Log::info("EmailService: Sent template [{$template->event_key}] (id={$template->id})", [
+                'recipients' => $recipients,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error(
+                "EmailService: Failed template [{$template->event_key}] (id={$template->id}) — " . $e->getMessage()
+            );
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Internals
+    // ─────────────────────────────────────────────────────────────────────────
+
+    protected static function resolveRecipients(EmailTemplate $template, $to): array
     {
         if (!empty($to)) {
             return array_values(array_filter((array) $to));

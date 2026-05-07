@@ -692,19 +692,14 @@ class OrdersController extends Controller
             DB::commit();
 
             // ── Send Approval Email to Dealer ─────────────────────────────────
-            $poForEmail  = PurchaseOrder::with([
+            /*$poForEmail  = PurchaseOrder::with([
                 'dealer',
                 'orderitems.product',
                 'orderitems.packingsize',
             ])->find($data['purchase_order_id']);
-
-            $dealerEmail = $poForEmail->dealer ? $poForEmail->dealer->email : null;
-            $dealerEmail = "mkanum786@gmail.com"; // later on we need to change
-            EmailService::send(
-                'po_dealer_approved',
-                ['po' => $poForEmail],
-                $dealerEmail
-            );
+            
+            $emails = getDealerTemplateRecipients('po_dealer_approved', $poForEmail->dealer);
+            EmailService::send('po_dealer_approved', ['po' => $poForEmail], $emails);*/
             // ── End Email ─────────────────────────────────
 
             return Redirect::to('/admin/dealer-orders')

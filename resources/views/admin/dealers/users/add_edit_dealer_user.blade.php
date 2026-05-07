@@ -91,43 +91,126 @@
                                     </div>
                                 </div>
                                 @endif
-<div class="form-group">
-    <label class="col-md-3 control-label">Modules to Access? <b class="red">({{count($selAppRoles)}})</b> <span class="asteric">*</span></label>
-    <div class="col-md-6">
-        <div class="panel-group" id="accordion-module">
-            <div class="panel panel-default">
-                <div class="panel-heading text-center">
-                    <h4 class="panel-title">
-                        <a style="text-decoration:none;" class="accordion-toggle" data-toggle="collapse" data-parent="#accordion-module" href="#collapseTwo">
-                        </a>
-                    </h4>
-                </div>
-                <div id="collapseTwo" class="panel-collapse collapse">
-                    <div class="panel-body">
-                        <table class="table table-bordered">
-                            <tr>
-                                <th>Sr. No.</th>
-                                <th>Role</th>
-                                <th>Actions</th>
-                            </tr>
-                            @foreach($appRoles as $pkey=> $role)
-                                <tr>
-                                    <td>{{++$pkey}}</td>
-                                   <td>
-                                       {{$role['name_admin']}}
-                                   </td> 
-                                   <td>
-                                       <input type="checkbox" name="app_roles[]" value="{{$role['key']}}" @if(in_array($role['key'],$selAppRoles)) checked @endif>
-                                   </td>
-                                </tr>
-                            @endforeach
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+
+                                {{-- ===== MODULES TO ACCESS ===== --}}
+                                <div class="form-group">
+                                    <label class="col-md-3 control-label">Modules to Access? <b class="red">({{count($selAppRoles)}})</b> <span class="asteric">*</span></label>
+                                    <div class="col-md-6">
+                                        <div class="panel-group" id="accordion-module">
+                                            <div class="panel panel-default">
+                                                <div class="panel-heading text-center">
+                                                    <h4 class="panel-title">
+                                                        <a style="text-decoration:none;" class="accordion-toggle" data-toggle="collapse" data-parent="#accordion-module" href="#collapseTwo">
+                                                        </a>
+                                                    </h4>
+                                                </div>
+                                                <div id="collapseTwo" class="panel-collapse collapse">
+                                                    <div class="panel-body">
+                                                        <table class="table table-bordered">
+                                                            <tr>
+                                                                <th>Sr. No.</th>
+                                                                <th>Role</th>
+                                                                <th>Actions</th>
+                                                            </tr>
+                                                            @foreach($appRoles as $pkey=> $role)
+                                                                <tr>
+                                                                    <td>{{++$pkey}}</td>
+                                                                   <td>
+                                                                       {{$role['name_admin']}}
+                                                                   </td> 
+                                                                   <td>
+                                                                       <input type="checkbox" name="app_roles[]" value="{{$role['key']}}" @if(in_array($role['key'],$selAppRoles)) checked @endif>
+                                                                   </td>
+                                                                </tr>
+                                                            @endforeach
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- ===== EMAIL TEMPLATES SECTION (NEW) ===== --}}
+                                @if(!empty($dealerEmailTemplates) && count($dealerEmailTemplates) > 0)
+                                <div class="form-group">
+                                    <label class="col-md-3 control-label">
+                                        Email Notifications
+                                        <b class="red">({{ count($selEmailTemplates) }})</b>
+                                        <span class="asteric">*</span>
+                                    </label>
+                                    <div class="col-md-6">
+                                        <div class="panel-group" id="accordion-email">
+                                            <div class="panel panel-default">
+                                                <div class="panel-heading">
+                                                    <h4 class="panel-title" style="display:flex; align-items:center; justify-content:space-between;">
+                                                        <a style="text-decoration:none; flex:1;" 
+                                                           class="accordion-toggle collapsed" 
+                                                           data-toggle="collapse" 
+                                                           data-parent="#accordion-email" 
+                                                           href="#collapseEmailTemplates">
+                                                            Click to select email notifications for this dealer
+                                                        </a>
+                                                        <span>
+                                                            <button type="button" class="btn btn-xs btn-success" id="selectAllEmails" style="margin-right:4px;">
+                                                                <i class="fa fa-check-square-o"></i> All
+                                                            </button>
+                                                            <button type="button" class="btn btn-xs btn-default" id="deselectAllEmails">
+                                                                <i class="fa fa-square-o"></i> None
+                                                            </button>
+                                                        </span>
+                                                    </h4>
+                                                </div>
+                                                <div id="collapseEmailTemplates" class="panel-collapse collapse @if(count($selEmailTemplates) > 0) in @endif">
+                                                    <div class="panel-body" style="padding:0;">
+                                                        <table class="table table-bordered table-hover" style="margin-bottom:0;">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th style="width:50px;">Sr.</th>
+                                                                    <th>Template Name</th>
+                                                                    <th>Event Key</th>
+                                                                    <th>Subject</th>
+                                                                    <th style="width:60px; text-align:center;">Enable</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                @foreach($dealerEmailTemplates as $tkey => $template)
+                                                                <tr class="email-template-row @if(in_array($template['id'], $selEmailTemplates)) active-template @endif"
+                                                                    style="cursor:pointer;"
+                                                                    onclick="toggleEmailTemplate({{ $template['id'] }})">
+                                                                    <td>{{ $tkey + 1 }}</td>
+                                                                    <td>
+                                                                        <strong>{{ $template['name'] }}</strong>
+                                                                    </td>
+                                                                    <td>
+                                                                        <code style="font-size:11px;">{{ $template['event_key'] }}</code>
+                                                                    </td>
+                                                                    <td style="font-size:12px; color:#666;">
+                                                                        {{ \Illuminate\Support\Str::limit($template['subject'], 50) }}
+                                                                    </td>
+                                                                    <td style="text-align:center;" onclick="event.stopPropagation();">
+                                                                        <input type="checkbox" 
+                                                                               class="email-template-checkbox" 
+                                                                               name="email_templates[]" 
+                                                                               value="{{ $template['id'] }}"
+                                                                               id="et_{{ $template['id'] }}"
+                                                                               @if(in_array($template['id'], $selEmailTemplates)) checked @endif
+                                                                               onchange="updateEmailTemplateCount()">
+                                                                    </td>
+                                                                </tr>
+                                                                @endforeach
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-email_templates"></h4>
+                                    </div>
+                                </div>
+                                @endif
+                                {{-- ===== END EMAIL TEMPLATES SECTION ===== --}}
+
                             </div>
                             @if(!empty($dealerdata['id']))
                                 <input type="hidden" name="dealerid" value="{{$dealerdata['id']}}">
@@ -146,7 +229,50 @@
 </div>
 
 <script type="text/javascript">
+    // ===== Email Template helpers =====
+    function toggleEmailTemplate(id) {
+        var cb = document.getElementById('et_' + id);
+        cb.checked = !cb.checked;
+        updateEmailTemplateCount();
+    }
+
+    function updateEmailTemplateCount() {
+        var checked = document.querySelectorAll('.email-template-checkbox:checked').length;
+        // Update the badge next to the label
+        var badge = document.querySelector('label[for="email-notifications-label"] b.red');
+        // Update label count text (find it by proximity)
+        var labels = document.querySelectorAll('.control-label b.red');
+        // Update the last b.red that is inside the email group label
+        if (labels.length >= 2) {
+            labels[labels.length - 1].textContent = '(' + checked + ')';
+        }
+        // Highlight selected rows
+        document.querySelectorAll('.email-template-row').forEach(function(row) {
+            var cb = row.querySelector('.email-template-checkbox');
+            if (cb && cb.checked) {
+                row.classList.add('active-template');
+            } else {
+                row.classList.remove('active-template');
+            }
+        });
+    }
+
+    document.getElementById('selectAllEmails') && document.getElementById('selectAllEmails').addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.querySelectorAll('.email-template-checkbox').forEach(function(cb) { cb.checked = true; });
+        updateEmailTemplateCount();
+    });
+
+    document.getElementById('deselectAllEmails') && document.getElementById('deselectAllEmails').addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.querySelectorAll('.email-template-checkbox').forEach(function(cb) { cb.checked = false; });
+        updateEmailTemplateCount();
+    });
+
+    // ===== Form Submit =====
     $(document).ready(function(){
+        updateEmailTemplateCount();
+
         $("#DealerForm").submit(function(e){
             $('.loadingDiv').show();
             e.preventDefault();
@@ -165,10 +291,8 @@
                             $('#Dealer-'+i).attr('style', '');
                             $('#Dealer-'+i).html(error);
                             setTimeout(function () {
-                                $('#Dealer-'+i).css({
-                                    'display': 'none'
-                                });
-                            $('#Dealer-'+i).removeClass('error-triggered');
+                                $('#Dealer-'+i).css({'display': 'none'});
+                                $('#Dealer-'+i).removeClass('error-triggered');
                             }, 5000);
                         });
                         $('html,body').animate({
@@ -180,32 +304,54 @@
                 }
             });
         });
-    })
+    });
 </script>
-<style>
-    .panel-heading .accordion-toggle:after {
-    /* symbol for "opening" panels */
-    font-family: 'Glyphicons Halflings';  /* essential for enabling glyphicon */
-    content: "\e114";    /* adjust as needed, taken from bootstrap.css */
-    float: left;        /* adjust as needed */
-    color: #4a8c17 !important;         /* adjust as needed */
-}
-.panel-heading .accordion-toggle.collapsed:after {
-    /* symbol for "collapsed" panels */
-    content: "\e080";    /* adjust as needed, taken from bootstrap.css */
-}
-.panel-default>.panel-heading {
-    background-color: transparent !important;
-    height: 40px;
-}
-.panel-heading .accordion-toggle:after
-{
-    color:#fff;
-}
-.panel-title>a:hover
-{
-    color:#fff;
-}
 
+<style>
+    /* ===== Existing accordion styles ===== */
+    .panel-heading .accordion-toggle:after {
+        font-family: 'Glyphicons Halflings';
+        content: "\e114";
+        float: left;
+        color: #4a8c17 !important;
+    }
+    .panel-heading .accordion-toggle.collapsed:after {
+        content: "\e080";
+    }
+    .panel-default>.panel-heading {
+        background-color: transparent !important;
+        min-height: 40px;
+        height: auto;
+    }
+    .panel-heading .accordion-toggle:after { color:#fff; }
+    .panel-title>a:hover { color:#fff; }
+
+    /* ===== Email templates table styles (NEW) ===== */
+    .email-template-row:hover {
+        background-color: #f0f7ff !important;
+    }
+    .email-template-row.active-template {
+        background-color: #e8f5e9 !important;
+    }
+    .email-template-row.active-template td {
+        color: #2e7d32;
+    }
+    #accordion-email .panel-heading {
+        padding: 8px 12px;
+    }
+    #accordion-email .panel-heading h4 {
+        font-size: 13px;
+    }
+    #accordion-email .panel-heading a {
+        color: #555;
+    }
+    #accordion-email .panel-heading a:hover {
+        color: #333;
+    }
+    .email-template-checkbox {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+    }
 </style>
 @endsection

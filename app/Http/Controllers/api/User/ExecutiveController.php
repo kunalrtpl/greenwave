@@ -292,34 +292,63 @@ class ExecutiveController extends Controller
     }
 
     public function profile(Request $request){
-    	if($request->isMethod('post')){
-			$resp = $this->resp;
-    		if($resp['status']){
-    			if(isset($resp['user'])){
-    				$message ='Profile has been fetched successfully';
-    				$result['user'] = $resp['user'];
+        if($request->isMethod('post')){
+            $resp = $this->resp;
+            if($resp['status']){
+                if(isset($resp['user'])){
+                    $message ='Profile has been fetched successfully';
+                    $result['user'] = $resp['user'];
                     $result['user']['user_roles'] = getUserRoles($resp['user']['app_roles'],'executive');
                     $reporting_resp = User::getReportingUsers($resp['user']['id']);
                     $result['image_url'] = url('images/AdminImages').'/';
+
+                    // Proof URLs - full URL or empty string if filename empty
+                    $proofFields = ['aadhar_proof', 'driving_license_proof', 'pan_proof'];
+                    foreach ($proofFields as $field) {
+                        if (!empty($resp['user'][$field])) {
+                            $result['user'][$field] = url('images/UserProofs/' . $resp['user'][$field]);
+                        } else {
+                            $result['user'][$field] = '';
+                        }
+                    }
+
                     $result['user']['report_to_users'] =  $reporting_resp['report_to_users'];
                     $result['user']['report_from_users'] =  $reporting_resp['report_from_users'];
                     $result['user']['incentives'] =  $reporting_resp['incentives'];
                     $result['user']['cities'] =  $reporting_resp['cities'];
+
+                    // Attachments where show_in_app = 1
+                    $attachments = \DB::table('user_attachments')
+                        ->where('user_id', $resp['user']['id'])
+                        ->where('show_in_app', 1)
+                        ->get();
+
+                    $result['user']['attachments'] = $attachments->map(function($attachment) {
+                        return [
+                            'id'            => $attachment->id,
+                            'label'         => $attachment->label,
+                            'original_name' => $attachment->original_name,
+                            'url'           => url('images/UserAttachments/' . $attachment->file_path),
+                            'created_at'    => $attachment->created_at,
+                        ];
+                    })->values()->toArray();
+
                     $noOfUsersLoggedIn = AuthToken::where('type','user')->where('user_id',$resp['user']['id'])->count();
                     $result['user']['no_of_users_logged_in'] = $noOfUsersLoggedIn;
-    				return response()->json(apiSuccessResponse($message,$result),200);
-    			}else{
-    				$message = "Unable to fetch profile. PLease try again after sometime";
-		    		return response()->json(apiErrorResponse($message),422);
-    			}
-    		}else{
-    			$message = "Unable to fetch profile. PLease try again after sometime";
-		    	return response()->json(apiErrorResponse($message),422);
-    		}
-    	}else{
-    		$message = "GET not supported for this route";
-		    return response()->json(apiErrorResponse($message),422); 
-    	}
+
+                    return response()->json(apiSuccessResponse($message,$result),200);
+                }else{
+                    $message = "Unable to fetch profile. PLease try again after sometime";
+                    return response()->json(apiErrorResponse($message),422);
+                }
+            }else{
+                $message = "Unable to fetch profile. PLease try again after sometime";
+                return response()->json(apiErrorResponse($message),422);
+            }
+        }else{
+            $message = "GET not supported for this route";
+            return response()->json(apiErrorResponse($message),422); 
+        }
     }
 
     public function subordinateProfile(Request $request){

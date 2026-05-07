@@ -630,3 +630,54 @@
 	    return "This mobile number is already in use. Please use a different mobile number.";
 	}
 
+	/**
+	 * Get all recipient emails for a dealer email template.
+	 *
+	 * Always includes the dealer's own email, plus any active child users
+	 * who have opted into this template via their email_templates selection.
+	 *
+	 * @param  string       $eventKey   e.g. 'po_dealer_self', 'po_dealer_approve'
+	 * @param  \App\Dealer  $dealer     The PO's dealer object
+	 * @return array<string>
+	 */
+	function getDealerTemplateRecipients(string $eventKey, $dealer): array
+	{
+	    $emails = [];
+
+	    // 1. Always include the dealer's own email
+	    if (!empty($dealer->email)) {
+	        $emails[] = $dealer->email;
+	    }
+
+	    // 2. Resolve parent dealer ID using id and parent_id directly
+	    $parentDealerId = $dealer->id;
+
+	    // 3. Find the template by event_key to get its ID for matching
+	    $template = \App\EmailTemplate::where('is_active', 1)
+	        ->where('event_key', $eventKey)
+	        ->first();
+
+	    if (!$template) {
+	        return array_values(array_unique(array_filter($emails)));
+	    }
+
+	    // 4. Collect child users who have opted into this template
+	    $childUsers = \App\Dealer::where('parent_id', $parentDealerId)
+	        ->where('is_delete', 0)
+	        ->where('status', 1)
+	        ->whereNotNull('email')
+	        ->where('email', '!=', '')
+	        ->whereNotNull('email_templates')
+	        ->where('email_templates', '!=', '')
+	        ->get(['email', 'email_templates']);
+
+	    foreach ($childUsers as $user) {
+	        $selectedIds = array_map('intval', explode(',', $user->email_templates));
+	        if (in_array($template->id, $selectedIds)) {
+	            $emails[] = $user->email;
+	        }
+	    }
+
+	    return array_values(array_unique(array_filter($emails)));
+	}
+
