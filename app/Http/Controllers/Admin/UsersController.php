@@ -279,11 +279,11 @@ class UsersController extends Controller
                         $img->save($destination.$mainFilename);
                         $user->image = $mainFilename;
                     }else{
-                        if($data['gender'] =="Male"){
+                        /*if($data['gender'] =="Male"){
                             $user->image = 'male.jpg';
                         }else{
                             $user->image = 'female.png';
-                        }
+                        }*/
                     }
 
                     $proofsArr = array('aadhar_proof','driving_license_proof','pan_proof');
