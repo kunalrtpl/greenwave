@@ -3634,4 +3634,27 @@ class ExecutiveController extends Controller
             ]), 200);
         }
     }
+
+    public function getAppManual()
+    {
+        $resp = $this->resp;
+        if($resp['status'] && isset($resp['user'])){
+            $user = \App\User::findOrFail($resp['user']['id']);
+
+            // Parse the app_roles column (comma-separated string)
+            $userRoleKeys = array_map('trim', explode(',', $user->app_roles));
+
+            // Fetch matching roles — return only required columns
+            $roles = \DB::table('app_roles')
+                ->whereIn('key', $userRoleKeys)
+                ->where('type', 'executive')
+                ->orderBy('sort_order', 'ASC')
+                ->select('key', 'name_app', 'description')
+                ->get();
+
+            return response()->json(apiSuccessResponse('App manual fetched successfully', [
+                'roles' => $roles,
+            ]), 200);
+        }
+    }
 }

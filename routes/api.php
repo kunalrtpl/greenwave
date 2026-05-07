@@ -292,6 +292,7 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::post('user-products', 'ExecutiveController@getUserProducts');
 			Route::post('update-user-products', 'ExecutiveController@updateUserProducts');
 			Route::get('download-app-manual-pdf', 'ExecutiveController@downloadAppManualPdf');
+			Route::get('app-manual', 'ExecutiveController@getAppManual');
 
 
 			// --- App Role Assignment Routes ---

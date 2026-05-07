@@ -433,6 +433,7 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 	    Route::post('attendance/update-status','AttendanceViewController@updateStatus');
 
 	    Route::get('/dvrs', 'UserDvrController@index');
+		Route::get('dvrs/export-pdf',    'UserDvrController@exportPdf')->name('admin.dvrs.pdf');
 		Route::get('/dvrs/{id}', 'UserDvrController@show');
 
 

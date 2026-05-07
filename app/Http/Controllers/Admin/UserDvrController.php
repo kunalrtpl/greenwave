@@ -7,8 +7,9 @@ use Illuminate\Http\Request;
 use App\UserDvr;
 use App\User;
 use App\UserAttendance;
+use App\UserScheduler;
 use Carbon\Carbon;
-
+use PDF;
 /**
  * UserDvrController — Admin DVR Module
  * All display logic computed server-side; blade is pure rendering only.
@@ -20,7 +21,7 @@ class UserDvrController extends Controller
         'site_type'    => ['On Site', 'Off Site'],
         'meeting'      => ['Met Customer', 'No Meeting'],
         'detail'       => ['Visit Detail Added', 'Visit Detail Pending'],
-        //'verification' => ['Verified', 'Not Verified'],
+        'verification' => ['Verified', 'Not Verified'],
         'trial_status' => ['Report Attached', 'Trial Report Pending', 'Trial Not Done', 'No Trials'],
     ];
 
@@ -33,14 +34,22 @@ class UserDvrController extends Controller
         $statusFilters = self::STATUS_FILTERS;
         $title         = 'Daily Visit Reports';
 
+        // ── Default to current month + year ────────────────
+        $currentMonth = $request->filled('month') ? (int)$request->month : (int)date('m');
+        $currentYear  = $request->filled('year')  ? (int)$request->year  : (int)date('Y');
+
         if (!$request->filled('user_id')) {
             return view('admin.dvrs.index', compact('users', 'statusFilters', 'title'))
                 ->with('groupedDvrs', collect())
                 ->with('paginator', null)
                 ->with('summaryStats', null)
-                ->with('attendanceMap', collect());
+                ->with('customerStats', collect())
+                ->with('attendanceMap', collect())
+                ->with('currentMonth', $currentMonth)
+                ->with('currentYear', $currentYear);
         }
 
+        // ── Build Eloquent query ────────────────────────────
         $query = UserDvr::with([
             'user:id,name',
             'customer:id,name,activity,category,mobile',
@@ -50,41 +59,57 @@ class UserDvrController extends Controller
             'products.productinfo:id,product_name',
             'trials.attachments',
             'attachments',
+            'user_scheduler:id,scheduler_date,scheduler_time,description,status',
         ])
         ->withCount('trials')
         ->where('user_id', $request->user_id)
+        ->whereMonth('dvr_date', $currentMonth)
+        ->whereYear('dvr_date', $currentYear)
         ->orderBy('dvr_date', 'desc')
         ->orderBy('id', 'desc');
 
-        if ($request->filled('month')) $query->whereMonth('dvr_date', $request->month);
-        if ($request->filled('year'))  $query->whereYear('dvr_date', $request->year);
+        $allDvrs  = $query->get();
+        $dvrDates = $allDvrs->pluck('dvr_date')->unique()->values();
 
-        $allDvrs       = $query->get();
-        $dvrDates      = $allDvrs->pluck('dvr_date')->unique()->values();
+        // ── Attendance map keyed by date ────────────────────
         $attendanceMap = UserAttendance::where('user_id', $request->user_id)
             ->whereIn('in_date', $dvrDates)
             ->get()
             ->keyBy(fn($a) => Carbon::parse($a->in_date)->format('Y-m-d'));
 
+        // ── Build computed rows ─────────────────────────────
         $allDvrs = $allDvrs->map(fn($dvr) => $this->buildDvrRow($dvr, $attendanceMap));
 
+        // ── Customer stats (visit count + time %) ──────────
+        $customerStats = $this->buildCustomerStats($allDvrs);
+
+        // ── Status filter ───────────────────────────────────
         if ($request->filled('status_filter')) {
             $sf      = $request->status_filter;
             $allDvrs = $allDvrs->filter(function ($dvr) use ($sf) {
-                $labels = collect($dvr['statuses'])->pluck('label');
+                $labels     = collect($dvr['statuses'])->pluck('label');
                 $trialLabel = $dvr['trial_overall']['label'];
                 return $labels->contains($sf) || $trialLabel === $sf;
             })->values();
         }
 
+        // ── Customer filter ─────────────────────────────────
+        if ($request->filled('customer_filter')) {
+            $cf      = $request->customer_filter;
+            $allDvrs = $allDvrs->filter(fn($d) => $d['customer_name'] === $cf)->values();
+        }
+
+        // ── Visit type filter ───────────────────────────────
         if ($request->filled('visit_type')) {
             $allDvrs = $allDvrs->filter(fn($d) => $d['visit_type'] === $request->visit_type)->values();
         }
 
+        // ── Summary stats ───────────────────────────────────
         $summaryStats = $this->buildSummaryStats($allDvrs, $attendanceMap);
 
+        // ── Paginate ────────────────────────────────────────
         $perPage  = 20;
-        $page     = (int) $request->get('page', 1);
+        $page     = (int)$request->get('page', 1);
         $total    = $allDvrs->count();
         $pageDvrs = $allDvrs->forPage($page, $perPage)->values();
 
@@ -97,7 +122,8 @@ class UserDvrController extends Controller
 
         return view('admin.dvrs.index', compact(
             'groupedDvrs', 'paginator', 'users',
-            'summaryStats', 'statusFilters', 'attendanceMap', 'title'
+            'summaryStats', 'statusFilters', 'attendanceMap',
+            'customerStats', 'title', 'currentMonth', 'currentYear'
         ));
     }
 
@@ -125,6 +151,68 @@ class UserDvrController extends Controller
     }
 
     /* ═══════════════════════════════════════════════
+     *  PDF EXPORT
+     * ═══════════════════════════════════════════════ */
+    public function exportPdf(Request $request)
+    {
+        if (!$request->filled('user_id')) {
+            return redirect()->back()->with('error', 'Please select an employee.');
+        }
+
+        $currentMonth = $request->filled('month') ? (int)$request->month : (int)date('m');
+        $currentYear  = $request->filled('year')  ? (int)$request->year  : (int)date('Y');
+
+        $query = UserDvr::with([
+            'user:id,name',
+            'customer:id,name',
+            'customer_register_request:id,name',
+            'customerContacts.customerContact:id,name,designation,mobile_number',
+            'customer_contact_info:id,name,designation,mobile_number',
+            'products.productinfo:id,product_name',
+            'trials.attachments',
+            'user_scheduler:id,scheduler_date,scheduler_time,description,status',
+        ])
+        ->withCount('trials')
+        ->where('user_id', $request->user_id)
+        ->whereMonth('dvr_date', $currentMonth)
+        ->whereYear('dvr_date', $currentYear)
+        ->orderBy('dvr_date', 'desc')
+        ->orderBy('id', 'desc');
+
+        $allDvrs       = $query->get();
+        $dvrDates      = $allDvrs->pluck('dvr_date')->unique()->values();
+        $attendanceMap = UserAttendance::where('user_id', $request->user_id)
+            ->whereIn('in_date', $dvrDates)->get()
+            ->keyBy(fn($a) => Carbon::parse($a->in_date)->format('Y-m-d'));
+
+        $rows         = $allDvrs->map(fn($dvr) => $this->buildDvrRow($dvr, $attendanceMap));
+        $groupedDvrs  = $rows->groupBy('dvr_date_key');
+        $summaryStats = $this->buildSummaryStats($rows, $attendanceMap);
+        $customerStats = $this->buildCustomerStats($rows);
+
+        $selectedUser = User::find($request->user_id);
+        $monthName    = date('F', mktime(0, 0, 0, $currentMonth, 1));
+
+        $html = view('admin.dvrs.pdf', compact(
+            'groupedDvrs', 'summaryStats', 'customerStats',
+            'selectedUser', 'monthName', 'currentYear', 'attendanceMap'
+        ))->render();
+
+        $dompdf = new PDF;
+        $pdf = $dompdf::loadHTML($html)
+            ->setPaper('a4', 'portrait')
+            ->setOptions([
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled'      => false,
+                'defaultFont'          => 'DejaVu Sans',
+                'dpi'                  => 120,
+            ]);
+
+        $filename = 'DVR_' . ($selectedUser->name ?? 'export') . '_' . $monthName . '_' . $currentYear . '.pdf';
+        return $pdf->download($filename);
+    }
+
+    /* ═══════════════════════════════════════════════
      *  PRIVATE HELPERS
      * ═══════════════════════════════════════════════ */
 
@@ -134,6 +222,9 @@ class UserDvrController extends Controller
             ->orderBy('name')->get(['id', 'name']);
     }
 
+    /**
+     * Build full display array for one DVR row — NO logic in blade.
+     */
     private function buildDvrRow(UserDvr $dvr, $attendanceMap): array
     {
         $dateKey  = Carbon::parse($dvr->dvr_date)->format('Y-m-d');
@@ -150,9 +241,16 @@ class UserDvrController extends Controller
         $meetDur  = ($dvr->start_time && $dvr->end_time)
             ? $this->diffHumanShort($dvr->start_time, $dvr->end_time) : null;
 
+        // meeting minutes for % calc
+        $meetMinutes = 0;
+        if ($dvr->start_time && $dvr->end_time) {
+            $meetMinutes = max(0, Carbon::parse($dvr->start_time)->diffInMinutes(Carbon::parse($dvr->end_time)));
+        }
+
         $att        = $attendanceMap->get($dateKey);
         $attDisplay = $this->buildAttendanceDisplay($att);
 
+        // Contacts met
         $contacts = $dvr->customerContacts
             ->filter(fn($cc) => $cc->customerContact !== null)
             ->map(fn($cc) => [
@@ -163,7 +261,7 @@ class UserDvrController extends Controller
             ])->values()->toArray();
 
         if (empty($contacts) && $dvr->customer_contact_info) {
-            $c = $dvr->customer_contact_info;
+            $c        = $dvr->customer_contact_info;
             $contacts = [[
                 'name'        => $c->name,
                 'designation' => $c->designation,
@@ -172,44 +270,85 @@ class UserDvrController extends Controller
             ]];
         }
 
+        // Purposes
         $purposes = $dvr->purpose_of_visit
             ? array_values(array_filter(array_map('trim', explode(',,,', $dvr->purpose_of_visit))))
             : [];
 
+        // Products
         $products = $dvr->products->map(fn($p) => optional($p->productinfo)->product_name)
             ->filter()->values()->toArray();
 
+        // Trials
         $trialRows    = $this->buildTrialStatuses($dvr);
         $trialOverall = $this->overallTrialStatus($trialRows);
 
-        // ── STATUS BADGES ─────────────────────────────────
-        $statuses = [];
+        // Visit detail (the longtext column)
+        $visitDetail = $dvr->visit_detail ?? null;
 
-        $statuses[] = ['label' => $dvr->visit_type ?? 'Official',
-            'color' => ($dvr->visit_type === 'Official') ? '#3b82f6' : '#6b7280',
-            'group' => 'visit_type'];
-
-        $isReal = ($dvr->visit_recorded === 'On Site');
-        $statuses[] = ['label' => $isReal ? 'Real Time Entry' : 'Post Visit Entry',
-            'color' => $isReal ? '#10b981' : '#f59e0b', 'group' => 'entry_type'];
-
-        if ($dvr->site_type) {
-            $statuses[] = ['label' => $dvr->site_type,
-                'color' => ($dvr->site_type === 'On Site') ? '#06b6d4' : '#6b7280',
-                'group' => 'site_type'];
+        // Next plan & scheduler
+        $schedulerInfo = null;
+        if ($dvr->user_scheduler) {
+            $s = $dvr->user_scheduler;
+            $schedulerInfo = [
+                'date'        => $s->scheduler_date ? Carbon::parse($s->scheduler_date)->format('d M Y') : null,
+                'time'        => $s->scheduler_time ? Carbon::parse($s->scheduler_time)->format('H:i')   : null,
+                'description' => $s->description,
+                'status'      => $s->status,
+            ];
+        } elseif ($dvr->next_plan) {
+            $schedulerInfo = [
+                'date'        => null,
+                'time'        => null,
+                'description' => $dvr->next_plan,
+                'status'      => null,
+            ];
         }
 
-        $met = (bool) $dvr->have_you_met;
-        $statuses[] = ['label' => $met ? 'Met Customer' : 'No Meeting',
-            'color' => $met ? '#10b981' : '#ef4444', 'group' => 'meeting'];
+        // ── STATUS BADGES (only blue & red per client request) ──
+        $statuses = [];
 
-        $submitted = (bool) $dvr->is_submitted;
-        $statuses[] = ['label' => $submitted ? 'Visit Detail Added' : 'Visit Detail Pending',
-            'color' => $submitted ? '#10b981' : '#f59e0b', 'group' => 'detail'];
+        $statuses[] = [
+            'label' => $dvr->visit_type ?? 'Official',
+            'color' => '#22c55e',
+            'group' => 'visit_type',
+        ];
+
+        $isReal = ($dvr->visit_recorded === 'On Site');
+        $statuses[] = [
+            'label' => $isReal ? 'Real Time Entry' : 'Post Visit Entry',
+            'color' => $isReal ? '#22c55e' : '#ef4444',
+            'group' => 'entry_type',
+        ];
+
+        if ($dvr->site_type) {
+            $statuses[] = [
+                'label' => $dvr->site_type,
+                'color' => ($dvr->site_type === 'On Site') ? '#22c55e' : '#ef4444',
+                'group' => 'site_type',
+            ];
+        }
+
+        $met = (bool)$dvr->have_you_met;
+        $statuses[] = [
+            'label' => $met ? 'Met Customer' : 'No Meeting',
+            'color' => $met ? '#22c55e' : '#ef4444',
+            'group' => 'meeting',
+        ];
+
+        $submitted = (bool)$dvr->is_submitted;
+        $statuses[] = [
+            'label' => $submitted ? 'Visit Detail Added' : 'Visit Detail Pending',
+            'color' => $submitted ? '#22c55e' : '#ef4444',
+            'group' => 'detail',
+        ];
 
         $verified = !is_null($dvr->dvr_verified_date_time);
-        /*$statuses[] = ['label' => $verified ? 'Verified' : 'Not Verified',
-            'color' => $verified ? '#10b981' : '#f59e0b', 'group' => 'verification']*/;
+        $statuses[] = [
+            'label' => $verified ? 'Verified' : 'Not Verified',
+            'color' => $verified ? '#22c55e' : '#ef4444',
+            'group' => 'verification',
+        ];
 
         return [
             'id'               => $dvr->id,
@@ -221,10 +360,13 @@ class UserDvrController extends Controller
             'check_in'         => $checkIn,
             'check_out'        => $checkOut,
             'meeting_duration' => $meetDur,
+            'meet_minutes'     => $meetMinutes,
             'attendance'       => $attDisplay,
             'contacts'         => $contacts,
             'purposes'         => $purposes,
             'products'         => $products,
+            'visit_detail'     => $visitDetail,
+            'scheduler'        => $schedulerInfo,
             'trials_count'     => $dvr->trials_count,
             'trial_rows'       => $trialRows,
             'trial_overall'    => $trialOverall,
@@ -248,19 +390,19 @@ class UserDvrController extends Controller
             $hasAtt = $trial->attachments->where('type', 'trial_report')->count() > 0;
             $hasId  = !is_null($trial->trial_report_id ?? null);
             if ($hasAtt || $hasId) {
-                return ['label' => 'Report Attached', 'color' => '#10b981', 'type' => $trial->trial_type];
+                return ['label' => 'Report Attached', 'color' => '#22c55e', 'type' => $trial->trial_type];
             }
-            return ['label' => 'Trial Report Pending', 'color' => '#f59e0b', 'type' => $trial->trial_type];
+            return ['label' => 'Trial Report Pending', 'color' => '#ef4444', 'type' => $trial->trial_type];
         })->toArray();
     }
 
     private function overallTrialStatus(array $rows): array
     {
-        if (empty($rows)) return ['label' => 'No Trials', 'color' => '#9ca3af'];
+        if (empty($rows)) return ['label' => 'No Trials', 'color' => '#94a3b8'];
         $labels = array_column($rows, 'label');
-        if (in_array('Trial Not Done', $labels))        return ['label' => 'Trial Not Done',       'color' => '#ef4444'];
-        if (in_array('Trial Report Pending', $labels))  return ['label' => 'Trial Report Pending', 'color' => '#f59e0b'];
-        return ['label' => 'Report Attached', 'color' => '#10b981'];
+        if (in_array('Trial Not Done', $labels))       return ['label' => 'Trial Not Done',       'color' => '#ef4444'];
+        if (in_array('Trial Report Pending', $labels)) return ['label' => 'Trial Report Pending', 'color' => '#ef4444'];
+        return ['label' => 'Report Attached', 'color' => '#22c55e'];
     }
 
     private function buildAttendanceDisplay($att): array
@@ -272,7 +414,7 @@ class UserDvrController extends Controller
             'out_time'     => $att->out_time ? Carbon::parse($att->out_time)->format('H:i:s') : null,
             'work_hours'   => $this->calcWorkHours($att),
             'status'       => $att->status,
-            'status_color' => ($att->status === 'Present') ? '#10b981' : '#ef4444',
+            'status_color' => ($att->status === 'Present') ? '#22c55e' : '#ef4444',
         ];
     }
 
@@ -283,12 +425,56 @@ class UserDvrController extends Controller
         return $d->h . 'h ' . $d->i . 'm';
     }
 
+    private function calcWorkMinutes($att): int
+    {
+        if (!$att || !$att->in_time || !$att->out_time) return 0;
+        return max(0, Carbon::parse($att->in_time)->diffInMinutes(Carbon::parse($att->out_time)));
+    }
+
     private function diffHumanShort($start, $end): string
     {
         $d = Carbon::parse($start)->diff(Carbon::parse($end));
         return $d->h . 'h ' . $d->i . 'm';
     }
 
+    /**
+     * Build per-customer stats: visit count %, total meeting time %.
+     */
+    private function buildCustomerStats($allDvrs): \Illuminate\Support\Collection
+    {
+        $total        = $allDvrs->count();
+        $totalMinutes = $allDvrs->sum('meet_minutes');
+
+        if ($total === 0) return collect();
+
+        return $allDvrs
+            ->groupBy('customer_name')
+            ->map(function ($group, $name) use ($total, $totalMinutes) {
+                $count   = $group->count();
+                $minutes = $group->sum('meet_minutes');
+                $h       = intdiv($minutes, 60);
+                $m       = $minutes % 60;
+                $th = intdiv($totalMinutes, 60);
+                $tm = $totalMinutes % 60;
+                return [
+                    'name'               => $name,
+                    'count'              => $count,
+                    'visit_pct'          => $total > 0 ? round($count / $total * 100) : 0,
+                    'time_minutes'       => $minutes,
+                    'time_display'       => $h . 'h ' . $m . 'm',
+                    'time_pct'           => $totalMinutes > 0 ? round($minutes / $totalMinutes * 100) : 0,
+                    'total_dvrs'         => $total,
+                    'total_minutes'      => $totalMinutes,
+                    'total_time_display' => $th . 'h ' . $tm . 'm',
+                ];
+            })
+            ->sortByDesc('count')
+            ->values();
+    }
+
+    /**
+     * Summary stat cards.
+     */
     private function buildSummaryStats($allDvrs, $attendanceMap): array
     {
         $total       = $allDvrs->count();
@@ -299,6 +485,7 @@ class UserDvrController extends Controller
         )->count();
         $trialsSum   = $allDvrs->sum('trials_count');
         $presentDays = $attendanceMap->filter(fn($a) => $a->status === 'Present')->count();
+
         return compact('total', 'verified', 'pending', 'metCount', 'trialsSum', 'presentDays');
     }
 }
