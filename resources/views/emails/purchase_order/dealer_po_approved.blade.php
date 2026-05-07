@@ -53,7 +53,7 @@
 
         /* ── Items Table ── */
         .items-table            { width: 100%; border: 1px solid #6ee7b7; border-radius: 12px; overflow: hidden; font-size: 12px; }
-        .items-header           { background: linear-gradient(135deg, #065f46 0%, #059669 100%); }
+        .items-header { background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%); }
         .items-header td        { padding: 12px 8px; color: #fff; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
         .items-header .center   { text-align: center; }
         .items-header .right    { text-align: right; }
@@ -157,10 +157,11 @@
                 <div class="header-divider"></div>
 
                 {{-- Approved Circle --}}
+                {{-- Approved Circle --}}
                 <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 0 auto 18px;">
                     <tr>
                         <td align="center" style="padding: 0;">
-                            <div style="width: 68px; height: 68px; border-radius: 34px; background: #10b981; border: 3px solid rgba(255,255,255,0.6); box-shadow: 0 4px 20px rgba(16,185,129,0.4); display: table; margin: 0 auto;">
+                            <div style="width: 68px; height: 68px; border-radius: 34px; background: #10b981; box-shadow: 0 4px 20px rgba(16,185,129,0.4); display: table; margin: 0 auto;">
                                 <div style="display: table-cell; vertical-align: middle; text-align: center; font-size: 32px; color: #ffffff;">
                                     ✓
                                 </div>
@@ -223,8 +224,8 @@
                     <tr class="summary-row-border">
                         <td class="summary-label">Approved On</td>
                         <td class="summary-value">{{ \Carbon\Carbon::now()->format('d M Y, h:i A') }}</td>
-                        <td class="summary-label">Mode</td>
-                        <td class="summary-value">{{ $po->mode ?: '—' }}</td>
+                        <td class="summary-label">Approved By</td>
+                        <td class="summary-value">{{ $approvedBy }}</td>
                     </tr>
                     @if(!empty($po->remarks))
                     <tr>

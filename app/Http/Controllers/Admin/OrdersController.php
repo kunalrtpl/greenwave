@@ -690,16 +690,16 @@ class OrdersController extends Controller
             $updatePo->save();
 
             DB::commit();
-
+            $approvedBy = auth()->user()->name;
             // ── Send Approval Email to Dealer ─────────────────────────────────
-            /*$poForEmail  = PurchaseOrder::with([
+            $poForEmail  = PurchaseOrder::with([
                 'dealer',
                 'orderitems.product',
                 'orderitems.packingsize',
             ])->find($data['purchase_order_id']);
             
             $emails = getDealerTemplateRecipients('po_dealer_approved', $poForEmail->dealer);
-            EmailService::send('po_dealer_approved', ['po' => $poForEmail], $emails);*/
+            EmailService::send('po_dealer_approved', ['po' => $poForEmail,'approvedBy'=> $approvedBy], $emails);
             // ── End Email ─────────────────────────────────
 
             return Redirect::to('/admin/dealer-orders')
