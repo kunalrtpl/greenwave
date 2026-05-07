@@ -268,30 +268,46 @@ class DealerController extends Controller
 
 
     public function profile(Request $request){
-    	if($request->isMethod('post')){
-			$resp = $this->resp;
-    		if($resp['status']){
-    			if(isset($resp['dealer'])){
-    				$message ='Profile has been fetched successfully'; 
-    				$result['dealer'] = $resp['dealer'];
+        if($request->isMethod('post')){
+            $resp = $this->resp;
+            if($resp['status']){
+                if(isset($resp['dealer'])){
+                    $message ='Profile has been fetched successfully'; 
+                    $result['dealer'] = $resp['dealer'];
                     $result['dealer']['dealer_roles'] = getUserRoles($resp['dealer']['app_roles'],'dealer');
                     $addOnUsers = Dealer::addOnUsers($resp['dealer']['id']);
                     $noOfUsersLoggedIn = AuthToken::where('type','dealer')->where('dealer_id',$resp['dealer']['id'])->count();
                     $result['dealer']['no_of_users_logged_in'] = $noOfUsersLoggedIn;
                     $result['dealer']['addon_users'] = $addOnUsers;
-    				return response()->json(apiSuccessResponse($message,$result),200);
-    			}else{
-    				$message = "Unable to fetch profile. PLease try again after sometime";
-		    		return response()->json(apiErrorResponse($message),422);
-    			}
-    		}else{
-    			$message = "Unable to fetch profile. PLease try again after sometime";
-		    	return response()->json(apiErrorResponse($message),422);
-    		}
-    	}else{
-    		$message = "GET not supported for this route";
-		    return response()->json(apiErrorResponse($message),422); 
-    	}
+
+                    // Email templates for dealer
+                    $emailTemplates = \DB::table('email_templates')
+                        ->where('template_for', 'dealer')
+                        ->get();
+
+                    $result['dealer']['email_templates'] = $emailTemplates->map(function($template) {
+                        return [
+                            'id'            => $template->id,
+                            'event_key'     => $template->event_key,
+                            'name'          => $template->name,
+                            'subject'       => $template->subject,
+                            'blade_view'    => $template->blade_view,
+                        ];
+                    })->values()->toArray();
+
+                    return response()->json(apiSuccessResponse($message,$result),200);
+                }else{
+                    $message = "Unable to fetch profile. PLease try again after sometime";
+                    return response()->json(apiErrorResponse($message),422);
+                }
+            }else{
+                $message = "Unable to fetch profile. PLease try again after sometime";
+                return response()->json(apiErrorResponse($message),422);
+            }
+        }else{
+            $message = "GET not supported for this route";
+            return response()->json(apiErrorResponse($message),422); 
+        }
     }
 
     public function addOnUsers(Request $request){
@@ -333,9 +349,7 @@ class DealerController extends Controller
                     $mobileunique = "unique:dealers,owner_mobile";
                 }
                 $validator = Validator::make($request->all(), [
-                        //'dealer_type'   =>  'bail|required',
                         'name'   =>  'bail|required',
-                        //'designation'   =>  'bail',
                         'email'   => 'bail|email|'.$emailunique,
                         'mobile' => 'bail|required|numeric|digits:10|'.$mobileunique,
                         'status' => 'bail|required',
@@ -365,6 +379,17 @@ class DealerController extends Controller
                     if(isset($data['app_roles'])){
                         $dealer->app_roles = $data['app_roles'];
                     }
+
+                    // Save email_templates as comma separated event_keys
+                    $dealer->email_templates = "";
+                    if(isset($data['email_templates']) && !empty($data['email_templates'])){
+                        if(is_array($data['email_templates'])){
+                            $dealer->email_templates = implode(',', $data['email_templates']);
+                        }else{
+                            $dealer->email_templates = $data['email_templates'];
+                        }
+                    }
+
                     $dealer->save();
                     $message = "success";
                     return response()->json(apiSuccessResponse($message),200);
