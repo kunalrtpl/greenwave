@@ -905,17 +905,31 @@ class AttendanceController extends Controller
         }
 
         $userId = $this->resp['user']['id'];
-        $month  = (int)$request->query('month', now()->month);
-        $year   = (int)$request->query('year',  now()->year);
+
+        // Determine current financial year (April to March)
+        $currentMonth = (int) now()->month;
+        $currentYear  = (int) now()->year;
+        $currentFYStart = $currentMonth >= 4 ? $currentYear : $currentYear - 1;
+
+        // Accept financial year start from request e.g. ?fy=2024 means 2024-25
+        $fyStart = (int) $request->query('fy', $currentFYStart);
+        $fyEnd   = $fyStart + 1;
+
+        $fromDate = $fyStart . '-04-01';
+        $toDate   = $fyEnd   . '-03-31';
 
         $leaves = UserLeave::with(['leaveType'])
             ->where('user_id', $userId)
-            ->whereMonth('date', $month)
-            ->whereYear('date', $year)
+            ->whereBetween('date', [$fromDate, $toDate])
             ->orderBy('date', 'desc')
             ->get();
 
-        return response()->json(apiSuccessResponse('Leave list fetched', ['leaves' => $leaves]), 200);
+        return response()->json(apiSuccessResponse('Leave list fetched', [
+            'financial_year' => $fyStart . '-' . $fyEnd,
+            'from_date'      => $fromDate,
+            'to_date'        => $toDate,
+            'leaves'         => $leaves,
+        ]), 200);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
