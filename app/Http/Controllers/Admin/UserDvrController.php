@@ -10,6 +10,7 @@ use App\UserAttendance;
 use App\UserScheduler;
 use Carbon\Carbon;
 use PDF;
+use Session;
 /**
  * UserDvrController — Admin DVR Module
  * All display logic computed server-side; blade is pure rendering only.
