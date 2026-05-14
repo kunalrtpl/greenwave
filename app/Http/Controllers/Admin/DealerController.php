@@ -247,12 +247,12 @@ class DealerController extends Controller
                     }
                     // Set default auth_mobile if is_authenticated is 0 but no auth_mobile provided
                     if (isset($data['is_authenticated']) && $data['is_authenticated'] == 0) {
-                        if (empty($data['auth_mobile'])) {
+                        /*if (empty($data['auth_mobile'])) {
                             $data['auth_mobile'] = $data['owner_mobile'] ?? '7837329321';
-                        }
+                        }*/
                     } else {
                         // If authenticated = yes, clear auth_mobile
-                        $data['auth_mobile'] = null;
+                       // $data['auth_mobile'] = null;
                     }
                     foreach($data as $dkey=> $dealerinfo){
                         $dealer->$dkey = $dealerinfo;

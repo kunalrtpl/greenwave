@@ -134,13 +134,17 @@ class ExecutiveController extends Controller
             $user = User::where(['mobile'=>$data['mobile']])->first();
             if(is_object($user)){
                 if($data['step'] == 1){
-                    if($data['mobile'] == "9890909090" || $data['mobile'] == "9876543210" || $data['mobile'] == "9988990099"){
-                        $otp = 999888;
+                    if($user->is_authenticated == 0){
+                        $otp = 123456;
                     }else{
-                        $otp =  rand(100000, 999999);
-                        $params['mobile'] = $data['mobile'];
-                        $params['message'] = "Your OTP for Login is ".$otp.". -GREENWAVE GLOBAL LTD";
-                        sendSms($params);
+                        if($data['mobile'] == "9890909090" || $data['mobile'] == "9876543210" || $data['mobile'] == "9988990099"){
+                            $otp = 999888;
+                        }else{
+                            $otp =  rand(100000, 999999);
+                            $params['mobile'] = $data['mobile'];
+                            $params['message'] = "Your OTP for Login is ".$otp.". -GREENWAVE GLOBAL LTD";
+                            sendSms($params);
+                        }
                     }
                     $user->recent_otp = $otp;
                     $user->save();

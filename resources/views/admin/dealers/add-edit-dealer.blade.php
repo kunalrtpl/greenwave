@@ -72,26 +72,6 @@
                                     </div>
                                 </div>
 
-                                <div class="form-group" id="auth-mobile-row" 
-                                    @if(!empty($dealerdata) && $dealerdata['is_authenticated'] == 0) 
-                                        style="display:block;" 
-                                    @else 
-                                        style="display:none;" 
-                                    @endif>
-                                    <label class="col-md-3 control-label">Authentication Mobile (OTP) </label>
-                                    <div class="col-md-4">
-                                        <input type="text" 
-                                               placeholder="Enter mobile for OTP login" 
-                                               name="auth_mobile" 
-                                               maxlength="10"
-                                               style="color:gray" 
-                                               class="form-control" 
-                                               value="{{ (!empty($dealerdata) && $dealerdata['is_authenticated'] == 0) ? (!empty($dealerdata['auth_mobile']) ? $dealerdata['auth_mobile'] : '9867187484') : '' }}"
-                                        />
-                                        <small class="text-muted">OTP will be sent to this number during login.</small>
-                                        <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-auth_mobile"></h4>
-                                    </div>
-                                </div>
                                 <div class="form-group">
                                     <label class="col-md-3 control-label">Business Name <span class="asteric">*</span></label>
                                     <div class="col-md-4">
@@ -648,28 +628,5 @@
         });
     });
 
-// Show/hide auth mobile field based on is_authenticated radio
-$(document).on('change', 'input[name="is_authenticated"]', function() {
-    var value = $(this).val();
-    if (value == '0') {
-        $('#auth-mobile-row').show();
-        // Set default mobile if field is empty
-        if ($('[name=auth_mobile]').val() == '') {
-            var ownerMobile = $('[name=owner_mobile]').val();
-            $('[name=auth_mobile]').val('9867187484');
-        }
-    } else {
-        $('#auth-mobile-row').hide();
-    }
-});
-
-// Auto-fill auth_mobile when owner_mobile is typed (only if auth is No)
-$(document).on('keyup', '[name=owner_mobile]', function() {
-    if ($('input[name="is_authenticated"]:checked').val() == '0') {
-        if ($('[name=auth_mobile]').val() == '') {
-            $('[name=auth_mobile]').val($(this).val());
-        }
-    }
-});
 </script>
 @endsection

@@ -257,6 +257,7 @@ class UsersController extends Controller
                     }*/
                     $user->mobile = $data['mobile'];
                     $user->status = $data['status'];
+                    $user->is_authenticated = $data['is_authenticated'];
                     $user->pan = $data['pan'];
                     //$user->show_class = $data['show_class'];
                     $user->show_weightage = $data['show_weightage'];

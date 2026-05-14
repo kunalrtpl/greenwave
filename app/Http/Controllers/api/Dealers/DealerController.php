@@ -112,17 +112,18 @@ class DealerController extends Controller
                 if($data['step'] == 1){
                     
                     if($dealer->is_authenticated == 0){
-                        $data['mobile'] = $dealer->auth_mobile;
-                    }
-
-                    if($data['mobile'] == "9898989898" || $data['mobile'] == "9876543210" || $data['mobile'] =="9988771234" || $data['mobile'] =="7887880136"){
                         $otp = 123456;
                     }else{
-                        $otp =  rand(100000, 999999);
-                        $params['mobile'] = $data['mobile'];
-                        $params['message'] = "Your OTP for Login is ".$otp.". -GREENWAVE GLOBAL LTD";
-                        sendSms($params);
+                        if($data['mobile'] == "9898989898" || $data['mobile'] == "9876543210" || $data['mobile'] =="9988771234" || $data['mobile'] =="7887880136"){
+                            $otp = 123456;
+                        }else{
+                            $otp =  rand(100000, 999999);
+                            $params['mobile'] = $data['mobile'];
+                            $params['message'] = "Your OTP for Login is ".$otp.". -GREENWAVE GLOBAL LTD";
+                            sendSms($params);
+                        }
                     }
+
                     $dealer->recent_otp = $otp;
                     $dealer->save();
                     $message = "Otp has been sent successfully to your mobile number";

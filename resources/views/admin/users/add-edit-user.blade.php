@@ -451,6 +451,26 @@
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
+                                <label class="col-md-4 control-label">Authorized <span class="asteric">*</span></label>
+                                <div class="col-md-8" style="padding-top:7px;">
+                                    <div class="radio-inline-group">
+                                        <label>
+                                            <input type="radio" name="is_authenticated" value="1"
+                                                @if(empty($empdata) || $empdata['is_authenticated'] == 1) checked @endif/>
+                                            Yes
+                                        </label>
+                                        <label>
+                                            <input type="radio" name="is_authenticated" value="0"
+                                                @if(!empty($empdata) && $empdata['is_authenticated'] == 0) checked @endif/>
+                                            No
+                                        </label>
+                                    </div>
+                                    <h4 class="text-danger" style="display:none;font-size:12px;" id="Employee-is_authenticated"></h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
                                 <label class="col-md-4 control-label">Profile Photo</label>
                                 <div class="col-md-8">
                                     <div data-provides="fileinput" class="fileinput fileinput-new">
