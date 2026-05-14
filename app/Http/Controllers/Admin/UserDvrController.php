@@ -30,6 +30,7 @@ class UserDvrController extends Controller
      * ═══════════════════════════════════════════════ */
     public function index(Request $request)
     {
+        Session::put('active','dvrs'); 
         $users         = $this->getEmployeeList();
         $statusFilters = self::STATUS_FILTERS;
         $title         = 'Daily Visit Reports';
