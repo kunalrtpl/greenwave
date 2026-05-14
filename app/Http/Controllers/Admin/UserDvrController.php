@@ -10,7 +10,6 @@ use App\UserAttendance;
 use App\UserScheduler;
 use Carbon\Carbon;
 use PDF;
-use Session;
 /**
  * UserDvrController — Admin DVR Module
  * All display logic computed server-side; blade is pure rendering only.
@@ -22,7 +21,7 @@ class UserDvrController extends Controller
         'site_type'    => ['On Site', 'Off Site'],
         'meeting'      => ['Met Customer', 'No Meeting'],
         'detail'       => ['Visit Detail Added', 'Visit Detail Pending'],
-        'verification' => ['Verified', 'Not Verified'],
+        //'verification' => ['Verified', 'Not Verified'],
         'trial_status' => ['Report Attached', 'Trial Report Pending', 'Trial Not Done', 'No Trials'],
     ];
 
@@ -31,7 +30,6 @@ class UserDvrController extends Controller
      * ═══════════════════════════════════════════════ */
     public function index(Request $request)
     {
-        Session::put('active','dvrs'); 
         $users         = $this->getEmployeeList();
         $statusFilters = self::STATUS_FILTERS;
         $title         = 'Daily Visit Reports';
@@ -187,30 +185,86 @@ class UserDvrController extends Controller
             ->whereIn('in_date', $dvrDates)->get()
             ->keyBy(fn($a) => Carbon::parse($a->in_date)->format('Y-m-d'));
 
-        $rows         = $allDvrs->map(fn($dvr) => $this->buildDvrRow($dvr, $attendanceMap));
-        $groupedDvrs  = $rows->groupBy('dvr_date_key');
-        $summaryStats = $this->buildSummaryStats($rows, $attendanceMap);
-        $customerStats = $this->buildCustomerStats($rows);
+        // Build all rows for the full month
+        $allRows     = $allDvrs->map(fn($dvr) => $this->buildDvrRow($dvr, $attendanceMap));
+        $totalAllDvrs = $allRows->count(); // full month count for context
+
+        // ── Apply filters — PDF matches exactly what's on screen ──
+        $filteredRows = $allRows;
+
+        if ($request->filled('status_filter')) {
+            $sf           = $request->status_filter;
+            $filteredRows = $filteredRows->filter(function ($dvr) use ($sf) {
+                $labels     = collect($dvr['statuses'])->pluck('label');
+                $trialLabel = $dvr['trial_overall']['label'];
+                return $labels->contains($sf) || $trialLabel === $sf;
+            })->values();
+        }
+
+        if ($request->filled('customer_filter')) {
+            $cf           = $request->customer_filter;
+            $filteredRows = $filteredRows->filter(fn($d) => $d['customer_name'] === $cf)->values();
+        }
+
+        if ($request->filled('visit_type')) {
+            $filteredRows = $filteredRows->filter(fn($d) => $d['visit_type'] === $request->visit_type)->values();
+        }
+
+        // Stats + customer summary = filtered rows (matches screen)
+        $summaryStats  = $this->buildSummaryStats($filteredRows, $attendanceMap);
+        $customerStats = $this->buildCustomerStats($filteredRows);
+
+        // For customer summary % context — if customer filter active, use full month as denominator
+        // so "12/29 41%" shows correctly instead of "12/12 100%"
+        $hasFilter = $request->filled('customer_filter')
+                  || $request->filled('status_filter')
+                  || $request->filled('visit_type');
+
+        if ($hasFilter) {
+            // Recompute customer stats with full-month total as denominator
+            $customerStats = $this->buildCustomerStatsWithTotal($filteredRows, $totalAllDvrs, $allRows);
+        }
+
+        $groupedDvrs = $filteredRows->groupBy('dvr_date_key');
+
+        // Build filter label and filename suffix
+        $filterParts  = [];
+        $filterSuffix = '';
+        if ($request->filled('customer_filter')) {
+            $filterParts[]  = $request->customer_filter;
+            $filterSuffix  .= '_' . str_replace(' ', '_', substr($request->customer_filter, 0, 20));
+        }
+        if ($request->filled('status_filter')) {
+            $filterParts[]  = $request->status_filter;
+            $filterSuffix  .= '_' . str_replace(' ', '_', $request->status_filter);
+        }
+        if ($request->filled('visit_type')) {
+            $filterParts[]  = $request->visit_type;
+        }
+        $filterLabel = !empty($filterParts) ? implode(' | ', $filterParts) : null;
 
         $selectedUser = User::find($request->user_id);
         $monthName    = date('F', mktime(0, 0, 0, $currentMonth, 1));
 
         $html = view('admin.dvrs.pdf', compact(
             'groupedDvrs', 'summaryStats', 'customerStats',
-            'selectedUser', 'monthName', 'currentYear', 'attendanceMap'
+            'selectedUser', 'monthName', 'currentYear', 'attendanceMap',
+            'filterLabel', 'totalAllDvrs'
         ))->render();
 
-        $dompdf = new PDF;
-        $pdf = $dompdf::loadHTML($html)
+        // barryvdh/laravel-dompdf ^0.8.7 usage
+        $pdf = PDF::loadHTML($html)
             ->setPaper('a4', 'portrait')
             ->setOptions([
                 'isHtml5ParserEnabled' => true,
                 'isRemoteEnabled'      => false,
                 'defaultFont'          => 'DejaVu Sans',
-                'dpi'                  => 120,
+                'dpi'                  => 96,
+                'isPhpEnabled'         => false,
+                'debugKeepTemp'        => false,
             ]);
 
-        $filename = 'DVR_' . ($selectedUser->name ?? 'export') . '_' . $monthName . '_' . $currentYear . '.pdf';
+        $filename = 'DVR_' . ($selectedUser->name ?? 'export') . '_' . $monthName . '_' . $currentYear . $filterSuffix . '.pdf';
         return $pdf->download($filename);
     }
 
@@ -346,11 +400,11 @@ class UserDvrController extends Controller
         ];
 
         $verified = !is_null($dvr->dvr_verified_date_time);
-        $statuses[] = [
+        /*$statuses[] = [
             'label' => $verified ? 'Verified' : 'Not Verified',
             'color' => $verified ? '#22c55e' : '#ef4444',
             'group' => 'verification',
-        ];
+        ];*/
 
         return [
             'id'               => $dvr->id,
@@ -467,6 +521,41 @@ class UserDvrController extends Controller
                     'time_pct'           => $totalMinutes > 0 ? round($minutes / $totalMinutes * 100) : 0,
                     'total_dvrs'         => $total,
                     'total_minutes'      => $totalMinutes,
+                    'total_time_display' => $th . 'h ' . $tm . 'm',
+                ];
+            })
+            ->sortByDesc('count')
+            ->values();
+    }
+
+    /**
+     * Customer stats for filtered view — uses full-month totals as denominator
+     * so "12/29 41%" shows correctly when only one customer is filtered
+     */
+    private function buildCustomerStatsWithTotal($filteredRows, int $totalAllDvrs, $allRows): \Illuminate\Support\Collection
+    {
+        if ($filteredRows->isEmpty()) return collect();
+
+        $totalAllMinutes = $allRows->sum('meet_minutes');
+
+        return $filteredRows
+            ->groupBy('customer_name')
+            ->map(function ($group, $name) use ($totalAllDvrs, $totalAllMinutes) {
+                $count   = $group->count();
+                $minutes = $group->sum('meet_minutes');
+                $h       = intdiv($minutes, 60);
+                $m       = $minutes % 60;
+                $th      = intdiv($totalAllMinutes, 60);
+                $tm      = $totalAllMinutes % 60;
+                return [
+                    'name'               => $name,
+                    'count'              => $count,
+                    'visit_pct'          => $totalAllDvrs > 0 ? round($count / $totalAllDvrs * 100) : 0,
+                    'time_minutes'       => $minutes,
+                    'time_display'       => $h . 'h ' . $m . 'm',
+                    'time_pct'           => $totalAllMinutes > 0 ? round($minutes / $totalAllMinutes * 100) : 0,
+                    'total_dvrs'         => $totalAllDvrs,
+                    'total_minutes'      => $totalAllMinutes,
                     'total_time_display' => $th . 'h ' . $tm . 'm',
                 ];
             })
