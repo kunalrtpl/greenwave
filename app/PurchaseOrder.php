@@ -271,10 +271,12 @@ class PurchaseOrder extends Model
                 // Custom rounding for net price
                 $intPart = floor($rawNetPrice);
                 $decimal = $rawNetPrice - $intPart;
+                
+                $poitem->net_price = $rawNetPrice;
 
-                $poitem->net_price = ($decimal >= 0.30)
+                /*$poitem->net_price = ($decimal >= 0.30)
                     ? $intPart + 1
-                    : $intPart;
+                    : $intPart;*/
 
             }elseif($data['action'] == 'customer'){
                 $directCustomerDiscount = \App\CustomerDiscount::where('product_id', $productinfo->id)

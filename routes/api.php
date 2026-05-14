@@ -144,6 +144,9 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 	        Route::post('/get-dealer-products', 'LinkingController@dealerLinkedProducts');
 	        Route::post('/update-dealer-products', 'LinkingController@saveDealerProducts');
 
+	        //report
+	        Route::post('report', 'DealerReportController@generate');
+
 		});
 	});
 
