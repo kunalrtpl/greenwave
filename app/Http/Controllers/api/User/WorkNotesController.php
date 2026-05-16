@@ -1,9 +1,8 @@
 <?php
 
 namespace App\Http\Controllers\api\User;
-
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use App\AuthToken;
 use App\WorkNote;
 use App\WorkNoteAttachment;
@@ -196,5 +195,46 @@ class WorkNotesController extends Controller
         $result  = ['work_note' => $workNote];
         $message = "Work note created successfully.";
         return response()->json(apiSuccessResponse($message, $result), 200);
+    }
+
+    // ─── 3. Delete Work Note ──────────────────────────────────────────────────
+
+    public function destroy(Request $request, $id)
+    {
+        $resp = $this->resp;
+
+        if (!$resp['status']) {
+            $message = "Unauthorized. Please try again after sometime.";
+            return response()->json(apiErrorResponse($message), 422);
+        }
+
+        $userId = $resp['user']['id'];
+
+        $workNote = WorkNote::with(['attachments'])
+            ->where('id', $id)
+            ->where('user_id', $userId)
+            ->first();
+
+        if (!$workNote) {
+            $message = "Work note not found.";
+            return response()->json(apiErrorResponse($message), 422);
+        }
+
+        // ── Unlink all physical files ─────────────────────────────────────────
+        foreach ($workNote->attachments as $attachment) {
+            $folder   = $attachment->type === 'voice_note' ? 'voice' : 'attachments';
+            $filePath = public_path('work_notes/' . $folder . '/' . $attachment->file);
+
+            if (file_exists($filePath)) {
+                unlink($filePath);
+            }
+        }
+
+        // ── Delete attachment records then work note ──────────────────────────
+        $workNote->attachments()->delete();
+        $workNote->delete();
+
+        $message = "Work note deleted successfully.";
+        return response()->json(apiSuccessResponse($message, []), 200);
     }
 }

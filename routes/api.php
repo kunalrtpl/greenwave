@@ -380,6 +380,8 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			 
 			    // POST /api/work-notes   (multipart/form-data)
 			    Route::post('/', 'WorkNotesController@store');
+
+			    Route::delete('{id}', 'WorkNotesController@destroy');
 			 
 			});
 
