@@ -27,6 +27,7 @@
 /public/images/UserAttachments
 /public/ExpenseReceipts
 /public/DealerReports
+/public/work_notes
 public/app_manuals
 .env
 .phpunit.result.cache

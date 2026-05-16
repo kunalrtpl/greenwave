@@ -371,6 +371,21 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			    Route::post('/{id}/mark-read','ExpenseController@markQueriesRead');
 			});
 
+			Route::group(['prefix' => 'work-notes'], function () {
+ 
+			    // GET  /api/work-notes
+			    // GET  /api/work-notes?month=4&year=2026
+			    // GET  /api/work-notes?month=4&year=2026&user_id=12
+			    Route::get('/',  'WorkNotesController@index');
+			 
+			    // POST /api/work-notes   (multipart/form-data)
+			    Route::post('/', 'WorkNotesController@store');
+			 
+			});
+
+
+
+
 		});
 	});
 });
