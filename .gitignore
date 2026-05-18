@@ -27,6 +27,7 @@
 /public/images/UserAttachments
 /public/ExpenseReceipts
 /public/DealerReports
+/public/images/UserSecurityFaces/
 /public/work_notes
 public/app_manuals
 .env

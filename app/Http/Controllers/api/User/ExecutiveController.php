@@ -340,6 +340,15 @@ class ExecutiveController extends Controller
                     $noOfUsersLoggedIn = AuthToken::where('type','user')->where('user_id',$resp['user']['id'])->count();
                     $result['user']['no_of_users_logged_in'] = $noOfUsersLoggedIn;
 
+                    $faceImages = \App\UserFaceImage::where('user_id', $resp['user']['id'])->get();
+                    $result['user']['security_face_images'] = $faceImages->map(function ($img) {
+                        return [
+                            'id'    => $img->id,
+                            'angle' => $img->angle,
+                            'url'   => url('images/UserSecurityFaces/' . $img->file_path),
+                        ];
+                    })->values()->toArray();
+                    
                     return response()->json(apiSuccessResponse($message,$result),200);
                 }else{
                     $message = "Unable to fetch profile. PLease try again after sometime";
@@ -377,6 +386,85 @@ class ExecutiveController extends Controller
         }else{
             $message = "GET not supported for this route";
             return response()->json(apiErrorResponse($message),422); 
+        }
+    }
+
+    public function uploadFaceImages(Request $request)
+    {
+        if ($request->isMethod('post')) {
+            $resp = $this->resp;
+
+            if (!$resp['status'] || !isset($resp['user'])) {
+                return response()->json(apiErrorResponse("Unable to authenticate. Please try again."), 422);
+            }
+
+            $images = $request->input('images', []);
+
+            // Validate exactly 5 images sent
+            if (!is_array($images) || count($images) !== 5) {
+                return response()->json(apiErrorResponse("Exactly 5 face images are required."), 422);
+            }
+
+            $allowedAngles = ['front', 'slight_left', 'slight_right', 'slight_up', 'slight_down'];
+            $uploadedAngles = array_column($images, 'angle');
+            sort($uploadedAngles);
+            sort($allowedAngles);
+
+            // Validate all 5 required angles are present
+            if ($uploadedAngles !== $allowedAngles) {
+                return response()->json(apiErrorResponse("All 5 angles are required: front, slight_left, slight_right, slight_up, slight_down."), 422);
+            }
+
+            // Validate each image file is present
+            $files = $request->file('images', []);
+            if (count($files) !== 5) {
+                return response()->json(apiErrorResponse("Exactly 5 image files are required."), 422);
+            }
+
+            foreach ($files as $index => $fileData) {
+                if (!isset($fileData['file']) || !$fileData['file']->isValid()) {
+                    return response()->json(apiErrorResponse("Invalid file at index {$index}."), 422);
+                }
+            }
+
+            $storageDir = public_path('images/UserSecurityFaces');
+            if (!file_exists($storageDir)) {
+                mkdir($storageDir, 0755, true);
+            }
+
+            $userId = $resp['user']['id'];
+
+            // Delete old face images for this user (files + DB rows)
+            $oldImages = \App\UserFaceImage::where('user_id', $userId)->get();
+            foreach ($oldImages as $old) {
+                $oldPath = public_path('images/UserSecurityFaces/' . $old->file_path);
+                if (file_exists($oldPath)) {
+                    unlink($oldPath);
+                }
+            }
+            \App\UserFaceImage::where('user_id', $userId)->delete();
+
+            // Save new images
+            foreach ($files as $index => $fileData) {
+                $angle    = $images[$index]['angle'];
+                $file     = $fileData['file'];
+                $ext      = $file->getClientOriginalExtension();
+                $fileName = $angle . '_' . $userId . '_' . time() . '_' . $index . '.' . $ext;
+
+                $file->move($storageDir, $fileName);
+
+                \App\UserFaceImage::create([
+                    'user_id'   => $userId,
+                    'angle'     => $angle,
+                    'file_path' => $fileName,
+                ]);
+            }
+
+            $message = "Your face images have been synced successfully.";
+            return response()->json(apiSuccessResponse($message), 200);
+
+        } else {
+            return response()->json(apiErrorResponse("GET not supported for this route."), 422);
         }
     }
 

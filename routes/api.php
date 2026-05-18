@@ -181,6 +181,9 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::match(['get', 'post'], '/logout','ExecutiveController@logout'); 
 			Route::match(['get', 'post'], '/logout-all-devices','ExecutiveController@logoutAllDevices'); 
 			Route::match(['get', 'post'], '/profile','ExecutiveController@profile'); 
+
+			Route::post('upload-face-images', 'ExecutiveController@uploadFaceImages');
+
 			Route::match(['get', 'post'], '/update-hash-salt','ExecutiveController@updateHashSalt'); 
 			Route::match(['get', 'post'], '/update-passcode-status','ExecutiveController@updatePasscodeStatus'); 
 			Route::match(['get', 'post'], '/subordinate-profile','ExecutiveController@subordinateProfile'); 
