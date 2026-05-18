@@ -10,24 +10,24 @@
 @forelse($data['reportData']['actors'] as $actor)
 @php $grandQty += $actor['total_qty']; @endphp
 
-<table class="rpt" style="margin-bottom:0;">
+<table class="rpt" style="margin-bottom:0;border-bottom:none;">
   <tbody>
     <tr class="prod-hdr">
       <td style="width:28px">{{ $sno++ }}.</td>
       <td><strong>{{ $actor['actor_name'] }}</strong></td>
-      <td class="r" style="width:90px">{{ number_format($actor['total_qty']) }} kg</td>
+      <td class="r" style="width:95px">{{ number_format($actor['total_qty']) }} kg</td>
     </tr>
   </tbody>
 </table>
 
-<table class="rpt" style="margin-bottom:14px;">
+<table class="rpt" style="margin-bottom:14px;border-top:none;">
   <thead>
     <tr class="sub-hdr">
-      <th style="width:80px">Date</th>
+      <th style="width:82px">Date</th>
       <th>Product Name</th>
-      <th class="r" style="width:80px">Order Qty</th>
-      <th class="r" style="width:85px">Pending Qty</th>
-      <th class="c" style="width:65px">Age</th>
+      <th class="r" style="width:82px">Order Qty</th>
+      <th class="r" style="width:88px">Pending Qty</th>
+      <th class="c" style="width:62px">Age</th>
     </tr>
   </thead>
   <tbody>
@@ -55,16 +55,19 @@
 <p style="padding:16px;text-align:center;color:#aaa;font-style:italic;">No pending customer orders.</p>
 @endforelse
 
-<table class="grand-bar">
+<table style="width:100%;border-collapse:collapse;margin-top:2px;">
   <tr>
-    <td>TOTAL PENDING QTY</td>
-    <td class="r">{{ number_format($grandQty) }} kg</td>
+    <td style="width:80%;"></td>
+    <td style="width:20%;background:#2d2d2d;border:1px solid #1a1a1a;padding:7px 10px;text-align:right;">
+      <span style="font-size:9px;color:#B1D83C;text-transform:uppercase;letter-spacing:0.3px;">Total Pending Qty</span><br>
+      <strong style="font-size:13px;color:#fff;">{{ number_format($grandQty) }} kg</strong>
+    </td>
   </tr>
 </table>
 
 <table class="footer-table">
   <tr>
-    <td>Auto-generated report. Pending qty is real-time at time of generation.</td>
+    <td>Auto-generated. Pending qty is real-time at time of generation.</td>
     <td class="r">Greenwave — Confidential</td>
   </tr>
 </table>

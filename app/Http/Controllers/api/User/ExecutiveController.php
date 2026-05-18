@@ -1453,6 +1453,8 @@ class ExecutiveController extends Controller
 
                     $existsInCustomers = DB::table('customers')->where('email', $value)->exists();
 
+                    $existsInDealers = DB::table('dealers')->where('email', $value)->exists(); // ✅ Added
+
                     $existsInRequests = DB::table('customer_register_requests')
                         ->where('email', $value)
                         ->where('status', 'Pending')
@@ -1461,7 +1463,7 @@ class ExecutiveController extends Controller
                         })
                         ->exists();
 
-                    if ($existsInCustomers || $existsInRequests) {
+                    if ($existsInCustomers || $existsInDealers || $existsInRequests) { // ✅ Updated
                         $fail('The ' . $attribute . ' has already been taken.');
                     }
                 };
@@ -1469,6 +1471,8 @@ class ExecutiveController extends Controller
                 // Mobile validation closure (still required)
                 $mobileunique = function ($attribute, $value, $fail) use ($id) {
                     $existsInCustomers = DB::table('customers')->where('mobile', $value)->exists();
+
+                    $existsInDealers = DB::table('dealers')->where('owner_mobile', $value)->exists(); // ✅ Added
 
                     $existsInRequests = DB::table('customer_register_requests')
                         ->where('mobile', $value)
@@ -1478,7 +1482,7 @@ class ExecutiveController extends Controller
                         })
                         ->exists();
 
-                    if ($existsInCustomers || $existsInRequests) {
+                    if ($existsInCustomers || $existsInDealers || $existsInRequests) { // ✅ Updated
                         $fail('The ' . $attribute . ' has already been taken.');
                     }
                 };
@@ -1551,7 +1555,6 @@ class ExecutiveController extends Controller
                         $requestModel->business_card_two = $path;
                     }
                 }
-
 
                 $requestModel->save();
 

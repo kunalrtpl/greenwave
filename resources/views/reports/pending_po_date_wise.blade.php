@@ -20,12 +20,12 @@
       <th style="width:110px">PO Ref No.</th>
       <th>Product Name</th>
       <th class="r" style="width:72px">Order Qty</th>
-      <th class="r" style="width:75px">Pending Qty</th>
+      <th class="r" style="width:78px">Pending Qty</th>
       @if($data['ctx']->withPrice)
       <th class="r" style="width:72px">Price (&#8377;)</th>
       <th class="r" style="width:85px">Value (&#8377;)</th>
       @endif
-      <th class="c" style="width:50px">Age</th>
+      <th class="c" style="width:65px">Days</th>
     </tr>
   </thead>
   <tbody>
@@ -33,7 +33,8 @@
     @foreach($dateGroup['lines'] as $line)
     @php
       $alt++;
-      $cls = $line['age_days'] <= 7 ? 'age-fresh' : ($line['age_days'] <= 20 ? 'age-mid' : 'age-old');
+      $d = $line['age_days'];
+      $daysLabel = $d == 0 ? '0 days' : ($d == 1 ? '1 day' : $d . ' days');
     @endphp
     <tr class="{{ $alt % 2 == 0 ? 'alt' : '' }}">
       <td>{{ $line['po_date'] }}</td>
@@ -50,15 +51,15 @@
       <td class="r">{{ number_format($line['unit_price'] ?? 0, 2) }}</td>
       <td class="r">{{ number_format($line['line_value'] ?? 0, 2) }}</td>
       @endif
-      <td class="c"><span class="age {{ $cls }}">{{ $line['age_days'] }}d</span></td>
+      <td class="c">({{ $daysLabel }})</td>
     </tr>
     @endforeach
     <tr class="tot">
-      <td colspan="{{ $data['ctx']->withPrice ? 4 : 4 }}" class="r">Date Total</td>
+      <td colspan="4" class="r">Date Subtotal</td>
       <td class="r">{{ number_format($dateGroup['date_qty']) }} kg</td>
       @if($data['ctx']->withPrice)
       <td></td>
-      <td class="r">&#8377; {{ number_format($dateGroup['date_value'], 2) }}</td>
+      <td class="r">&#8377;&nbsp;{{ number_format($dateGroup['date_value'], 2) }}</td>
       @endif
       <td></td>
     </tr>
@@ -69,19 +70,25 @@
 <p style="padding:16px;text-align:center;color:#aaa;font-style:italic;">No pending orders found.</p>
 @endforelse
 
-<table class="grand-bar">
+<table class="summary-table">
   <tr>
-    <td>GRAND TOTAL QTY</td>
-    <td class="r">{{ number_format($grandQty) }} kg</td>
-    <td class="r" style="width:180px">TOTAL VALUE &nbsp; &#8377; {{ number_format($grandVal, 2) }}</td>
+    <td class="summary-spacer"></td>
+    <td class="summary-box">
+      <span class="summary-label">Grand Total Qty</span>
+      <span class="summary-qty">{{ number_format($grandQty) }} kg</span>
+      <hr class="summary-divider">
+      <span class="summary-label">Total Value</span>
+      <span class="summary-value">&#8377;&nbsp;{{ number_format($grandVal, 2) }}</span>
+    </td>
   </tr>
 </table>
 
 <table class="footer-table">
   <tr>
-    <td>Auto-generated report. Pending qty is real-time at time of generation.</td>
+    <td>Auto-generated. Pending qty is real-time at time of generation.</td>
     <td class="r">Greenwave — Confidential</td>
   </tr>
 </table>
+
 </body>
 </html>

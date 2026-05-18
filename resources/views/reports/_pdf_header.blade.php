@@ -44,30 +44,34 @@
   }
 
   /* ── Tables ──────────────────────────────────────── */
-  table.rpt { width:100%; border-collapse:collapse; margin-bottom:12px; }
+  table.rpt { width:100%; border-collapse:collapse; margin-bottom:12px; border:1px solid #ccc; }
 
-  table.rpt thead tr { background:#333; color:#fff; }
+  table.rpt thead tr { background:#2d2d2d; color:#fff; }
   table.rpt thead th {
-    padding: 6px 8px;
+    padding: 7px 9px;
     font-size: 9px;
     font-weight: bold;
     text-align: left;
     text-transform: uppercase;
     letter-spacing: 0.3px;
+    border-right: 1px solid #444;
   }
+  table.rpt thead th:last-child { border-right: none; }
   table.rpt thead th.r { text-align:right; }
   table.rpt thead th.c { text-align:center; }
 
   table.rpt tbody tr   { background:#fff; }
-  table.rpt tbody tr.alt { background:#f7f9f0; }
+  table.rpt tbody tr.alt { background:#f5f8ec; }
 
   table.rpt tbody td {
-    padding: 5px 8px;
+    padding: 6px 9px;
     font-size: 10px;
     color: #333;
-    border-bottom: 1px solid #e8e8e8;
+    border-bottom: 1px solid #ddd;
+    border-right: 1px solid #e5e5e5;
     vertical-align: top;
   }
+  table.rpt tbody td:last-child { border-right: none; }
   table.rpt tbody td.r { text-align:right; }
   table.rpt tbody td.c { text-align:center; }
 
@@ -83,11 +87,13 @@
   /* ── Product group header row ────────────────────── */
   tr.prod-hdr td {
     background: #B1D83C;
-    color: #222;
+    color: #1a1a1a;
     font-weight: bold;
     font-size: 10px;
-    padding: 6px 8px;
+    padding: 7px 9px;
+    border-right: 1px solid #9ab82e;
   }
+  tr.prod-hdr td:last-child { border-right: none; }
   tr.prod-hdr td.r { text-align:right; }
 
   /* ── Sub-header inside product group ─────────────── */
@@ -96,24 +102,27 @@
     color: #444;
     font-size: 9px;
     font-weight: bold;
-    padding: 4px 8px;
+    padding: 5px 9px;
     text-align: left;
     text-transform: uppercase;
     border-bottom: 1px solid #c8d870;
+    border-right: 1px solid #dde8a0;
   }
+  tr.sub-hdr th:last-child { border-right: none; }
   tr.sub-hdr th.r { text-align:right; }
   tr.sub-hdr th.c { text-align:center; }
 
   /* ── Totals row ──────────────────────────────────── */
   tr.tot td {
-    background: #333;
+    background: #2d2d2d;
     color: #fff;
     font-weight: bold;
     font-size: 10px;
-    padding: 6px 8px;
-    border: none;
+    padding: 7px 9px;
+    border-right: 1px solid #444;
   }
-  tr.tot td.r { text-align:right; color:#B1D83C; }
+  tr.tot td:last-child { border-right: none; }
+  tr.tot td.r { text-align:right; color:#fff; }
 
   /* ── Age badge ───────────────────────────────────── */
   .age {
@@ -139,15 +148,53 @@
   }
 
   /* ── Grand total bar ─────────────────────────────── */
-  .grand-bar { width:100%; border-collapse:collapse; margin-top:4px; }
+  .grand-bar { width:100%; border-collapse:collapse; margin-top:4px; border:1px solid #ccc; }
   .grand-bar td {
-    background: #B1D83C;
-    color: #222;
+    background: #2d2d2d;
+    color: #fff;
     font-weight: bold;
     font-size: 11px;
-    padding: 7px 10px;
+    padding: 8px 10px;
+    border-right: 1px solid #444;
   }
-  .grand-bar td.r { text-align:right; }
+  .grand-bar td:last-child { border-right: none; }
+  .grand-bar td.r { text-align:right; color:#B1D83C; }
+
+  /* ── Report summary block (totals stacked right) ─── */
+  .summary-table { width:100%; border-collapse:collapse; margin-top:8px; }
+  .summary-spacer { width:60%; border-top:2px solid #B1D83C; }
+  .summary-box {
+    width: 40%;
+    border-top: 2px solid #B1D83C;
+    padding-top: 8px;
+    text-align: right;
+    vertical-align: top;
+  }
+  .summary-label {
+    font-size: 9px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    display: block;
+  }
+  .summary-qty {
+    font-size: 13px;
+    font-weight: bold;
+    color: #444;
+    display: block;
+    margin-bottom: 6px;
+  }
+  .summary-value {
+    font-size: 15px;
+    font-weight: bold;
+    color: #222;
+    display: block;
+  }
+  .summary-divider {
+    border: none;
+    border-top: 1px solid #ddd;
+    margin: 4px 0 6px;
+  }
 
   /* ── Footer ──────────────────────────────────────── */
   .footer-table { width:100%; border-collapse:collapse; margin-top:18px; border-top:1px solid #ddd; }
@@ -170,11 +217,31 @@
       @endif
     </td>
 
-    {{-- CENTRE: Logo --}}
+    {{-- CENTRE: Logo (base64 embedded for DomPDF – no remote fetch needed) --}}
     <td class="hdr-mid">
-      <img src="https://g2app.in/images/greenwave-logo-1-275-sl.jpg"
-           alt="Greenwave"
-           style="width:130px; height:auto;" />
+      @php
+        $logoPath  = public_path('images/greenwave-logo.jpg');
+        $logoCache = public_path('images/greenwave-logo-b64.txt');
+        // Download once and cache as base64 file
+        if (!file_exists($logoCache)) {
+            if (!file_exists(public_path('images'))) {
+                mkdir(public_path('images'), 0755, true);
+            }
+            $raw = @file_get_contents('https://g2app.in/images/greenwave-logo-1-275-sl.jpg');
+            if ($raw) {
+                file_put_contents($logoPath, $raw);
+                file_put_contents($logoCache, base64_encode($raw));
+            }
+        }
+        $logoB64 = file_exists($logoCache) ? file_get_contents($logoCache) : null;
+      @endphp
+      @if($logoB64)
+        <img src="data:image/jpeg;base64,{{ $logoB64 }}"
+             alt="Greenwave"
+             style="width:130px; height:auto;" />
+      @else
+        <span style="font-size:18px;font-weight:bold;color:#B1D83C;letter-spacing:1px;">GREENWAVE</span>
+      @endif
     </td>
 
     {{-- RIGHT: Report title + generated by --}}
@@ -206,7 +273,7 @@
           {{ !empty($data['ctx']->dateTo) ? \Carbon\Carbon::parse($data['ctx']->dateTo)->format('d M Y') : '—' }}
         </strong>
       @else
-        All dates (no date filter applied)
+        <!-- All dates (no date filter applied) -->
       @endif
     </td>
     <td class="meta-right">Greenwave — Confidential</td>

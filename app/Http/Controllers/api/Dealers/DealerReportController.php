@@ -37,7 +37,7 @@ use PDF;
  * ║  OTHER PARAMS                                                           ║
  * ║  output          pdf (default) | json                                   ║
  * ║  product_ids     array or "1,2,3" — empty = all                         ║
- * ║  po_statuses     array — default: approved, completed, executed         ║
+ * ║  po_statuses     array — default: approved,completed,executed,sales_pending  ║
  * ║  date_from       Y-m-d                                                  ║
  * ║  date_to         Y-m-d                                                  ║
  * ║  customer_id     int — single customer drill (customer_detailed/date)   ║
@@ -79,7 +79,7 @@ class DealerReportController extends Controller
                 'output'        => 'nullable|in:json,pdf',
                 'product_ids'   => 'nullable',
                 'po_statuses'   => 'nullable|array',
-                'po_statuses.*' => 'string|in:approved,completed,executed,pending',
+                'po_statuses.*' => 'string|in:approved,completed,executed,pending,sales_pending',
                 'date_from'     => 'nullable|date_format:Y-m-d',
                 'date_to'       => 'nullable|date_format:Y-m-d',
                 'customer_id'   => 'nullable|integer',
@@ -115,22 +115,22 @@ class DealerReportController extends Controller
         $view = $this->resolveView($ctx->reportType);
         $data = compact('dealer', 'reportData', 'ctx');
 
-        $dir = public_path('DealerReports');
+        $dir  = public_path('DealerReports');
+        $file = $ctx->reportType . '.pdf';
+        $path = $dir . '/' . $file;
+
         if (!file_exists($dir)) {
             mkdir($dir, 0755, true);
         }
 
-        // Unlink any previous report of same type for this dealer (keep only latest)
-        $pattern = $dir . '/Dealer_' . $dealerId . '_' . $ctx->reportType . '_*.pdf';
-        foreach (glob($pattern) ?: [] as $oldFile) {
-            @unlink($oldFile);
+        // Unlink ALL files in folder before saving – folder stays clean always
+        foreach (glob($dir . '/*.pdf') ?: [] as $old) {
+            @unlink($old);
         }
-
-        $file = 'Dealer_' . $dealerId . '_' . $ctx->reportType . '_' . now()->format('Ymd_His') . '.pdf';
 
         PDF::loadView($view, compact('data'))
             ->setPaper('a4', 'portrait')
-            ->save($dir . '/' . $file);
+            ->save($path);
 
         return response()->json(apiSuccessResponse("PDF generated", [
             'pdf_url' => url('DealerReports/' . $file),

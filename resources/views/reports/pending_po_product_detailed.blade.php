@@ -12,34 +12,34 @@
 @forelse($data['reportData']['products'] as $product)
 @php $grandQty += $product['total_pending_qty']; $grandVal += $product['total_value']; @endphp
 
+{{-- Product header: same dark style as consolidated thead --}}
 <table class="rpt" style="margin-bottom:0;">
-  <tbody>
-    <tr class="prod-hdr">
-      <td style="width:28px">{{ $sno++ }}.</td>
-      <td>
+  <thead>
+    <tr>
+      <th style="width:28px">{{ $sno++ }}.</th>
+      <th>
         {{ $product['product_name'] }}
-        <span style="font-size:9px;font-weight:normal;font-style:italic;color:#444;">
-          &nbsp;({{ $product['packing_size'] }})
-        </span>
-      </td>
-      <td class="r" style="width:90px">{{ number_format($product['total_pending_qty']) }} kg</td>
-      <td class="r" style="width:110px">&#8377; {{ number_format($product['total_value'], 2) }}</td>
+        <span class="prod-pack">({{ $product['packing_size'] }})</span>
+      </th>
+      <th class="r" style="width:100px">{{ number_format($product['total_pending_qty']) }} kg</th>
+      <th class="r" style="width:120px">&#8377;&nbsp;{{ number_format($product['total_value'], 2) }}</th>
     </tr>
-  </tbody>
+  </thead>
 </table>
 
-<table class="rpt" style="margin-bottom:14px;">
+{{-- Order lines --}}
+<table class="rpt" style="margin-bottom:16px;">
   <thead>
     <tr class="sub-hdr">
-      <th style="width:80px">PO Date</th>
-      <th style="width:130px">PO Ref No.</th>
-      <th class="r" style="width:80px">Order Qty</th>
-      <th class="r" style="width:80px">Pending Qty</th>
+      <th style="width:82px">PO Date</th>
+      <th>PO Ref No.</th>
+      <th class="r" style="width:82px">Order Qty</th>
+      <th class="r" style="width:88px">Pending Qty</th>
       @if($data['ctx']->withPrice)
-      <th class="r" style="width:75px">Price (&#8377;)</th>
+      <th class="r" style="width:78px">Price (&#8377;)</th>
       <th class="r" style="width:90px">Value (&#8377;)</th>
       @endif
-      <th class="c" style="width:60px">Age</th>
+      <th class="c" style="width:72px">Days</th>
     </tr>
   </thead>
   <tbody>
@@ -47,7 +47,8 @@
     @foreach($product['orders'] as $order)
     @php
       $alt++;
-      $cls = $order['age_days'] <= 7 ? 'age-fresh' : ($order['age_days'] <= 20 ? 'age-mid' : 'age-old');
+      $d = $order['age_days'];
+      $daysLabel = $d == 0 ? '0 days' : ($d == 1 ? '1 day' : $d . ' days');
     @endphp
     <tr class="{{ $alt % 2 == 0 ? 'alt' : '' }}">
       <td>{{ $order['po_date'] }}</td>
@@ -58,7 +59,7 @@
       <td class="r">{{ number_format($order['unit_price'] ?? 0, 2) }}</td>
       <td class="r">{{ number_format($order['line_value'] ?? 0, 2) }}</td>
       @endif
-      <td class="c"><span class="age {{ $cls }}">{{ $order['age_days'] }}d</span></td>
+      <td class="c">({{ $daysLabel }})</td>
     </tr>
     @endforeach
   </tbody>
@@ -68,19 +69,26 @@
 <p style="padding:16px;text-align:center;color:#aaa;font-style:italic;">No pending orders found.</p>
 @endforelse
 
-<table class="grand-bar">
+{{-- Summary: same as consolidated --}}
+<table class="summary-table">
   <tr>
-    <td>TOTAL PENDING QTY</td>
-    <td class="r">{{ number_format($grandQty) }} kg</td>
-    <td class="r" style="width:180px">TOTAL VALUE &nbsp; &#8377; {{ number_format($grandVal, 2) }}</td>
+    <td class="summary-spacer"></td>
+    <td class="summary-box">
+      <span class="summary-label">Total Pending Qty</span>
+      <span class="summary-qty">{{ number_format($grandQty) }} kg</span>
+      <hr class="summary-divider">
+      <span class="summary-label">Total Value</span>
+      <span class="summary-value">&#8377;&nbsp;{{ number_format($grandVal, 2) }}</span>
+    </td>
   </tr>
 </table>
 
 <table class="footer-table">
   <tr>
-    <td>Auto-generated report. Pending qty is real-time at time of generation.</td>
+    <td>Auto-generated. Pending qty is real-time at time of generation.</td>
     <td class="r">Greenwave — Confidential</td>
   </tr>
 </table>
+
 </body>
 </html>

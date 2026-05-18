@@ -44,7 +44,7 @@
     </tr>
     @endforeach
     <tr class="tot">
-      <td colspan="4" class="r">Date Total</td>
+      <td colspan="4" class="r" style="font-size:9px;color:#aaa;">Date Subtotal</td>
       <td class="r">{{ number_format($dateGroup['date_qty']) }} kg</td>
       <td></td>
     </tr>
@@ -55,16 +55,19 @@
 <p style="padding:16px;text-align:center;color:#aaa;font-style:italic;">No pending customer orders.</p>
 @endforelse
 
-<table class="grand-bar">
+<table style="width:100%;border-collapse:collapse;margin-top:2px;">
   <tr>
-    <td>GRAND TOTAL PENDING QTY</td>
-    <td class="r">{{ number_format($grandQty) }} kg</td>
+    <td style="width:80%;"></td>
+    <td style="width:20%;background:#2d2d2d;border:1px solid #1a1a1a;padding:7px 10px;text-align:right;">
+      <span style="font-size:9px;color:#B1D83C;text-transform:uppercase;letter-spacing:0.3px;">Grand Total Qty</span><br>
+      <strong style="font-size:13px;color:#fff;">{{ number_format($grandQty) }} kg</strong>
+    </td>
   </tr>
 </table>
 
 <table class="footer-table">
   <tr>
-    <td>Auto-generated report. Pending qty is real-time at time of generation.</td>
+    <td>Auto-generated. Pending qty is real-time at time of generation.</td>
     <td class="r">Greenwave — Confidential</td>
   </tr>
 </table>

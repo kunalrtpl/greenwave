@@ -8,10 +8,9 @@
 <table class="rpt">
   <thead>
     <tr>
-      <th style="width:38px">S.No.</th>
+      <th style="width:36px">S.No.</th>
       <th>Product Name</th>
-      <th class="r" style="width:90px">Qty (kg)</th>
-      <th class="r" style="width:110px">Value (&#8377;)</th>
+      <th class="r" style="width:100px">Qty (kg)</th>
     </tr>
   </thead>
   <tbody>
@@ -23,20 +22,30 @@
         <strong>{{ $row['product_name'] }}</strong>
         <span class="prod-pack">({{ $row['packing_size'] }})</span>
       </td>
-      <td class="r">{{ number_format($row['total_qty']) }}</td>
-      <td class="r">&#8377; {{ number_format($row['total_value'], 2) }}</td>
+      <td class="r">{{ number_format($row['total_qty']) }} kg</td>
     </tr>
     @empty
-    <tr><td colspan="4" class="c" style="padding:16px;color:#aaa;font-style:italic;">No pending orders found.</td></tr>
+    <tr>
+      <td colspan="3" class="c" style="padding:18px;color:#aaa;font-style:italic;">
+        No pending orders found.
+      </td>
+    </tr>
     @endforelse
   </tbody>
-  <tfoot>
-    <tr class="tot">
-      <td colspan="2" class="r">TOTAL</td>
-      <td class="r">{{ number_format($data['reportData']['total_qty']) }} kg</td>
-      <td class="r">&#8377; {{ number_format($data['reportData']['total_value'], 2) }}</td>
-    </tr>
-  </tfoot>
+</table>
+
+{{-- Totals: spacer left, both values stacked on right --}}
+<table class="summary-table">
+  <tr>
+    <td class="summary-spacer"></td>
+    <td class="summary-box">
+      <span class="summary-label">Total Qty</span>
+      <span class="summary-qty">{{ number_format($data['reportData']['total_qty']) }} kg</span>
+      <hr class="summary-divider">
+      <span class="summary-label">Total Value</span>
+      <span class="summary-value">&#8377;&nbsp;{{ number_format($data['reportData']['total_value'], 2) }}</span>
+    </td>
+  </tr>
 </table>
 
 <table class="footer-table">
