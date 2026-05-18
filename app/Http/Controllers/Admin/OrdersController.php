@@ -1477,7 +1477,165 @@ class OrdersController extends Controller
         return redirect::to('/admin/bill-ready?dealer_info='.$data['dealer_name'].'&product_name='.$data['pro_name'].'&invoice_info='.$data['sale_invoice_no'])->with('flash_message_success','Sale invoice has been updated successfully');
     }
 
-    public function updateBulkTransportDetails(Request $request){
+    public function updateBulkTransportDetails(Request $request)
+    {
+        $data = $request->all();
+
+        // ── LR No duplicate check ────────────────────────────────────────
+        $lr_no_detials = SaleInvoice::where('lr_no', $data['lr_no'])->first();
+        if (is_object($lr_no_detials)) {
+            $lr_no_detials = json_decode(json_encode($lr_no_detials), true);
+            if (!empty($data['dealer_id']) && !empty($lr_no_detials['dealer_id'])) {
+                if ($lr_no_detials['dealer_id'] != $data['dealer_id']) {
+                    return Redirect::to('admin/bill-ready')
+                        ->with('flash_message_error', 'This LR no has already been used.');
+                }
+            } elseif (!empty($data['customer_id']) && !empty($lr_no_detials['customer_id'])) {
+                if ($lr_no_detials['customer_id'] != $data['customer_id']) {
+                    return Redirect::to('admin/bill-ready')
+                        ->with('flash_message_error', 'This LR no has already been used.');
+                }
+            }
+        }
+
+        // ── Same invoice no check ────────────────────────────────────────
+        $saleInvoiceIds = explode(',', $data['sale_invoice_ids']);
+
+        $saleInvoices = SaleInvoice::whereIn('id', $saleInvoiceIds)
+            ->pluck('dealer_invoice_no', 'id')
+            ->toArray();
+
+        $invoiceNos = array_unique($saleInvoices);
+        if (count($invoiceNos) > 1) {
+            return Redirect::to('admin/bill-ready')
+                ->with('flash_message_error', 'You have selected different invoice numbers. Please update one invoice number at once');
+        }
+
+        // ── Eager load to avoid N+1 ──────────────────────────────────────
+        // item           → SaleInvoiceItem (selects id, sale_invoice_id, purchase_order_item_id, qty, product_id)
+        // item.productinfo → Product with productpacking already loaded inside productinfo relation
+        // purchase_order → PurchaseOrder
+        // purchase_order.dealer → Dealer
+        $loadedInvoices = SaleInvoice::with([
+            'item.productinfo', // productinfo already loads productpacking internally
+            'purchase_order.dealer',
+        ])->whereIn('id', $saleInvoiceIds)->get();
+
+        // ── Batch update collectors ──────────────────────────────────────
+        $dealerProductUpdates   = []; // [dealer_id][product_id] => qty
+        $customerProductUpdates = []; // [customer_id][product_id] => qty
+
+        // ── Email collectors ─────────────────────────────────────────────
+        $isDealerOrder    = false;
+        $dispatchedDealer = null;
+        $dispatchedPo     = null;
+        $dispatchedItems  = [];
+
+        // ── Process each invoice ─────────────────────────────────────────
+        foreach ($loadedInvoices as $saleInvoice) {
+
+            // Save transport details — original logic untouched
+            $saleInvoice->transport_name = $data['transport_name'];
+            $saleInvoice->lr_no          = $data['lr_no'];
+            $saleInvoice->dispatch_date  = $data['dispatch_date'];
+            $saleInvoice->save();
+
+            $poinfo = $saleInvoice->purchase_order;
+
+            if (!empty($poinfo->dealer_id)) {
+
+                // ── Dealer order ─────────────────────────────────────────
+                if ($poinfo->trader_po == 0) {
+                    $pid = $saleInvoice->item->product_id;
+                    $did = $saleInvoice->dealer_id;
+                    $dealerProductUpdates[$did][$pid] = ($dealerProductUpdates[$did][$pid] ?? 0)
+                        + $saleInvoice->item->qty;
+                }
+
+                // Collect for email
+                $isDealerOrder    = true;
+                $dispatchedDealer = $poinfo->dealer;
+                $dispatchedPo     = $poinfo;
+
+                // Pack size from productinfo->productpacking->size
+                // productinfo relation already eager loads productpacking internally
+                $packSize = null;
+                if (
+                    isset($saleInvoice->item->productinfo->productpacking->size) &&
+                    !empty($saleInvoice->item->productinfo->productpacking->size)
+                ) {
+                    $packSize = $saleInvoice->item->productinfo->productpacking->size . ' kg';
+                }
+
+                $dispatchedItems[] = [
+                    'product_name' => $saleInvoice->item->productinfo->product_name ?? '—',
+                    'pack_size'    => $packSize,
+                    'qty'          => $saleInvoice->item->qty,
+                ];
+
+            } else {
+
+                // ── Customer order — no email, just update stock ──────────
+                $pid = $saleInvoice->item->product_id;
+                $cid = $saleInvoice->customer_id;
+                $customerProductUpdates[$cid][$pid] = ($customerProductUpdates[$cid][$pid] ?? 0)
+                    + $saleInvoice->item->qty;
+            }
+        }
+
+        // ── Bulk update dealer_products ──────────────────────────────────
+        foreach ($dealerProductUpdates as $dealerId => $products) {
+            foreach ($products as $productId => $qty) {
+                $dealerProd = DB::table('dealer_products')
+                    ->where(['dealer_id' => $dealerId, 'product_id' => $productId])
+                    ->first();
+                if ($dealerProd) {
+                    $updatedealerProd                 = DealerProduct::find($dealerProd->id);
+                    $updatedealerProd->in_transit     = $qty;
+                    $updatedealerProd->pending_orders = $dealerProd->pending_orders - $qty;
+                    $updatedealerProd->save();
+                }
+            }
+        }
+
+        // ── Bulk update customer_products ────────────────────────────────
+        foreach ($customerProductUpdates as $customerId => $products) {
+            foreach ($products as $productId => $qty) {
+                $dealerProd = DB::table('customer_products')
+                    ->where(['customer_id' => $customerId, 'product_id' => $productId])
+                    ->first();
+                if ($dealerProd) {
+                    $updateCustProd                 = CustomerProduct::find($dealerProd->id);
+                    $updateCustProd->in_transit     = $qty;
+                    $updateCustProd->pending_orders = $dealerProd->pending_orders - $qty;
+                    $updateCustProd->save();
+                }
+            }
+        }
+        $dispatchedDealer->email = "mkanum786@gmail.com";
+        // ── Send dispatch email — dealer orders only ─────────────────────
+        if ($isDealerOrder && $dispatchedDealer && !empty($dispatchedDealer->email)) {
+            \App\Services\EmailService::send(
+                'po_dealer_dispatched',
+                [
+                    'dealer'           => $dispatchedDealer,
+                    'po'               => $dispatchedPo,
+                    'dispatched_items' => $dispatchedItems,
+                    'transport_name'   => $data['transport_name'],
+                    'lr_no'            => $data['lr_no'],
+                    'dispatch_date'    => $data['dispatch_date'],
+                ],
+                $dispatchedDealer->email
+            );
+        }
+        // ── End email ─────────────────────────────────────────────────────
+
+        return Redirect::to('/admin/bill-ready')
+            ->with('flash_message_success', 'Sale invoice has been updated successfully');
+    }
+
+
+    /*public function updateBulkTransportDetails(Request $request){
         $data = $request->all();
         $lr_no_detials = SaleInvoice::where('lr_no',$data['lr_no'])->first();
         if(is_object($lr_no_detials)){
@@ -1523,7 +1681,7 @@ class OrdersController extends Controller
             }
         }
         return redirect::to('/admin/bill-ready')->with('flash_message_success','Sale invoice has been updated successfully');
-    }
+    }*/
 
 
     public function dispatchedMaterial(Request $Request){

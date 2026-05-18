@@ -113,11 +113,20 @@
                 </button>
                 <h5 class="modal-title" id="BulkUpdateTransortModalLabel">Update Transport Details</h5>
             </div>
-            <form action="{{url('/admin/update-bulk-transport-details')}}" method="post" autocomplete="off">@csrf
+            <form action="{{url('/admin/update-bulk-transport-details')}}" method="post" autocomplete="off" id="BulkTransportForm">@csrf
                 <input type="hidden" name="sale_invoice_ids" value="">
                 <input type="hidden" name="customer_id" value="">
                 <input type="hidden" name="dealer_id" value="">
                 <div class="modal-body">
+                    {{-- Loader overlay --}}
+                    <div id="formLoader" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:999; border-radius:4px;">
+                        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center;">
+                            <div class="spinner-border text-primary" role="status" style="width:2.5rem; height:2.5rem;">
+                                <span class="sr-only">Loading...</span>
+                            </div>
+                            <p class="mt-2 text-primary fw-bold" style="font-size:13px;">Dispatching Order...</p>
+                        </div>
+                    </div>
                     <div class="form-group">
                         <label for="transport-name" class="col-form-label">Transport Name:</label>
                         <input type="text" name="transport_name" placeholder="Enter Transport Name" class="form-control" id="transport-name" required>
@@ -132,20 +141,53 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">Submit</button>
+                    <button type="submit" class="btn btn-primary" id="BulkTransportSubmitBtn">
+                        <span id="BtnText">Submit</span>
+                        <span id="BtnSpinner" style="display:none;">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            Dispatching...
+                        </span>
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
 <script type="text/javascript">
-    $(document).on('click','.BulkUpdateTransport',function(){
+    $(document).on('click', '.BulkUpdateTransport', function(){
         var sale_invoice_ids = $(this).data('saleinvoiceids');
         $('[name=sale_invoice_ids]').val(sale_invoice_ids);
         $('[name=customer_id]').val($(this).data('customer_id'));
         $('[name=dealer_id]').val($(this).data('dealer_id'));
         $('#BulkUpdateTransortModal').modal('show');
-    })
+    });
+
+    $('#BulkTransportForm').on('submit', function(){
+        // Show overlay loader
+        $('#formLoader').show();
+
+        // Disable submit button & swap text to spinner
+        $('#BulkTransportSubmitBtn').prop('disabled', true);
+        $('#BtnText').hide();
+        $('#BtnSpinner').show();
+
+        // Disable close button & backdrop click to prevent dismissal mid-submit
+        $('#BulkUpdateTransortModal').find('.close').prop('disabled', true);
+        $('#BulkUpdateTransortModal').data('bs.modal')._config.backdrop = 'static';
+        $('#BulkUpdateTransortModal').data('bs.modal')._config.keyboard = false;
+
+        return true; // Allow form to submit normally
+    });
+
+    // Reset modal state when it's hidden (e.g. after redirect back on error)
+    $('#BulkUpdateTransortModal').on('hidden.bs.modal', function(){
+        $('#formLoader').hide();
+        $('#BulkTransportSubmitBtn').prop('disabled', false);
+        $('#BtnText').show();
+        $('#BtnSpinner').hide();
+        $('#BulkUpdateTransortModal').find('.close').prop('disabled', false);
+    });
 </script>
 @stop
 
