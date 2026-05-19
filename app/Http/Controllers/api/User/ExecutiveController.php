@@ -392,33 +392,41 @@ class ExecutiveController extends Controller
     public function uploadFaceImages(Request $request)
     {
         if ($request->isMethod('post')) {
-            $resp = $this->resp;
 
+            // ── Image count constraints ──────────────────────────────────────
+            const MIN_FACE_IMAGES = 3;
+            const MAX_FACE_IMAGES = 5;
+            // ────────────────────────────────────────────────────────────────
+
+            $resp = $this->resp;
             if (!$resp['status'] || !isset($resp['user'])) {
                 return response()->json(apiErrorResponse("Unable to authenticate. Please try again."), 422);
             }
 
             $images = $request->input('images', []);
 
-            // Validate exactly 5 images sent
-            if (!is_array($images) || count($images) !== 5) {
-                return response()->json(apiErrorResponse("Exactly 5 face images are required."), 422);
+            // Validate between MIN and MAX images sent
+            if (!is_array($images) || count($images) < self::MIN_FACE_IMAGES || count($images) > self::MAX_FACE_IMAGES) {
+                return response()->json(apiErrorResponse("Between " . self::MIN_FACE_IMAGES . " and " . self::MAX_FACE_IMAGES . " face images are required."), 422);
             }
 
-            $allowedAngles = ['front', 'slight_left', 'slight_right', 'slight_up', 'slight_down'];
-            $uploadedAngles = array_column($images, 'angle');
-            sort($uploadedAngles);
-            sort($allowedAngles);
+            $allowedAngles   = ['front', 'slight_left', 'slight_right', 'slight_up', 'slight_down'];
+            $uploadedAngles  = array_column($images, 'angle');
 
-            // Validate all 5 required angles are present
-            if ($uploadedAngles !== $allowedAngles) {
-                return response()->json(apiErrorResponse("All 5 angles are required: front, slight_left, slight_right, slight_up, slight_down."), 422);
+            // Validate all uploaded angles are within allowed set (no duplicates)
+            if (count($uploadedAngles) !== count(array_unique($uploadedAngles))) {
+                return response()->json(apiErrorResponse("Duplicate angles are not allowed."), 422);
+            }
+            foreach ($uploadedAngles as $angle) {
+                if (!in_array($angle, $allowedAngles)) {
+                    return response()->json(apiErrorResponse("Invalid angle '{$angle}'. Allowed: " . implode(', ', $allowedAngles)), 422);
+                }
             }
 
             // Validate each image file is present
             $files = $request->file('images', []);
-            if (count($files) !== 5) {
-                return response()->json(apiErrorResponse("Exactly 5 image files are required."), 422);
+            if (count($files) < self::MIN_FACE_IMAGES || count($files) > self::MAX_FACE_IMAGES) {
+                return response()->json(apiErrorResponse("Between " . self::MIN_FACE_IMAGES . " and " . self::MAX_FACE_IMAGES . " image files are required."), 422);
             }
 
             foreach ($files as $index => $fileData) {
@@ -450,9 +458,7 @@ class ExecutiveController extends Controller
                 $file     = $fileData['file'];
                 $ext      = $file->getClientOriginalExtension();
                 $fileName = $angle . '_' . $userId . '_' . time() . '_' . $index . '.' . $ext;
-
                 $file->move($storageDir, $fileName);
-
                 \App\UserFaceImage::create([
                     'user_id'   => $userId,
                     'angle'     => $angle,
