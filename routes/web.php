@@ -475,6 +475,23 @@ Route::post('attendance/{id}/update-status',      'AdminAttendanceController@upd
 Route::get('/email-templates/{id}/edit','EmailTemplateController@edit')->name('admin.email_templates.edit');
 Route::post('/email-templates/{id}',    'EmailTemplateController@update')->name('admin.email_templates.update');
 
+	
+	Route::group(['prefix' => 'move-customers', 'as' => 'admin.move-customers.'], function () {
+ 
+    // Show the main form
+    Route::get('/','MoveCustomerController@index')
+         ->name('index');
+ 
+    // AJAX: load customers for selected employee + subordinates
+    Route::get('load-customers',  'MoveCustomerController@loadCustomers')
+         ->name('load-customers');
+ 
+    // POST: perform the move
+    Route::post('move','MoveCustomerController@moveCustomers')
+         ->name('move');
+});
+
+
 
 	});
 });
