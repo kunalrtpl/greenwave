@@ -17,6 +17,7 @@ class MoveCustomerController extends Controller
      */
     public function index()
     {
+        Session::put('active','move_customers');
         $title = 'Move Customers';
 
         // Marketing department ID = 2
