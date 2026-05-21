@@ -128,18 +128,33 @@
         font-size: 10px; font-weight: 700;
         flex-shrink: 0; margin-right: 12px;
     }
-    .cust-cb-wrap { margin-right: 14px; display: flex; align-items: center; }
+    .cust-cb-wrap { margin-right: 14px; display: flex; align-items: center; flex-shrink: 0; }
     .cust-cb { transform: scale(1.2); cursor: pointer; accent-color: #3598dc; }
 
-    .cust-info { flex-grow: 1; }
+    /* ── Three equal columns ── */
+    .cust-info   { flex: 1 1 0; min-width: 0; }
+    .cust-center { flex: 1 1 0; min-width: 0; padding-left: 16px; border-left: 1px solid #edf2f7; }
+    .cust-right  { flex: 1 1 0; min-width: 0; display: flex; justify-content: flex-end; align-items: center; }
+
     .cust-name { font-weight: 500; color: #2d3748; font-size: 13px; display: block; line-height: 1.3; }
-    .cust-meta { font-size: 11px; color: #a0aec0; }
+    .cust-meta { font-size: 11px; color: #a0aec0; display: block; margin-top: 1px; }
+
+    .cust-center-city {
+        font-size: 12px;
+        font-weight: 600;
+        color: #276749;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .cust-center-city i { font-size: 10px; color: #52b788; }
 
     .cust-badge {
-        font-size: 10px; padding: 2px 8px;
+        display: inline-block;
+        font-size: 11px; padding: 3px 10px;
         border-radius: 10px !important;
         font-weight: 600; white-space: nowrap;
-        flex-shrink: 0; margin-left: 8px;
+        flex-shrink: 0;
         background: #ebf8ff; color: #2b6cb0;
     }
     .cust-badge.bm-direct { background: #e6fffa; color: #276749; }
@@ -381,8 +396,9 @@ $(document).ready(function () {
     (function restoreFromUrl() {
         var urlParams    = new URLSearchParams(window.location.search);
         var savedEmployee = urlParams.get('source_employee');
-        var savedBm       = urlParams.get('bm_filter');
-        var savedCity     = urlParams.get('city_filter');
+        // Use null when param absent so loadCustomers knows not to restore
+        var savedBm       = urlParams.get('bm_filter');   // null if absent
+        var savedCity     = urlParams.get('city_filter'); // null if absent
 
         if (savedEmployee) {
             $('#source-employee').val(savedEmployee);
@@ -409,9 +425,13 @@ $(document).ready(function () {
         $('#from-user-id-input').val(userId);
         $('#source-employee-hidden').val(userId);
 
-        // Persist source employee in URL
+        // Update URL — keep filter params only on redirect-restore, clear on fresh load
         var url = new URL(window.location.href);
         url.searchParams.set('source_employee', userId);
+        if (bmFilterToRestore === null) {
+            url.searchParams.delete('bm_filter');
+            url.searchParams.delete('city_filter');
+        }
         history.replaceState(null, '', url.toString());
 
         $('#customers-placeholder').hide();
@@ -435,16 +455,17 @@ $(document).ready(function () {
                 populateFilters(resp.data);
                 $('#filter-bar-wrapper').show();
 
-                // Restore filters if provided (from URL params after redirect)
-                var urlParams  = new URLSearchParams(window.location.search);
-                var restoreBm  = bmFilterToRestore   || urlParams.get('bm_filter')   || '';
-                var restoreCity = cityFilterToRestore || urlParams.get('city_filter') || '';
+                // Only restore filters when explicitly provided (post-move redirect).
+                // On a fresh manual employee change bmFilterToRestore & cityFilterToRestore
+                // are both null (not empty string '') — empty string '' means "user cleared it".
+                var restoreBm   = (bmFilterToRestore   !== null) ? bmFilterToRestore   : '';
+                var restoreCity = (cityFilterToRestore !== null) ? cityFilterToRestore : '';
 
-                if (restoreBm)   $('#bm-filter').val(restoreBm);
-                if (restoreCity) $('#city-filter').val(restoreCity);
+                $('#bm-filter').val(restoreBm);
+                $('#city-filter').val(restoreCity);
 
                 if (restoreBm || restoreCity) {
-                    applyFilter(true); // silent — URL already correct
+                    applyFilter(true); // silent — URL already correct from redirect
                 } else {
                     updateFilterCount();
                 }
@@ -458,7 +479,8 @@ $(document).ready(function () {
     }
 
     $('#source-employee').on('change', function () {
-        loadCustomers($(this).val(), '', '');
+        // null = fresh load, don't restore any filters
+        loadCustomers($(this).val(), null, null);
     });
 
     /* ─── Render Groups ──────────────────────────────────── */
@@ -523,10 +545,16 @@ $(document).ready(function () {
                     if (cust.department)          html += ' &middot; ' + escHtml(cust.department);
                     html += '    </span>';
                     html += '  </div>';
-                    html += '<span class="cust-badge ' + bmClass + '">' + escHtml(bmLabel) + '</span>';
+                    /* ── Col 2: city ── */
+                    html += '  <div class="cust-center">';
                     if (cust.city_name) {
-                        html += '<span class="cust-badge cust-city-badge"><i class="fa fa-map-marker" style="margin-right:3px;"></i>' + escHtml(cust.city_name) + '</span>';
+                        html += '    <div class="cust-center-city"><i class="fa fa-map-marker"></i>' + escHtml(cust.city_name) + '</div>';
                     }
+                    html += '  </div>';
+                    /* ── Col 3: business model badge ── */
+                    html += '  <div class="cust-right">';
+                    html += '    <span class="cust-badge ' + bmClass + '">' + escHtml(bmLabel) + '</span>';
+                    html += '  </div>';
                     html += '</div>'; /* /customer-item */
                 });
             }
@@ -627,8 +655,12 @@ $(document).ready(function () {
         $('#floating-bar').hide();
         $('#btn-move').prop('disabled', true);
         $('#filter-bar-wrapper').hide();
+        // Reset BM filter — remove dynamic dealer options, keep first 3
         $('#bm-filter').val('');
+        $('#bm-filter option:gt(2)').remove();
+        // Reset city filter — remove all dynamic options, keep "All Cities"
         $('#city-filter').val('');
+        $('#city-filter option:gt(0)').remove();
     }
 
     /* ─── Move Form Submit Validation ───────────────────── */
