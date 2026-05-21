@@ -17,7 +17,6 @@ class MoveCustomerController extends Controller
      */
     public function index()
     {
-        Session::put('active','move_customers');
         $title = 'Move Customers';
 
         // Marketing department ID = 2
@@ -78,9 +77,12 @@ class MoveCustomerController extends Controller
             ->keyBy('id');
 
         // Fetch customers for each user via user_customer_shares
+        // LEFT JOIN customer_cities in the same query — no N+1
         $shares = DB::table('user_customer_shares')
-            ->whereIn('user_id', $allUserIds)
+            ->whereIn('user_customer_shares.user_id', $allUserIds)
             ->join('customers', 'customers.id', '=', 'user_customer_shares.customer_id')
+            ->leftJoin('dealers', 'dealers.id', '=', 'customers.dealer_id')
+            ->leftJoin('customer_cities', 'customer_cities.customer_id', '=', 'customers.id')
             ->select(
                 'user_customer_shares.user_id',
                 'user_customer_shares.customer_id',
@@ -90,7 +92,11 @@ class MoveCustomerController extends Controller
                 'customers.contact_person_name',
                 'customers.designation as customer_designation',
                 'customers.department',
-                'customers.category'
+                'customers.category',
+                'customers.business_model',
+                'customers.dealer_id',
+                'dealers.business_name as dealer_business_name',
+                'customer_cities.city_name'
             )
             ->orderBy('user_customer_shares.user_id')
             ->orderBy('customers.name')
@@ -125,6 +131,10 @@ class MoveCustomerController extends Controller
                         'category'             => $c->category,
                         'share'                => $c->share,
                         'user_date'            => $c->user_date,
+                        'business_model'       => $c->business_model,
+                        'dealer_id'            => $c->dealer_id,
+                        'dealer_business_name' => $c->dealer_business_name,
+                        'city_name'            => $c->city_name,
                     ];
                 }, $customers),
             ];
@@ -142,9 +152,12 @@ class MoveCustomerController extends Controller
      */
     public function moveCustomers(Request $request)
     {
-        $customerIds    = $request->get('customer_ids', []);
-        $fromUserId     = $request->get('from_user_id');   // original user (source)
-        $toUserId       = $request->get('to_user_id');     // target user
+        $customerIds        = $request->get('customer_ids', []);
+        $fromUserId         = $request->get('from_user_id');
+        $toUserId           = $request->get('to_user_id');
+        $bmFilter           = $request->get('bm_filter', '');
+        $cityFilter         = $request->get('city_filter', '');
+        $sourceEmployeeId   = $request->get('source_employee_id', '');
 
         // Basic validation
         if (empty($customerIds) || !$toUserId) {
@@ -224,7 +237,19 @@ class MoveCustomerController extends Controller
             Session::flash('error', 'An error occurred: ' . $e->getMessage());
         }
 
-        return Redirect::route('admin.move-customers.index');
+        // Build query params to restore the UI state after redirect
+        $queryParams = [];
+        if ($sourceEmployeeId) {
+            $queryParams['source_employee'] = $sourceEmployeeId;
+        }
+        if ($bmFilter) {
+            $queryParams['bm_filter'] = $bmFilter;
+        }
+        if ($cityFilter) {
+            $queryParams['city_filter'] = $cityFilter;
+        }
+
+        return Redirect::route('admin.move-customers.index', $queryParams);
     }
 
     /**

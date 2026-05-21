@@ -138,9 +138,13 @@
     .cust-badge {
         font-size: 10px; padding: 2px 8px;
         border-radius: 10px !important;
-        background: #ebf8ff; color: #2b6cb0;
         font-weight: 600; white-space: nowrap;
+        flex-shrink: 0; margin-left: 8px;
+        background: #ebf8ff; color: #2b6cb0;
     }
+    .cust-badge.bm-direct { background: #e6fffa; color: #276749; }
+    .cust-badge.bm-open   { background: #fffbeb; color: #975a16; }
+    .cust-badge.bm-dealer { background: #ebf8ff; color: #2b6cb0; }
 
     /* Empty State */
     .empty-state {
@@ -210,6 +214,34 @@
     #loader { display: none; text-align: center; padding: 40px; }
     #loader .spinner { font-size: 30px; color: #3598dc; }
 
+    /* ── Business Model Badges ─────────────────────────────── */
+    .bm-badge {
+        display: inline-block;
+        font-size: 10px; font-weight: 700;
+        padding: 2px 8px; border-radius: 10px !important;
+        white-space: nowrap; margin-left: 6px;
+    }
+    .bm-direct  { background: #e6fffa; color: #276749; }
+    .bm-open    { background: #fffbeb; color: #975a16; }
+    .bm-dealer  { background: #ebf4ff; color: #2c5282; }
+
+    .dealer-name {
+        font-size: 10px; color: #4a5568; font-style: italic; margin-left: 4px;
+    }
+
+    /* ── Filter Bar ─────────────────────────────────────────── */
+    .filter-bar {
+        display: flex; align-items: center; gap: 10px;
+        background: #f8f9fb; border: 1px solid #e1e5ec;
+        border-radius: 8px; padding: 10px 16px;
+        margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .filter-bar label { font-size: 12px; font-weight: 600; color: #4a5568; margin: 0; white-space: nowrap; }
+    .filter-bar select { border-radius: 6px !important; font-size: 13px; height: 36px; min-width: 200px; border: 1px solid #c8d0dc; }
+    .filter-count { font-size: 12px; color: #718096; margin-left: 6px; }
+
+    .cust-badge.cust-city-badge { background: #f0fff4; color: #276749; }
+
     /* ── Alerts ─────────────────────────────────────────────── */
     .alert { border-radius: 6px !important; }
 </style>
@@ -276,6 +308,26 @@
                     <p>Select an employee above to load their customers.</p>
                 </div>
 
+                <div id="filter-bar-wrapper" style="display:none;">
+                    <div class="filter-bar">
+                        <label><i class="fa fa-filter"></i> &nbsp;Business Model:</label>
+                        <select id="bm-filter" class="form-control">
+                            <option value="">-- All Models --</option>
+                            <option value="Direct Customer">Direct Customer</option>
+                            <option value="Open">Open</option>
+                            {{-- Dealer options injected by JS --}}
+                        </select>
+
+                        <label style="margin-left:6px;"><i class="fa fa-map-marker"></i> &nbsp;City:</label>
+                        <select id="city-filter" class="form-control">
+                            <option value="">-- All Cities --</option>
+                            {{-- City options injected by JS --}}
+                        </select>
+
+                        <span class="filter-count">Showing <strong id="filter-visible-count">0</strong> customers</span>
+                    </div>
+                </div>
+
                 <div id="customers-container" style="display:none;"></div>
 
             </div>{{-- /portlet-body --}}
@@ -288,6 +340,9 @@
     <form method="POST" action="{{ route('admin.move-customers.move') }}" id="move-form">
         @csrf
         <input type="hidden" name="from_user_id" id="from-user-id-input" value="">
+        <input type="hidden" name="bm_filter" id="bm-filter-hidden" value="">
+        <input type="hidden" name="city_filter" id="city-filter-hidden" value="">
+        <input type="hidden" name="source_employee_id" id="source-employee-hidden" value="">
         {{-- Customer IDs injected by JS --}}
         <div id="hidden-customer-inputs"></div>
 
@@ -322,17 +377,42 @@ $(document).ready(function () {
 
     var currentSourceUserId = null;
 
+    /* ─── On Page Load: restore employee + filter from URL params ── */
+    (function restoreFromUrl() {
+        var urlParams    = new URLSearchParams(window.location.search);
+        var savedEmployee = urlParams.get('source_employee');
+        var savedBm       = urlParams.get('bm_filter');
+        var savedCity     = urlParams.get('city_filter');
+
+        if (savedEmployee) {
+            $('#source-employee').val(savedEmployee);
+            loadCustomers(savedEmployee, savedBm, savedCity);
+        }
+    })();
+
     /* ─── Load Customers on dropdown change ─────────────── */
-    function loadCustomers(userId) {
+    function loadCustomers(userId, bmFilterToRestore, cityFilterToRestore) {
         if (!userId) {
             $('#customers-container').hide().empty();
             $('#customers-placeholder').show();
             resetSelectionUI();
+            // Clear URL params
+            var url = new URL(window.location.href);
+            url.searchParams.delete('source_employee');
+            url.searchParams.delete('bm_filter');
+            url.searchParams.delete('city_filter');
+            history.replaceState(null, '', url.toString());
             return;
         }
 
         currentSourceUserId = userId;
         $('#from-user-id-input').val(userId);
+        $('#source-employee-hidden').val(userId);
+
+        // Persist source employee in URL
+        var url = new URL(window.location.href);
+        url.searchParams.set('source_employee', userId);
+        history.replaceState(null, '', url.toString());
 
         $('#customers-placeholder').hide();
         $('#customers-container').hide().empty();
@@ -346,11 +426,28 @@ $(document).ready(function () {
             success: function (resp) {
                 $('#loader').hide();
                 if (!resp.success || !resp.data || resp.data.length === 0) {
+                    $('#filter-bar-wrapper').hide();
                     $('#customers-placeholder').show();
                     return;
                 }
                 renderCustomerGroups(resp.data);
                 $('#customers-container').show();
+                populateFilters(resp.data);
+                $('#filter-bar-wrapper').show();
+
+                // Restore filters if provided (from URL params after redirect)
+                var urlParams  = new URLSearchParams(window.location.search);
+                var restoreBm  = bmFilterToRestore   || urlParams.get('bm_filter')   || '';
+                var restoreCity = cityFilterToRestore || urlParams.get('city_filter') || '';
+
+                if (restoreBm)   $('#bm-filter').val(restoreBm);
+                if (restoreCity) $('#city-filter').val(restoreCity);
+
+                if (restoreBm || restoreCity) {
+                    applyFilter(true); // silent — URL already correct
+                } else {
+                    updateFilterCount();
+                }
             },
             error: function () {
                 $('#loader').hide();
@@ -361,7 +458,7 @@ $(document).ready(function () {
     }
 
     $('#source-employee').on('change', function () {
-        loadCustomers($(this).val());
+        loadCustomers($(this).val(), '', '');
     });
 
     /* ─── Render Groups ──────────────────────────────────── */
@@ -378,7 +475,7 @@ $(document).ready(function () {
             html += '<div class="employee-group" id="' + groupId + '" data-user-id="' + group.user_id + '">';
 
             /* Header */
-            html += '<div class="employee-header collapsed' + (isRoot ? ' is-root' : '') + '" data-toggle-collapse="' + collapseId + '">';
+            html += '<div class="employee-header' + (isRoot ? ' is-root' : '') + '" data-toggle-collapse="' + collapseId + '">';
             html += '  <div class="emp-left">';
             html += '    <div class="emp-avatar">' + initials + '</div>';
             html += '    <div>';
@@ -396,15 +493,24 @@ $(document).ready(function () {
             html += '  </div>';
             html += '</div>'; /* /employee-header */
 
-            /* Collapsible customer list — collapsed by default */
-            html += '<div class="customer-list" id="' + collapseId + '" style="display:none;">';
+            /* Collapsible customer list */
+            html += '<div class="customer-list" id="' + collapseId + '">';
 
             if (customers.length === 0) {
                 html += '<div class="empty-state"><i class="fa fa-inbox"></i><p>No customers assigned.</p></div>';
             } else {
                 $.each(customers, function (ci, cust) {
                     var cbVal = group.user_id + '_' + cust.customer_id;
-                    html += '<div class="customer-item" id="ci-' + cbVal + '">';
+                    var bmVal = cust.business_model || 'Open';
+                    var dealerBmVal = (bmVal === 'Dealer' && cust.dealer_business_name) ? cust.dealer_business_name : '';
+
+                    var bmClass = 'bm-open';
+                    var bmLabel = bmVal;
+                    if (bmVal === 'Direct Customer') { bmClass = 'bm-direct'; bmLabel = 'Direct Customer'; }
+                    else if (bmVal === 'Open')        { bmClass = 'bm-open';   bmLabel = 'Open'; }
+                    else if (bmVal === 'Dealer')      { bmClass = 'bm-dealer'; bmLabel = cust.dealer_business_name || 'Dealer'; }
+
+                    html += '<div class="customer-item" id="ci-' + cbVal + '" data-bm="' + escHtml(bmVal) + '" data-dealer-bm="' + escHtml(dealerBmVal) + '" data-city="' + escHtml(cust.city_name || '') + '">';
                     html += '  <div class="cust-no">' + (ci + 1) + '</div>';
                     html += '  <div class="cust-cb-wrap">';
                     html += '    <input type="checkbox" class="cust-cb" data-group="' + group.user_id + '" value="' + cbVal + '">';
@@ -417,8 +523,9 @@ $(document).ready(function () {
                     if (cust.department)          html += ' &middot; ' + escHtml(cust.department);
                     html += '    </span>';
                     html += '  </div>';
-                    if (cust.category) {
-                        html += '<span class="cust-badge">' + escHtml(cust.category.split(',')[0]) + '</span>';
+                    html += '<span class="cust-badge ' + bmClass + '">' + escHtml(bmLabel) + '</span>';
+                    if (cust.city_name) {
+                        html += '<span class="cust-badge cust-city-badge"><i class="fa fa-map-marker" style="margin-right:3px;"></i>' + escHtml(cust.city_name) + '</span>';
                     }
                     html += '</div>'; /* /customer-item */
                 });
@@ -446,8 +553,18 @@ $(document).ready(function () {
         $(document).off('change', '.select-all-cb').on('change', '.select-all-cb', function () {
             var group   = $(this).data('group');
             var checked = $(this).is(':checked');
-            $('.cust-cb[data-group="' + group + '"]').prop('checked', checked)
-                .trigger('change.highlight');
+            // Only check VISIBLE (not filtered out) customers
+            $('.cust-cb[data-group="' + group + '"]').each(function () {
+                if ($(this).closest('.customer-item').is(':visible')) {
+                    $(this).prop('checked', checked);
+                    var val = $(this).val();
+                    if (checked) {
+                        $('#ci-' + val).addClass('is-selected');
+                    } else {
+                        $('#ci-' + val).removeClass('is-selected');
+                    }
+                }
+            });
             updateSelectionUI();
         });
 
@@ -456,17 +573,6 @@ $(document).ready(function () {
             var group = $(this).data('group');
             syncSelectAll(group);
             updateSelectionUI();
-            /* Highlight row */
-            var val = $(this).val();
-            if ($(this).is(':checked')) {
-                $('#ci-' + val).addClass('is-selected');
-            } else {
-                $('#ci-' + val).removeClass('is-selected');
-            }
-        });
-
-        /* Also handle highlight for select-all */
-        $(document).off('change.highlight', '.cust-cb').on('change.highlight', '.cust-cb', function () {
             var val = $(this).val();
             if ($(this).is(':checked')) {
                 $('#ci-' + val).addClass('is-selected');
@@ -476,10 +582,13 @@ $(document).ready(function () {
         });
     }
 
-    /* Keep Select All in sync with individual checkboxes */
+    /* Keep Select All in sync with individual checkboxes (only visible ones) */
     function syncSelectAll(group) {
-        var total   = $('.cust-cb[data-group="' + group + '"]').length;
-        var checked = $('.cust-cb[data-group="' + group + '"]:checked').length;
+        var $visible = $('.cust-cb[data-group="' + group + '"]').filter(function () {
+            return $(this).closest('.customer-item').is(':visible');
+        });
+        var total   = $visible.length;
+        var checked = $visible.filter(':checked').length;
         var $allCb  = $('.select-all-cb[data-group="' + group + '"]');
         $allCb.prop('checked', total > 0 && checked === total);
         $allCb.prop('indeterminate', checked > 0 && checked < total);
@@ -492,11 +601,16 @@ $(document).ready(function () {
 
         $('#selected-count').text(count);
 
-        /* Rebuild hidden inputs */
+        /* Sync hidden inputs for form submit */
         var $hidden = $('#hidden-customer-inputs').empty();
         $checked.each(function () {
             $hidden.append('<input type="hidden" name="customer_ids[]" value="' + $(this).val() + '">');
         });
+
+        /* Keep bm_filter + city_filter + source_employee in sync for post-redirect restore */
+        $('#bm-filter-hidden').val($('#bm-filter').val());
+        $('#city-filter-hidden').val($('#city-filter').val());
+        $('#source-employee-hidden').val($('#source-employee').val());
 
         if (count > 0) {
             $('#floating-bar').slideDown(200);
@@ -512,6 +626,9 @@ $(document).ready(function () {
         $('#hidden-customer-inputs').empty();
         $('#floating-bar').hide();
         $('#btn-move').prop('disabled', true);
+        $('#filter-bar-wrapper').hide();
+        $('#bm-filter').val('');
+        $('#city-filter').val('');
     }
 
     /* ─── Move Form Submit Validation ───────────────────── */
@@ -530,15 +647,13 @@ $(document).ready(function () {
             return;
         }
 
-        // Check if ALL selected customers already belong to the target user
-        // Each checkbox value is "originalUserId_customerId"
         var allSameUser = true;
         $('.cust-cb:checked').each(function () {
             var parts = $(this).val().split('_');
             var originalUserId = parts[0];
             if (originalUserId != toUser) {
                 allSameUser = false;
-                return false; // break
+                return false;
             }
         });
 
@@ -551,6 +666,98 @@ $(document).ready(function () {
         if (!confirm('Move ' + count + ' customer(s) to the selected employee? This action cannot be undone.')) {
             e.preventDefault();
         }
+    });
+
+    /* ─── Populate Filter Dropdowns ─────────────────────── */
+    function populateFilters(groups) {
+        var dealers = {};
+        var cities  = {};
+
+        $.each(groups, function (i, group) {
+            $.each(group.customers || [], function (j, cust) {
+                if (cust.business_model === 'Dealer' && cust.dealer_business_name) {
+                    dealers[cust.dealer_business_name] = true;
+                }
+                if (cust.city_name) {
+                    cities[cust.city_name] = true;
+                }
+            });
+        });
+
+        // Rebuild dealer options (keep first 3: All, Direct Customer, Open)
+        $('#bm-filter option:gt(2)').remove();
+        $.each(Object.keys(dealers).sort(), function (i, name) {
+            $('#bm-filter').append('<option value="' + name + '">' + name + '</option>');
+        });
+
+        // Rebuild city options (keep first: All Cities)
+        $('#city-filter option:gt(0)').remove();
+        $.each(Object.keys(cities).sort(), function (i, name) {
+            $('#city-filter').append('<option value="' + name + '">' + name + '</option>');
+        });
+    }
+
+    /**
+     * Apply the business model + city filters.
+     * @param {boolean} silent - if true, skip updating the URL (already set)
+     */
+    function applyFilter(silent) {
+        var bmVal   = $('#bm-filter').val();
+        var cityVal = $('#city-filter').val();
+        var groupCounts = {};
+
+        $('.customer-item').each(function () {
+            var bm       = $(this).data('bm') || '';
+            var dealerBm = $(this).data('dealer-bm') || '';
+            var city     = $(this).data('city') || '';
+
+            var bmMatch   = !bmVal   || bm === bmVal || dealerBm === bmVal;
+            var cityMatch = !cityVal || city === cityVal;
+            var show      = bmMatch && cityMatch;
+
+            $(this).toggle(show);
+
+            // Count visible per group
+            var groupId = $(this).closest('.employee-group').data('user-id');
+            if (!groupCounts[groupId]) groupCounts[groupId] = { visible: 0, total: 0 };
+            groupCounts[groupId].total++;
+            if (show) groupCounts[groupId].visible++;
+        });
+
+        // Update each group's badge with filtered / total
+        var isFiltered = bmVal || cityVal;
+        $.each(groupCounts, function (groupId, counts) {
+            var $badge = $('.group-total-badge[data-group="' + groupId + '"]');
+            if (isFiltered) {
+                $badge.text(counts.visible + ' / ' + counts.total + ' Customers');
+            } else {
+                $badge.text(counts.total + ' Customers');
+            }
+            syncSelectAll(groupId);
+        });
+
+        updateFilterCount();
+
+        // Persist filters in URL (unless silent restore)
+        if (!silent) {
+            var url = new URL(window.location.href);
+            if (bmVal)   { url.searchParams.set('bm_filter', bmVal); }   else { url.searchParams.delete('bm_filter'); }
+            if (cityVal) { url.searchParams.set('city_filter', cityVal); } else { url.searchParams.delete('city_filter'); }
+            history.replaceState(null, '', url.toString());
+        }
+
+        // Keep hidden form inputs in sync
+        $('#bm-filter-hidden').val(bmVal);
+        $('#city-filter-hidden').val(cityVal);
+    }
+
+    function updateFilterCount() {
+        var visible = $('.customer-item:visible').length;
+        $('#filter-visible-count').text(visible);
+    }
+
+    $('#bm-filter, #city-filter').on('change', function () {
+        applyFilter(false);
     });
 
     /* ─── Helpers ────────────────────────────────────────── */
