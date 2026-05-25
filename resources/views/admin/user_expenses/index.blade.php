@@ -4,7 +4,6 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
 
-/* ── SVG icon helper ── */
 .ico { display:inline-block; vertical-align:middle; flex-shrink:0; }
 .ico svg { display:block; }
 
@@ -55,6 +54,18 @@
 }
 .btn-fr:hover { background: #e4e9f2; color: #3a4a5a; text-decoration: none; }
 
+/* PDF button */
+.btn-pdf {
+    display: none; align-items:center; gap:6px;
+    background: #fff0f0; color: #c0392b;
+    border: 1.5px solid #f5c0c0; border-radius: 7px;
+    padding: 8px 18px; font-size: 14px; font-weight: 700;
+    cursor: pointer; text-decoration: none; transition: all .2s;
+    margin-left: 8px; font-family: 'DM Sans',sans-serif;
+}
+.btn-pdf:hover { background: #c0392b; color: #fff; border-color: #c0392b; text-decoration: none; }
+.btn-pdf.visible { display: inline-flex; }
+
 /* ---- Stats ---- */
 .exp-stats { margin-bottom:18px; display:flex; flex-wrap:wrap; gap:10px; }
 .exp-stat {
@@ -90,10 +101,10 @@
 .exp-row::before {
     content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 4px 0 0 4px;
 }
-.exp-row.s-Requested::before      { background: #b0bcc8; }
-.exp-row.s-Approved::before       { background: #2ecc71; }
-.exp-row.s-Partially::before      { background: #f39c12; }
-.exp-row.s-Rejected::before       { background: #e74c3c; }
+.exp-row.s-Requested::before       { background: #b0bcc8; }
+.exp-row.s-Approved::before        { background: #2ecc71; }
+.exp-row.s-Partially::before       { background: #f39c12; }
+.exp-row.s-Rejected::before        { background: #e74c3c; }
 .exp-row.s-PendingApproval::before { background: #e74c3c; }
 
 .dc { padding: 14px 12px; border-right: 1px solid #edf1f8; font-size: 14px; color: #2d3a4a; }
@@ -105,17 +116,10 @@
 .emp-m  { font-size: 13px; color: #7a8a9a; margin-top: 2px; display:flex; align-items:center; gap:4px; }
 .cat-t  { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; margin-top:6px; background:#edf3fb; color:#2d6faa; border:1px solid #cde0f4; }
 .miss-t {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 9px;
-    border-radius: 20px;
-    background: #d32f2f;
-    color: #ffffff;
-    border: 1px solid #b71c1c;
-    margin-left: 4px;
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 11px; font-weight: 700; padding: 3px 9px;
+    border-radius: 20px; background: #d32f2f; color: #ffffff;
+    border: 1px solid #b71c1c; margin-left: 4px;
 }
 .missed-reason-txt { display:inline-flex; align-items:center; gap:4px; font-size:11px; color:#c47d00; background:#fff9ee; border:1px solid #ffe0a0; border-radius:6px; padding:3px 10px; margin-top:5px; max-width:190px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:default; }
 .remarks-txt { font-size:12px; color:#8a9ab5; font-style:italic; margin-top:5px; padding-top:5px; border-top:1px dashed #edf1f8; display:flex; align-items:flex-start; gap:4px; }
@@ -131,28 +135,20 @@
 .tr-km   { font-size:13px; font-weight:700; color:#3a7fc1; display:flex; align-items:center; gap:5px; }
 .tr-rt   { font-size:11px; color:#8a9ab5; margin-top:3px; display:flex; align-items:center; gap:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px; }
 
-/* View Visits button — default (green, has visits) */
 .btn-view-visits {
     display:inline-flex; align-items:center; gap:6px;
     background:#edf8f0; color:#1a9a50; border:1.5px solid #b8e6c8; border-radius:7px;
     padding:6px 12px; font-size:12px; font-weight:700;
-    cursor:pointer; transition:all .18s; font-family:'DM Sans',sans-serif;
-    margin-top:7px;
+    cursor:pointer; transition:all .18s; font-family:'DM Sans',sans-serif; margin-top:7px;
 }
 .btn-view-visits:hover { background:#1a9a50; color:#fff; border-color:#1a9a50; }
-.btn-view-visits:hover svg path, .btn-view-visits:hover svg circle, .btn-view-visits:hover svg rect { stroke:#fff !important; fill:#fff !important; }
-
-/* View Visits — green badge (has visits) */
 .vc-badge { background:#1a9a50; color:#fff; border-radius:10px; font-size:10px; font-weight:800; padding:1px 7px; min-width:20px; text-align:center; }
 .btn-view-visits:hover .vc-badge { background:#fff; color:#1a9a50; }
-
-/* View Visits — ZERO visits (red style) */
 .btn-view-visits.visits-zero { background:#feeaea; color:#c0392b; border-color:#f5c0c0; }
 .btn-view-visits.visits-zero:hover { background:#c0392b; color:#fff; border-color:#c0392b; }
 .btn-view-visits.visits-zero .vc-badge { background:#e74c3c; color:#fff; }
 .btn-view-visits.visits-zero:hover .vc-badge { background:#fff; color:#c0392b; }
 
-/* Receipt */
 .r-thumb { width:52px; height:52px; border-radius:8px; overflow:hidden; cursor:pointer; position:relative; border:2px solid #e4eaf3; background:#f4f7fb; display:inline-flex; align-items:center; justify-content:center; transition:border-color .2s, transform .2s, box-shadow .2s; vertical-align:middle; margin:2px; }
 .r-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
 .r-thumb:hover { border-color:#4d8fcc; transform:scale(1.08); box-shadow:0 4px 12px rgba(77,143,204,.3); }
@@ -160,7 +156,6 @@
 .r-thumb:hover .rto { background:rgba(45,111,170,.62); }
 .r-none { width:52px; height:52px; border-radius:8px; border:2px dashed #dde4ee; display:inline-flex; align-items:center; justify-content:center; color:#c5cdd8; vertical-align:middle; margin:2px; }
 
-/* Verified */
 .vc { padding:14px 10px; border-right:1px solid #edf1f8; text-align:center; }
 .v-cb { width:18px; height:18px; cursor:pointer; }
 .v-lb { font-size:11px; font-weight:700; letter-spacing:.3px; margin-top:2px; display:block; }
@@ -169,7 +164,6 @@
 .btn-int-remarks:hover { border-color:#4d8fcc; color:#2d6faa; background:#edf3fb; }
 .btn-int-remarks.has-remark { border-color:#f39c12; color:#c47d00; background:#fff9ee; }
 
-/* Query */
 .qc { padding:14px 10px; border-right:1px solid #edf1f8; text-align:center; }
 .btn-query { display:inline-flex; align-items:center; justify-content:center; gap:6px; background:#f0f4ff; color:#3d5a9a; border:1.5px solid #c8d4f0; border-radius:8px; padding:7px 12px; font-size:13px; font-weight:700; cursor:pointer; transition:all .18s; font-family:'DM Sans',sans-serif; min-width:58px; }
 .btn-query:hover { background:#3d5a9a; color:#fff; border-color:#3d5a9a; }
@@ -182,7 +176,6 @@
 @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.25;} }
 .q-unread-dot { width:8px; height:8px; border-radius:50%; background:#e74c3c; flex-shrink:0; animation:blink 1.1s infinite; }
 
-/* Status */
 .sc { padding:14px 12px; border-right:1px solid #edf1f8; }
 .s-badge { display:inline-block; font-size:11px; font-weight:700; padding:4px 12px; border-radius:20px; white-space:nowrap; }
 .sb-Requested       { background:#f0f3f8; color:#7a8a9a; }
@@ -195,7 +188,6 @@
 .appr-remarks-txt { font-size:11px; color:#8a9ab5; font-style:italic; margin-top:4px; }
 .amt-col { padding:14px 12px; border-right:1px solid #edf1f8; text-align:right; }
 
-/* Empty / Pagination */
 .exp-empty { text-align:center; padding:70px 20px; color:#b0bcc8; }
 .exp-empty p { font-size:15px; margin-top:12px; }
 .exp-pager { padding:14px 22px; background:#f7f9fc; border-top:1px solid #edf1f8; overflow:hidden; }
@@ -204,14 +196,12 @@
 .exp-pager .pagination>li>a,.exp-pager .pagination>li>span { border-radius:6px!important; margin:0 2px; border-color:#dde4ee; color:#4d8fcc; font-size:13px; padding:5px 12px; font-weight:600; font-family:'DM Sans',sans-serif; }
 .exp-pager .pagination>.active>a,.exp-pager .pagination>.active>span { background:#4d8fcc!important; border-color:#4d8fcc!important; color:#fff!important; }
 
-/* Lightbox */
 .exp-lb { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(8,14,28,.95); z-index:999999; align-items:center; justify-content:center; }
 .exp-lb.on { display:flex; }
 .exp-lb img { max-width:90%; max-height:88vh; border-radius:12px; box-shadow:0 30px 80px rgba(0,0,0,.6); cursor:default; }
 .exp-lbx { position:fixed; top:20px; right:26px; color:rgba(255,255,255,.8); font-size:38px; cursor:pointer; line-height:1; z-index:1000000; transition:all .2s; background:rgba(255,255,255,.1); width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
 .exp-lbx:hover { color:#fff; background:rgba(255,255,255,.22); transform:rotate(90deg); }
 
-/* Modals */
 .mod-hdr-blue   { background:linear-gradient(135deg,#2d6faa,#1a4e80); padding:18px 24px; border:none; }
 .mod-hdr-indigo { background:linear-gradient(135deg,#3d5a9a,#253870); padding:18px 24px; border:none; }
 .mod-hdr-orange { background:linear-gradient(135deg,#f39c12,#d68910); padding:18px 24px; border:none; }
@@ -246,7 +236,6 @@
 .btn-msave:hover { opacity:.88; } .btn-msave:disabled { opacity:.55; cursor:not-allowed; }
 .btn-mcancel { display:inline-flex; align-items:center; gap:6px; background:#f0f3f8; color:#6a7a8a; border:1.5px solid #dde4ee; border-radius:7px; padding:9px 20px; font-size:14px; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; }
 
-/* Query chat */
 .q-chat-box { height:300px; overflow-y:auto; padding:16px 20px; background:#f7f9fc; border-bottom:1px solid #e8edf5; }
 .q-chat-box::-webkit-scrollbar { width:4px; } .q-chat-box::-webkit-scrollbar-thumb { background:#d0d8e8; border-radius:4px; }
 .q-bubble { display:block; max-width:82%; margin-bottom:12px; }
@@ -266,13 +255,11 @@
 .btn-qclose { display:inline-flex; align-items:center; gap:6px; background:#f0f3f8; color:#6a7a8a; border:1.5px solid #dde4ee; border-radius:7px; padding:9px 18px; font-size:14px; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; }
 .q-loading { display:flex; align-items:center; justify-content:center; height:100%; color:#b0bcc8; gap:10px; font-size:14px; }
 
-/* Internal remarks */
 .ir-current-box { background:#f7f9fc; border-radius:9px; padding:14px; border-left:4px solid #f39c12; margin-bottom:16px; }
 .ir-current-box .ir-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:#f39c12; margin-bottom:7px; display:flex; align-items:center; gap:5px; }
 .ir-current-box .ir-text { font-size:14px; color:#2d3a4a; line-height:1.6; }
 .ir-by { font-size:12px; color:#a0aab8; margin-top:8px; }
 
-/* Visits table */
 .visits-table { width:100%; border-collapse:collapse; font-size:13px; }
 .visits-table th { background:#f0f3f8; padding:10px 12px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#8a9ab5; border-bottom:2px solid #e4eaf3; text-align:left; position:sticky; top:0; }
 .visits-table td { padding:12px; border-bottom:1px solid #edf1f8; color:#2d3a4a; vertical-align:top; }
@@ -287,54 +274,56 @@
 .visits-empty p { font-size:14px; margin-top:10px; }
 .visits-count-badge { display:inline-block; background:rgba(255,255,255,.22); color:#fff; font-size:12px; font-weight:700; padding:3px 12px; border-radius:12px; margin-left:10px; }
 
-/* Spinner */
 @keyframes spin { to { transform:rotate(360deg); } }
 .spin-ico { animation:spin .8s linear infinite; display:inline-block; }
 </style>
 
-{{-- ══ INLINE SVG ICON DEFINITIONS (zero external deps) ══ --}}
+{{-- ══ INLINE SVG ICON DEFINITIONS ══ --}}
 <svg style="display:none" xmlns="http://www.w3.org/2000/svg">
-  <symbol id="ico-card"    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></symbol>
-  <symbol id="ico-list"    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></symbol>
-  <symbol id="ico-eye"     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
-  <symbol id="ico-user"    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
-  <symbol id="ico-cal"     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
-  <symbol id="ico-filter"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></symbol>
-  <symbol id="ico-check"   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></symbol>
-  <symbol id="ico-shield"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
-  <symbol id="ico-msg"     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
-  <symbol id="ico-flag"    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></symbol>
-  <symbol id="ico-cog"     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
-  <symbol id="ico-phone"   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.5 2 2 0 0 1 3.6 1.32h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 16.92z"/></symbol>
-  <symbol id="ico-tag"     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></symbol>
-  <symbol id="ico-warn"    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
-  <symbol id="ico-comment" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
-  <symbol id="ico-road"    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="21" x2="21" y2="21"/><line x1="3" y1="7" x2="21" y2="7"/><polyline points="8 21 8 7 16 3 16 21"/></symbol>
-  <symbol id="ico-map"     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></symbol>
-  <symbol id="ico-zoom"    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></symbol>
-  <symbol id="ico-img"     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></symbol>
-  <symbol id="ico-pencil"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></symbol>
-  <symbol id="ico-save"    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></symbol>
-  <symbol id="ico-send"    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></symbol>
-  <symbol id="ico-x"       viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
-  <symbol id="ico-xcirc"   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></symbol>
+  <symbol id="ico-card"      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></symbol>
+  <symbol id="ico-list"      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></symbol>
+  <symbol id="ico-eye"       viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="ico-user"      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="ico-cal"       viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+  <symbol id="ico-filter"    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></symbol>
+  <symbol id="ico-check"     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="ico-shield"    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+  <symbol id="ico-msg"       viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="ico-flag"      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></symbol>
+  <symbol id="ico-cog"       viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+  <symbol id="ico-phone"     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.5 2 2 0 0 1 3.6 1.32h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 16.92z"/></symbol>
+  <symbol id="ico-tag"       viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></symbol>
+  <symbol id="ico-warn"      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ico-comment"   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="ico-road"      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="21" x2="21" y2="21"/><line x1="3" y1="7" x2="21" y2="7"/><polyline points="8 21 8 7 16 3 16 21"/></symbol>
+  <symbol id="ico-map"       viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="ico-zoom"      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></symbol>
+  <symbol id="ico-img"       viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></symbol>
+  <symbol id="ico-pencil"    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></symbol>
+  <symbol id="ico-save"      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></symbol>
+  <symbol id="ico-send"      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></symbol>
+  <symbol id="ico-x"         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="ico-xcirc"     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></symbol>
   <symbol id="ico-checkcirc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></symbol>
-  <symbol id="ico-half"    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20V2z" fill="currentColor" stroke="none"/></symbol>
-  <symbol id="ico-money"   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></symbol>
-  <symbol id="ico-reply"   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></symbol>
-  <symbol id="ico-lock"    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
-  <symbol id="ico-inbox"   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
-  <symbol id="ico-clock"   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
-  <symbol id="ico-search"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
-  <symbol id="ico-reset"   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></symbol>
-  <symbol id="ico-spin"    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10" opacity=".9"/><path d="M12 2a10 10 0 0 0-10 10" opacity=".25"/><path d="M2 12a10 10 0 0 0 10 10" opacity=".5"/><path d="M22 12a10 10 0 0 1-10 10" opacity=".1"/></symbol>
+  <symbol id="ico-half"      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20V2z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="ico-money"     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></symbol>
+  <symbol id="ico-reply"     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></symbol>
+  <symbol id="ico-lock"      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="ico-inbox"     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+  <symbol id="ico-clock"     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="ico-search"    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+  <symbol id="ico-reset"     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></symbol>
+  <symbol id="ico-pdf"       viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="11" x2="15" y2="11"/></symbol>
+  <symbol id="ico-spin"      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10" opacity=".9"/><path d="M12 2a10 10 0 0 0-10 10" opacity=".25"/><path d="M2 12a10 10 0 0 0 10 10" opacity=".5"/><path d="M22 12a10 10 0 0 1-10 10" opacity=".1"/></symbol>
 </svg>
 
-{{-- ── SVG shorthand macro ── --}}
 @php
 function svgico($id, $size=16, $extra='') {
     return '<span class="ico"><svg width="'.$size.'" height="'.$size.'" '.$extra.'><use href="#ico-'.$id.'"/></svg></span>';
 }
+// Current month/year for default selection
+$currentMonth = date('n');
+$currentYear  = date('Y');
 @endphp
 
 <div class="page-content-wrapper">
@@ -353,14 +342,15 @@ function svgico($id, $size=16, $extra='') {
         <p>Review, verify and approve employee expense claims</p>
     </div>
 
-    {{-- FILTER --}}
+    {{-- ══ FILTER CARD ══ --}}
     <div class="exp-filter-card">
-        <form method="GET" action="{{ url('admin/user-expenses') }}">
+        <form method="GET" action="{{ url('admin/user-expenses') }}" id="filterForm">
             <div class="row">
+                {{-- Employee --}}
                 <div class="col-md-3">
                     <div class="form-group">
                         <label>{!! svgico('user',11) !!} Employee</label>
-                        <select name="employee_id" class="form-control select2" style="width:100%;">
+                        <select name="employee_id" id="filterEmployee" class="form-control select2" style="width:100%;">
                             <option value="">All Employees</option>
                             @foreach($employees as $emp)
                                 <option value="{{ $emp->id }}" {{ request('employee_id') == $emp->id ? 'selected' : '' }}>
@@ -370,32 +360,44 @@ function svgico($id, $size=16, $extra='') {
                         </select>
                     </div>
                 </div>
+
+                {{-- Month — defaults to current month on fresh load --}}
                 <div class="col-md-1">
                     <div class="form-group">
                         <label>{!! svgico('cal',11) !!} Month</label>
-                        <select name="month" class="form-control">
+                        <select name="month" id="filterMonth" class="form-control">
                             <option value="">All</option>
                             @foreach(range(1,12) as $m)
-                                <option value="{{ $m }}" {{ request('month') == $m ? 'selected' : '' }}>{{ date('M', mktime(0,0,0,$m,1)) }}</option>
+                                <option value="{{ $m }}"
+                                    {{ (request()->has('month') ? request('month') == $m : $currentMonth == $m) ? 'selected' : '' }}>
+                                    {{ date('M', mktime(0,0,0,$m,1)) }}
+                                </option>
                             @endforeach
                         </select>
                     </div>
                 </div>
+
+                {{-- Year — defaults to current year on fresh load --}}
                 <div class="col-md-1">
                     <div class="form-group">
                         <label>{!! svgico('cal',11) !!} Year</label>
-                        <select name="year" class="form-control">
+                        <select name="year" id="filterYear" class="form-control">
                             <option value="">All</option>
                             @foreach($years as $yr)
-                                <option value="{{ $yr }}" {{ request('year') == $yr ? 'selected' : '' }}>{{ $yr }}</option>
+                                <option value="{{ $yr }}"
+                                    {{ (request()->has('year') ? request('year') == $yr : $currentYear == $yr) ? 'selected' : '' }}>
+                                    {{ $yr }}
+                                </option>
                             @endforeach
                         </select>
                     </div>
                 </div>
+
+                {{-- Status --}}
                 <div class="col-md-2">
                     <div class="form-group">
                         <label>{!! svgico('filter',11) !!} Status</label>
-                        <select name="status" class="form-control">
+                        <select name="status" id="filterStatus" class="form-control">
                             <option value="">All Statuses</option>
                             <option value="Pending Approval"   {{ request('status')==='Pending Approval'   ? 'selected':'' }}>Pending Approval</option>
                             <option value="Approved"           {{ request('status')==='Approved'           ? 'selected':'' }}>Approved</option>
@@ -404,22 +406,35 @@ function svgico($id, $size=16, $extra='') {
                         </select>
                     </div>
                 </div>
+
+                {{-- Verified --}}
                 <div class="col-md-2">
                     <div class="form-group">
                         <label>{!! svgico('shield',11) !!} Verified</label>
-                        <select name="verified" class="form-control">
+                        <select name="verified" id="filterVerified" class="form-control">
                             <option value="">All</option>
                             <option value="yes" {{ request('verified')==='yes' ? 'selected':'' }}>Verified</option>
                             <option value="no"  {{ request('verified')==='no'  ? 'selected':'' }}>Not Verified</option>
                         </select>
                     </div>
                 </div>
+
+                {{-- Actions --}}
                 <div class="col-md-3">
                     <div class="form-group">
                         <label>&nbsp;</label>
-                        <div style="white-space:nowrap;padding-top:2px;">
-                            <button type="submit" class="btn-fa">{!! svgico('search',14,'style="color:#fff"') !!} Apply Filters</button>
-                            <a href="{{ url('admin/user-expenses') }}" class="btn-fr">{!! svgico('reset',14) !!} Reset</a>
+                        <div style="padding-top:2px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+                            <button type="submit" class="btn-fa">
+                                {!! svgico('search',14,'style="color:#fff"') !!} Apply Filters
+                            </button>
+                            <a href="{{ url('admin/user-expenses') }}" class="btn-fr">
+                                {!! svgico('reset',14) !!} Reset
+                            </a>
+                            {{-- PDF Export — visible only when employee selected --}}
+                            <a id="btnExportPdf" href="#" class="btn-pdf" target="_blank"
+                               title="Export to PDF (requires employee selection)">
+                                {!! svgico('pdf',14,'style="color:currentColor"') !!} Export PDF
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -427,7 +442,7 @@ function svgico($id, $size=16, $extra='') {
         </form>
     </div>
 
-    {{-- STATS --}}
+    {{-- ══ STATS BAR ══ --}}
     <div class="exp-stats">
         <div class="exp-stat">
             <div class="si" style="background:linear-gradient(135deg,#4d8fcc,#2d6faa);">{!! svgico('list',17,'style="color:#fff"') !!}</div>
@@ -451,7 +466,7 @@ function svgico($id, $size=16, $extra='') {
         @endif
     </div>
 
-    {{-- LIST --}}
+    {{-- ══ EXPENSE LIST ══ --}}
     <div class="exp-list">
         <div class="exp-grid exp-head">
             <div class="hc" style="justify-content:center;">#</div>
@@ -471,11 +486,11 @@ function svgico($id, $size=16, $extra='') {
             $sk = ($sk === 'PartiallyApproved') ? 'Partially' : $sk;
             $receiptPath    = !empty($expense->image)             ? asset('ExpenseReceipts/'.$expense->user_id.'/'.$expense->image)             : null;
             $altReceiptPath = !empty($expense->alternative_image) ? asset('ExpenseReceipts/'.$expense->user_id.'/'.$expense->alternative_image) : null;
-            $qCount   = $queryCounts[$expense->id]       ?? 0;
-            $unread   = $unreadQueryCounts[$expense->id] ?? 0;
-            $key      = $expense->user_id . '_' . $expense->expense_date;
-            $vCount   = $visitCounts[$key] ?? 0;
-            $expDate  = \Carbon\Carbon::parse($expense->expense_date);
+            $qCount  = $queryCounts[$expense->id]       ?? 0;
+            $unread  = $unreadQueryCounts[$expense->id] ?? 0;
+            $key     = $expense->user_id . '_' . $expense->expense_date;
+            $vCount  = $visitCounts[$key] ?? 0;
+            $expDate = \Carbon\Carbon::parse($expense->expense_date);
         @endphp
 
         <div class="exp-grid exp-row s-{{ $sk }}" id="row-{{ $expense->id }}">
@@ -510,10 +525,9 @@ function svgico($id, $size=16, $extra='') {
                 @endif
             </div>
 
-            {{-- Date + Amount — CHANGED: added day name badge --}}
+            {{-- Date & Amount --}}
             <div class="dc">
                 <div class="date-main">
-                    
                     {{ $expDate->format('d M Y') }} ({{ $expDate->format('D') }})
                     <span class="date-day-badge"></span>
                 </div>
@@ -525,7 +539,6 @@ function svgico($id, $size=16, $extra='') {
                     @if($expense->is_intercity && !empty($expense->intercity_route))
                         <div class="tr-rt">{!! svgico('map',10,'style="color:#b0bcc8"') !!}{{ $expense->intercity_route }}</div>
                     @endif
-                    {{-- CHANGED: red tint + red badge when 0 visits, green when > 0 --}}
                     <button class="btn-view-visits {{ $vCount == 0 ? 'visits-zero' : '' }}"
                         data-user-id="{{ $expense->user_id }}"
                         data-date="{{ $expense->expense_date }}"
@@ -538,7 +551,7 @@ function svgico($id, $size=16, $extra='') {
                 @endif
             </div>
 
-            {{-- Approved --}}
+            {{-- Approved Amount --}}
             <div class="amt-col" id="appr-{{ $expense->id }}">
                 @if($expense->approved_amount > 0)
                     <span class="a-apr">&#8377;{{ number_format($expense->approved_amount, 2) }}</span>
@@ -575,19 +588,19 @@ function svgico($id, $size=16, $extra='') {
                 <span class="v-lb {{ !empty($expense->verified_by) ? 'on' : 'off' }}" id="vlbl-{{ $expense->id }}">
                     {{ !empty($expense->verified_by) ? 'YES' : 'NO' }}
                 </span>
-                <button class="btn-int-remarks btn-open-int-remarks {{ !empty($expense->internal_remarks)?'has-remark':'' }}"
+                <button class="btn-int-remarks btn-open-int-remarks {{ !empty($expense->internal_remarks) ? 'has-remark' : '' }}"
                     id="irbtn-{{ $expense->id }}"
                     data-id="{{ $expense->id }}"
                     data-remarks="{{ addslashes($expense->internal_remarks ?? '') }}"
                     data-verified-by="{{ addslashes($expense->verified_by_name ?? '') }}"
-                    title="{{ !empty($expense->internal_remarks)?'Edit note':'Add note' }}">
+                    title="{{ !empty($expense->internal_remarks) ? 'Edit note' : 'Add note' }}">
                     {!! svgico('pencil',12,'style="color:currentColor"') !!} Note
                 </button>
             </div>
 
-            {{-- Query — CHANGED: hide pill when count is 0 --}}
+            {{-- Query --}}
             <div class="qc">
-                <button class="btn-query btn-open-query {{ $unread>0?'has-unread':'' }}"
+                <button class="btn-query btn-open-query {{ $unread>0 ? 'has-unread' : '' }}"
                     data-id="{{ $expense->id }}"
                     data-employee="{{ $expense->employee_name ?? 'Employee' }}"
                     id="qbtn-{{ $expense->id }}"
@@ -597,7 +610,7 @@ function svgico($id, $size=16, $extra='') {
                     <span class="q-count-pill"
                           id="qcount-{{ $expense->id }}"
                           style="{{ ($unread == 0 && $qCount == 0) ? 'display:none;' : '' }}">
-                        {{ $unread>0?($unread>99?'99+':$unread):($qCount>99?'99+':$qCount) }}
+                        {{ $unread>0 ? ($unread>99?'99+':$unread) : ($qCount>99?'99+':$qCount) }}
                     </span>
                 </button>
             </div>
@@ -645,13 +658,13 @@ function svgico($id, $size=16, $extra='') {
 </div>
 </div>
 
-{{-- LIGHTBOX --}}
+{{-- ══ LIGHTBOX ══ --}}
 <div class="exp-lb" id="expLb" onclick="closeLb()">
     <div class="exp-lbx" onclick="closeLb(event)">{!! svgico('x',22,'style="color:#fff"') !!}</div>
     <img src="" id="lbImg" alt="Receipt" onclick="event.stopPropagation()">
 </div>
 
-{{-- INTERNAL REMARKS MODAL --}}
+{{-- ══ INTERNAL REMARKS MODAL ══ --}}
 <div class="modal fade" id="internalRemarksModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document" style="width:440px;max-width:95vw;margin:80px auto;">
         <div class="modal-content">
@@ -682,7 +695,7 @@ function svgico($id, $size=16, $extra='') {
     </div>
 </div>
 
-{{-- STATUS MODAL --}}
+{{-- ══ STATUS MODAL ══ --}}
 <div class="modal fade" id="stModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document" style="width:460px;max-width:95vw;margin:55px auto;">
         <div class="modal-content">
@@ -734,7 +747,7 @@ function svgico($id, $size=16, $extra='') {
     </div>
 </div>
 
-{{-- QUERY MODAL --}}
+{{-- ══ QUERY MODAL ══ --}}
 <div class="modal fade" id="queryModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document" style="width:550px;max-width:96vw;margin:50px auto;">
         <div class="modal-content">
@@ -767,7 +780,7 @@ function svgico($id, $size=16, $extra='') {
     </div>
 </div>
 
-{{-- VISITS MODAL --}}
+{{-- ══ VISITS MODAL ══ --}}
 <div class="modal fade" id="visitsModal" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-lg" role="document" style="width:780px;max-width:96vw;margin:50px auto;">
         <div class="modal-content">
@@ -843,6 +856,35 @@ function scrollChatBottom(){ var b=document.getElementById('qChatBox'); if(b) b.
 var spinSvg = '<span class="spin-ico"><svg width="22" height="22" style="color:#b0bcc8"><use href="#ico-spin"/></svg></span>';
 
 $(document).ready(function(){
+
+    /* ── PDF Export button: show/hide + build URL ── */
+    function updatePdfBtn() {
+        var empVal    = $('#filterEmployee').val();
+        var month     = $('#filterMonth').val();
+        var year      = $('#filterYear').val();
+        var status    = $('#filterStatus').val();
+        var verified  = $('#filterVerified').val();
+        var $pdfBtn   = $('#btnExportPdf');
+
+        if (empVal && empVal !== '') {
+            var params = new URLSearchParams();
+            params.set('employee_id', empVal);
+            if (month)    params.set('month',    month);
+            if (year)     params.set('year',     year);
+            if (status)   params.set('status',   status);
+            if (verified) params.set('verified', verified);
+            $pdfBtn.attr('href', '{{ url("admin/user-expenses/export-pdf") }}?' + params.toString());
+            $pdfBtn.addClass('visible');
+        } else {
+            $pdfBtn.removeClass('visible');
+        }
+    }
+
+    // Run on page load (handles page reload with employee already in URL)
+    updatePdfBtn();
+
+    // Run on any filter change
+    $('#filterEmployee, #filterMonth, #filterYear, #filterStatus, #filterVerified').on('change', updatePdfBtn);
 
     /* ── Verify checkbox ── */
     $(document).on('change','.verify-checkbox',function(){
@@ -960,15 +1002,9 @@ $(document).ready(function(){
                         var html=''; $.each(r.queries,function(i,q){ html+=renderBubble(q); });
                         $('#qChatBox').html(html); scrollChatBottom();
                     }
-                    /* Mark read: remove unread style + dot, update count pill */
                     $('#qbtn-'+id).removeClass('has-unread').find('.q-unread-dot').remove();
-                    var total = r.queries.length;
-                    var $pill = $('#qcount-'+id);
-                    if(total > 0){
-                        $pill.text(total>99?'99+':total).show();
-                    } else {
-                        $pill.hide();
-                    }
+                    var total=r.queries.length, $pill=$('#qcount-'+id);
+                    total>0 ? $pill.text(total>99?'99+':total).show() : $pill.hide();
                 }
             },
             error:function(){ $('#qChatBox').html('<div class="q-empty"><svg width="28" height="28" style="color:#e74c3c"><use href="#ico-warn"/></svg><span>Failed to load.</span></div>'); }
@@ -986,8 +1022,7 @@ $(document).ready(function(){
                     $('#qChatBox .q-empty').remove();
                     $('#qChatBox').append(renderBubble(r.query)); scrollChatBottom();
                     $('#q_message').val('');
-                    var newTotal = r.total || parseInt($('#qcount-'+id).text()||'0') + 1;
-                    /* CHANGED: show pill and update count when query is sent */
+                    var newTotal=r.total||parseInt($('#qcount-'+id).text()||'0')+1;
                     $('#qcount-'+id).text(newTotal>99?'99+':newTotal).show();
                     notify('success','Query sent!');
                 } else { notify('error',r.message||'Failed to send.'); }

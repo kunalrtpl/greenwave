@@ -446,6 +446,8 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 	Route::post('user-expenses/{id}/raise-query',       'UserExpenseController@raiseQuery')->name('admin.user-expenses.raise-query');
 	Route::post('user-expenses/{id}/internal-remarks',       'UserExpenseController@saveInternalRemarks');
 
+	Route::get('user-expenses/export-pdf', 'UserExpenseController@exportPdf');
+
 
 	/*
 |─────────────────────────────────────────────────────────────────────
