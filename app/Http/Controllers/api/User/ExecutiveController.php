@@ -1532,6 +1532,7 @@ class ExecutiveController extends Controller
         }
     }
 
+    // not using this api now we will use now v3
     public function v2saveCustomerRequest(Request $request)
     {
         if ($request->isMethod('post')) {
@@ -1663,7 +1664,146 @@ class ExecutiveController extends Controller
         }
     }
 
+    public function v3saveCustomerRequest(Request $request)
+    {
+        if ($request->isMethod('post')) {
+            $resp = $this->resp;
 
+            if ($resp['status'] && isset($resp['user'])) {
+                $data = $request->all();
+                $id = $request->input('customer_register_request_id'); // Edit key
+
+                // Email validation closure (optional + unique)
+                $emailunique = function ($attribute, $value, $fail) use ($id) {
+                    if (!$value) {
+                        return; // Skip if email is empty/null
+                    }
+
+                    $existsInCustomers = DB::table('customers')->where('email', $value)->exists();
+
+                    $existsInDealers = DB::table('dealers')->where('email', $value)->exists(); // ✅ Added
+
+                    $existsInRequests = DB::table('customer_register_requests')
+                        ->where('email', $value)
+                        ->where('status', 'Pending')
+                        ->when($id, function ($query) use ($id) {
+                            return $query->where('id', '!=', $id); // Allow self
+                        })
+                        ->exists();
+
+                    if ($existsInCustomers || $existsInDealers || $existsInRequests) { // ✅ Updated
+                        $fail('The ' . $attribute . ' has already been taken.');
+                    }
+                };
+
+                // Mobile validation closure (still required)
+                $mobileunique = function ($attribute, $value, $fail) use ($id) {
+                    $existsInCustomers = DB::table('customers')->where('mobile', $value)->exists();
+
+                    $existsInDealers = DB::table('dealers')->where('owner_mobile', $value)->exists(); // ✅ Added
+
+                    $existsInRequests = DB::table('customer_register_requests')
+                        ->where('mobile', $value)
+                        ->where('status', 'Pending')
+                        ->when($id, function ($query) use ($id) {
+                            return $query->where('id', '!=', $id); // Allow self
+                        })
+                        ->exists();
+
+                    if ($existsInCustomers || $existsInDealers || $existsInRequests) { // ✅ Updated
+                        $fail('The ' . $attribute . ' has already been taken.');
+                    }
+                };
+
+                $rules = [
+                    'contact_person_name' => 'bail|required',
+                    'name' => 'bail|required',
+                    'email' => ['bail', 'nullable', 'email', $emailunique],
+                    'mobile' => ['bail', 'required', 'numeric', 'digits:10', $mobileunique],
+                    'business_model' => 'bail|required|in:Dealer,Open,Direct Customer',
+                    'dealer_id' => 'required_if:business_model,Dealer',
+                    //'linked_executive' => 'bail|required',
+                    'business_card' => 'nullable|max:2048'
+                ];
+
+                $customMessages = [];
+
+                $validator = Validator::make($data, $rules, $customMessages);
+
+                if ($validator->fails()) {
+                    return response()->json(validationResponse($validator), 422);
+                }
+
+                // Create or update model
+                $requestModel = $id ? CustomerRegisterRequest::find($id) : new CustomerRegisterRequest;
+
+                if ($id && !$requestModel) {
+                    return response()->json(apiErrorResponse('Request not found'), 404);
+                }
+
+                $requestModel->name = $data['name'];
+                $requestModel->email = $data['email'] ?? null; // assign null if not provided
+                $requestModel->mobile = $data['mobile'];
+                $requestModel->address = $data['address'];
+                $requestModel->contact_person_name = $data['contact_person_name'];
+                $requestModel->cities = $data['cities'];
+                $requestModel->designation = $data['designation'];
+                $requestModel->department = getDepartmentByDesignation($data['designation']);
+                $requestModel->activity = $data['activity'];
+                $requestModel->business_model = $data['business_model'];
+                if($resp['user']['level'] == 1){
+                    // Level 1 — save the report_to user as linked_executive
+                    $reportTo = DB::table('user_departments')
+                        ->where('user_id', $resp['user']['id'])
+                        ->value('report_to');
+
+                    // If report_to is null, assign himself
+                    $requestModel->linked_executive = $reportTo ?: $resp['user']['id'];
+                } else {
+                    $requestModel->linked_executive = $resp['user']['id'];
+                }
+                if(isset($data['employee_remarks'])){
+                    $requestModel->employee_remarks = $data['employee_remarks'];
+                }
+
+                if(isset($data['declaration'])){
+                    $requestModel->declaration = $data['declaration'];
+                }
+                $requestModel->dealer_id = $data['business_model'] === 'Dealer' ? ($data['dealer_id'] ?? null) : null;
+
+                if (!$id) {
+                    $requestModel->created_by = $resp['user']['id'];
+                }
+
+                // Handle file upload
+                if ($request->hasFile('business_card')) {
+                    $file = $request->file('business_card');
+                    $filename = time() . '_' . $file->getClientOriginalName();
+                    $path = 'business_cards/' . $filename;
+
+                    $file->move(public_path('business_cards'), $filename);
+                    $requestModel->business_card = $path;
+                    
+                    if ($request->hasFile('business_card_two')) {
+                        $file = $request->file('business_card_two');
+                        $filename = time() . '2_' . $file->getClientOriginalName();
+                        $path = 'business_cards/' . $filename;
+
+                        $file->move(public_path('business_cards'), $filename);
+                        $requestModel->business_card_two = $path;
+                    }
+                }
+
+                $requestModel->save();
+
+                $message = $id
+                    ? 'Register request has been updated successfully'
+                    : 'Register request has been submitted successfully';
+
+                return response()->json(apiSuccessResponse($message), 200);
+            }
+        }
+    }
 
     public function customersAreaList(Request $request){
         $resp = $this->resp;

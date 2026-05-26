@@ -258,6 +258,32 @@
     border-radius: 0 0 6px 6px;
     margin-top: 10px;
 }
+/* ---- Sub-region city pills ---- */
+.city-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #f0faf9;
+    border: 1px solid #b2dfdb;
+    border-radius: 12px;
+    padding: 3px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #00695c;
+}
+.city-pill i { font-size: 10px; color: #00897b; }
+.city-pill-group-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #888;
+    width: 100%;
+    margin-top: 6px;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.city-pill-group-label:first-child { margin-top: 0; }
 </style>
 
 <div class="page-content-wrapper">
@@ -363,6 +389,23 @@
                                     <input type="text" placeholder="Designation" name="designation" class="form-control"
                                            value="{{ !empty($empdata['designation']) ? $empdata['designation'] : '' }}"/>
                                     <h4 class="text-danger" style="display:none;font-size:12px;" id="Employee-designation"></h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="col-md-4 control-label">Level <span class="asteric">*</span></label>
+                                <div class="col-md-8">
+                                    <select class="form-control select2" name="level" id="employee_level" required>
+                                        <option value="">Please Select</option>
+                                        @foreach(range(1, 4) as $lvl)
+                                            <option value="{{ $lvl }}"
+                                                {{ (!empty($empdata) && isset($empdata['level']) && $empdata['level'] == $lvl) ? 'selected' : '' }}>
+                                                Level {{ $lvl }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <h4 class="text-danger" style="display:none;font-size:12px;" id="Employee-level"></h4>
                                 </div>
                             </div>
                         </div>
@@ -741,12 +784,25 @@
                 $allParentRegions = json_decode(json_encode($allParentRegions), true);
 
                 /* Pre-load sub-regions for edit mode */
+                /* Pre-load sub-regions for edit mode */
                 $preloadedSubRegions = [];
+                $preloadedCitiesBySubRegion = [];   // NEW
                 if ($existingDeptIsMarketing && !empty($existingRegionIds)) {
                     $preloadedSubRegions = DB::table('regions')
                         ->whereIn('parent_id', $existingRegionIds)
                         ->get();
                     $preloadedSubRegions = json_decode(json_encode($preloadedSubRegions), true);
+
+                    // NEW — load cities for already-selected sub-regions
+                    if (!empty($existingSubRegionIds)) {
+                        $preloadedCityRows = DB::table('region_cities')
+                            ->whereIn('region_id', $existingSubRegionIds)
+                            ->orderBy('city')
+                            ->get();
+                        foreach ($preloadedCityRows as $cityRow) {
+                            $preloadedCitiesBySubRegion[$cityRow->region_id][] = $cityRow->city;
+                        }
+                    }
                 }
             ?>
             <div class="emp-section sec-teal">
@@ -767,6 +823,7 @@
                                         @foreach(departments() as $deptinfo)
                                             <option value="{{ $deptinfo['id'] }}"
                                                 data-is-marketing="{{ $deptinfo['department'] == 'Marketing' ? '1' : '0' }}"
+                                                data-is-admin="{{ $deptinfo['department'] == 'Administration' ? '1' : '0' }}"
                                                 {{ $existingDeptId == $deptinfo['id'] ? 'selected' : '' }}>
                                                 {{ $deptinfo['department'] }}
                                             </option>
@@ -776,9 +833,19 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6" id="reportToWrapper" style="{{ $existingDeptId ? '' : 'display:none;' }}">
+                        <?php
+                            $hideReportToOnLoad = true; // default: hidden
+                            if (!empty($existingDeptId)) {
+                                $existingDeptName = DB::table('departments')->where('id', $existingDeptId)->value('department');
+                                // Show Report To only if dept is selected AND it's NOT Administration
+                                $hideReportToOnLoad = ($existingDeptName === 'Administration');
+                            }
+                        ?>
+                        <div class="col-md-6" id="reportToWrapper" style="{{ $hideReportToOnLoad ? 'display:none;' : '' }}">
                             <div class="form-group">
-                                <label class="col-md-4 control-label">Report To</label>
+                                <label class="col-md-4 control-label">
+                                    Report To <span class="asteric report-to-required-star">*</span>
+                                </label>
                                 <div class="col-md-8">
                                     <select class="form-control select2" id="inline_report_to" name="inline_report_to">
                                         <option value="">Please Select</option>
@@ -837,6 +904,17 @@
                                         </option>
                                     @endforeach
                                 </select>
+                                @if(empty($preloadedSubRegions))
+                                    <div class="dept-hint"><i class="fa fa-info-circle"></i> Select a region first</div>
+                                @endif
+
+                                {{-- ── Cities under selected sub-regions ── --}}
+                                <div id="subRegionCitiesBox" style="margin-top:10px;display:none;">
+                                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#3a3f51;margin-bottom:6px;">
+                                        <i class="fa fa-building" style="color:#00897b;"></i> Cities in Selected Sub-Regions
+                                    </div>
+                                    <div id="subRegionCitiesList" style="display:flex;flex-wrap:wrap;gap:5px;"></div>
+                                </div>
                                 @if(empty($preloadedSubRegions))
                                     <div class="dept-hint"><i class="fa fa-info-circle"></i> Select a region first</div>
                                 @endif
@@ -1228,14 +1306,22 @@ $(document).ready(function(){
 
     // ── Department change → show/hide Report To and Region block ──
     $(document).on('change','#inline_department_id', function(){
-        var selected   = $(this).find('option:selected');
+        var selected    = $(this).find('option:selected');
         var isMarketing = selected.data('is-marketing') == '1';
+        var isAdmin     = selected.data('is-admin') == '1';
+        var deptVal     = $(this).val();
 
-        // Always show Report To when any dept is selected
-        if($(this).val()){
+        // Hide Report To for Administration or when no dept selected
+        if(deptVal && !isAdmin){
             $('#reportToWrapper').show();
+            // Make report_to required for non-admin departments
+            $('#inline_report_to').attr('required', true);
+            $('.report-to-required-star').show();
         } else {
             $('#reportToWrapper').hide();
+            $('#inline_report_to').val('').trigger('change.select2');
+            $('#inline_report_to').removeAttr('required');
+            $('.report-to-required-star').hide();
         }
 
         // Region block only for Marketing
@@ -1243,7 +1329,6 @@ $(document).ready(function(){
             $('#regionSectionWrapper').show();
         } else {
             $('#regionSectionWrapper').hide();
-            // Clear region/sub-region selections
             $('#inline_regions').val(null).trigger('change.select2');
             $('#inline_subregions').html('').val(null);
             subToRegionMap = {};
@@ -1307,7 +1392,72 @@ $(document).ready(function(){
     });
 
     // ── Sub Region change → rebuild JSON ──────────────────────────
-    $(document).on('change','.subRegions', function(){ rebuildDeptJson(); });
+    // ── Sub Region change → rebuild JSON + load cities ────────────
+    $(document).on('change','.subRegions', function(){
+        rebuildDeptJson();
+        loadCitiesForSelectedSubRegions();
+    });
+
+    // ── Load cities for currently selected sub-regions ────────────
+    function loadCitiesForSelectedSubRegions(){
+        var selectedSubIds = $('#inline_subregions').val() || [];
+
+        if(!selectedSubIds || selectedSubIds.length === 0){
+            $('#subRegionCitiesBox').hide();
+            $('#subRegionCitiesList').html('');
+            return;
+        }
+
+        $.ajax({
+            url  : '/admin/get-cities-by-subregions',
+            type : 'POST',
+            data : {
+                _token      : $('[name="_token"]').val(),
+                sub_region_ids : selectedSubIds
+            },
+            success: function(resp){
+                if(resp.status && Object.keys(resp.data).length > 0){
+                    // Build sub-region name map
+                    var subRegionNames = {};
+                    $('#inline_subregions option').each(function(){
+                        subRegionNames[$(this).val()] = $(this).text();
+                    });
+                    renderCitiesBox(resp.data, subRegionNames);
+                } else {
+                    $('#subRegionCitiesBox').hide();
+                    $('#subRegionCitiesList').html('');
+                }
+            },
+            error: function(){
+                $('#subRegionCitiesBox').hide();
+            }
+        });
+    }
+
+    // ── Render the cities pills box ───────────────────────────────
+    function renderCitiesBox(citiesBySubId, subRegionNames){
+        var $list = $('#subRegionCitiesList');
+        $list.html('');
+
+        $.each(citiesBySubId, function(subId, cities){
+            var regionLabel = subRegionNames[subId] || ('Sub Region ' + subId);
+
+            $list.append(
+                '<div class="city-pill-group-label">'
+                + '<i class="fa fa-map-pin"></i> ' + regionLabel
+                + ' <span style="font-weight:400;color:#aaa;">(' + cities.length + ' cities)</span>'
+                + '</div>'
+            );
+
+            $.each(cities, function(i, city){
+                $list.append(
+                    '<span class="city-pill"><i class="fa fa-map-marker"></i>' + city + '</span>'
+                );
+            });
+        });
+
+        $('#subRegionCitiesBox').show();
+    }
 
     // ── Select All Regions ────────────────────────────────────────
     $(document).on('change','#SelectAllRegion', function(){
@@ -1328,8 +1478,15 @@ $(document).ready(function(){
     // dept_regions entries: "parentRegionId#subRegionId"
     function rebuildDeptJson(){
         var deptId   = $('#inline_department_id').val();
-        var reportTo = $('#inline_report_to').val() || '';
         if(!deptId){ $('#inline_user_dept_json').val(''); return; }
+
+        var selected = $('#inline_department_id').find('option:selected');
+        var isAdmin  = selected.data('is-admin') == '1';
+
+        // If Administration dept, force report_to to null
+        var reportTo = (isAdmin || $('#reportToWrapper').is(':hidden'))
+                        ? null
+                        : ($('#inline_report_to').val() || null);
 
         var deptRegions = [];
         $('#inline_subregions option:selected').each(function(){
@@ -1375,6 +1532,7 @@ $(document).ready(function(){
                             $('#inline_subregions').select2();
                         }
                         rebuildDeptJson();
+                        loadCitiesForSelectedSubRegions(); // NEW
                     }
                 }
             });
@@ -1490,7 +1648,19 @@ $(document).ready(function(){
             $(this).val('');
         }
     });
+    // ── Preload cities on edit page ───────────────────────────────
+    (function preloadCities(){
+        var preloaded = @json($preloadedCitiesBySubRegion ?? []);
+        if(Object.keys(preloaded).length === 0){ return; }
 
+        // Build sub-region name map from the select options
+        var subRegionNames = {};
+        $('#inline_subregions option').each(function(){
+            subRegionNames[$(this).val()] = $(this).text();
+        });
+
+        renderCitiesBox(preloaded, subRegionNames);
+    })();
     // ═══════════════════════════════════════════════════════════════
     // FORM SUBMIT
     // ═══════════════════════════════════════════════════════════════
@@ -1503,6 +1673,16 @@ $(document).ready(function(){
             $('#Employee-user_depts').attr('style','').html('Please select a department').show();
             setTimeout(function(){ $('#Employee-user_depts').hide(); }, 5000);
             $('html,body').animate({ scrollTop: $('#inline_department_id').offset().top - 150 }, 800);
+            return;
+        }
+
+        // Validate: report_to mandatory for non-Administration departments
+        var selected = $('#inline_department_id').find('option:selected');
+        var isAdmin  = selected.data('is-admin') == '1';
+        if(!isAdmin && $('#reportToWrapper').is(':visible') && !$('#inline_report_to').val()){
+            $('#Employee-user_depts').attr('style','').html('Please select a Report To person').show();
+            setTimeout(function(){ $('#Employee-user_depts').hide(); }, 5000);
+            $('html,body').animate({ scrollTop: $('#inline_report_to').offset().top - 150 }, 800);
             return;
         }
 

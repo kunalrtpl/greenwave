@@ -58,19 +58,68 @@ class User extends Authenticatable
         return $this->hasMany('App\UserCustomerShare')->join('customers','customers.id','=','user_customer_shares.customer_id')->select('user_customer_shares.*')->orderby('customers.name','ASC')->with('customer');
     }
 
-    public static function getReportingUsers($userid){
-        $reportToUserIds =  DB::table('user_departments')->where('user_id',$userid)->pluck('report_to');
-        $reportToUserIds = array_unique(json_decode(json_encode($reportToUserIds),true));
-        $report_to_users = User::wherein('id',$reportToUserIds)->select('id','name','mobile','email','correspondence_address','correspondence_address','emergency_contact_person','emergency_contact_person_mobile','designation')->get();
+    public static function getReportingUsers($userid)
+    {
+        // Single query to get both report_to and report_from user IDs
+        $userDepartments = DB::table('user_departments')
+            ->where('user_id', $userid)
+            ->orWhere('report_to', $userid)
+            ->select('user_id', 'report_to')
+            ->get();
 
-        $reportingFromUserIds =  DB::table('user_departments')->where('report_to',$userid)->pluck('user_id');
-        $reportingFromUserIds = array_unique(json_decode(json_encode($reportingFromUserIds),true));
-        $report_from_users = User::wherein('id',$reportingFromUserIds)->select('id','name','mobile','email','correspondence_address','correspondence_address','emergency_contact_person','emergency_contact_person_mobile','designation')->get();
-        $incentives = UserIncentive::where('user_id',$userid)->orderby('user_incentives.start_date','DESC')->get();
+        // Separate and deduplicate IDs using collections (Laravel 5.8 compatible)
+        $reportToUserIds = $userDepartments
+            ->where('user_id', $userid)
+            ->pluck('report_to')
+            ->filter()
+            ->unique()
+            ->values()
+            ->toArray();
 
-        $subRegions = UserDepartmentRegion::where('user_id',$userid)->pluck('sub_region_id')->toArray();
-        $cities = RegionCity::wherein('region_id',$subRegions)->pluck('city')->toArray();
-        return array('report_to_users'=>$report_to_users,'report_from_users'=>$report_from_users,'incentives'=>$incentives,'cities'=>$cities,'sub_region_ids'=>$subRegions);
+        $reportingFromUserIds = $userDepartments
+            ->where('report_to', $userid)
+            ->pluck('user_id')
+            ->filter()
+            ->unique()
+            ->values()
+            ->toArray();
+
+        // Common select columns
+        $userSelect = ['id', 'name', 'mobile', 'email', 'correspondence_address',
+                       'emergency_contact_person', 'emergency_contact_person_mobile', 'designation'];
+
+        // Fetch both user sets — only query if IDs exist
+        $report_to_users = !empty($reportToUserIds)
+            ? User::whereIn('id', $reportToUserIds)->select($userSelect)->get()
+            : collect();
+
+        $report_from_users = !empty($reportingFromUserIds)
+            ? User::whereIn('id', $reportingFromUserIds)->select($userSelect)->get()
+            : collect();
+
+        // Fetch incentives
+        $incentives = UserIncentive::where('user_id', $userid)
+            ->orderBy('start_date', 'DESC')
+            ->get();
+
+        // Fetch sub-regions and cities
+        $subRegions = UserDepartmentRegion::where('user_id', $userid)
+            ->pluck('sub_region_id')
+            ->filter()
+            ->unique()
+            ->toArray();
+
+        $cities = !empty($subRegions)
+            ? RegionCity::whereIn('region_id', $subRegions)->pluck('city')->toArray()
+            : [];
+
+        return [
+            'report_to_users'  => $report_to_users,
+            'report_from_users' => $report_from_users,
+            'incentives'       => $incentives,
+            'cities'           => $cities,
+            'sub_region_ids'   => $subRegions,
+        ];
     }
 
     public function products()

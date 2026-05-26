@@ -223,6 +223,7 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::match(['get', 'post'], '/master-lists','ExecutiveController@masterlists');
 			Route::match(['get', 'post'], '/save-customer-request','ExecutiveController@saveCustomerRequest');
 			Route::match(['get', 'post'], '/v2-save-customer-request','ExecutiveController@v2saveCustomerRequest');
+			Route::match(['get', 'post'], '/v3-save-customer-request','ExecutiveController@v3saveCustomerRequest');
 			Route::match(['get', 'post'], '/customer-register-info','ExecutiveController@customerRegisterInfo');
 
 			Route::match(['get', 'post'], '/customers-area-list','ExecutiveController@customersAreaList');

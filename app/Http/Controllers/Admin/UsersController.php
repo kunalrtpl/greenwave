@@ -212,6 +212,7 @@ class UsersController extends Controller
                         //'aadhar'  => 'bail|required',
                         //'salary_account_no'  => 'bail|required',
                         'dob'     => 'bail|required|date_format:Y-m-d',
+                        'level'   => 'bail|required|integer|between:1,4', 
                         //'joining_date'     => 'bail|required|date_format:Y-m-d',
                         //'joining_type' =>'bail|required',
                         //'permanent_from'      => 'required_if:joining_type,==,Permanent|nullable|date_format:Y-m-d',
@@ -267,6 +268,7 @@ class UsersController extends Controller
                     $user->app_access = $data['app_access'];
                     $user->conveyance_selection_allowed = $data['conveyance_selection_allowed'];
                     $user->probation_period = $data['probation_period'];
+                    $user->level = $data['level'];
                     //$user->should_verify_visit = $data['should_verify_visit'];
                     /*if(!empty($data['password'])){
                         $user->password = bcrypt($data['password']);
@@ -405,7 +407,7 @@ class UsersController extends Controller
                         $userdept->user_id         = $user->id;
                         $userdept->department_id   = $userDeptArr['department_id'];
                         $userdept->designation_id  = NULL;
-                        $userdept->report_to       = $userDeptArr['report_to'];
+                        $userdept->report_to = !empty($userDeptArr['report_to']) ? $userDeptArr['report_to'] : null;
                         $userdept->save();
 
                         // ── Save regions/subregions ────────────────────────────────────
@@ -995,6 +997,34 @@ switch ($regis_req['status']) {
         $pdf->setPaper('A4', 'portrait');
 
         return $pdf->download('App_Manual_' . str_replace(' ', '_', $user->name) . '.pdf');
+    }
+
+    public function getCitiesBySubRegions(Request $request)
+    {
+        try {
+            $subRegionIds = $request->input('sub_region_ids', []);
+
+            if (empty($subRegionIds)) {
+                return response()->json(['status' => false, 'data' => []]);
+            }
+
+            $cities = DB::table('region_cities')
+                ->whereIn('region_id', $subRegionIds)
+                ->orderBy('region_id')
+                ->orderBy('city')
+                ->get(['region_id', 'city']);
+
+            // Group by sub_region_id (which is region_id in region_cities table)
+            $grouped = [];
+            foreach ($cities as $cityRow) {
+                $grouped[$cityRow->region_id][] = $cityRow->city;
+            }
+
+            return response()->json(['status' => true, 'data' => $grouped]);
+
+        } catch (\Exception $e) {
+            return response()->json(['status' => false, 'data' => [], 'message' => $e->getMessage()]);
+        }
     }
 
 }

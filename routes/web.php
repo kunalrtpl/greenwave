@@ -71,6 +71,9 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 		Route::match(['get', 'post'], '/add-edit-user/{id?}', 'UsersController@addEditUser');
 		Route::match(['get', 'post'], '/save-user', 'UsersController@saveUser');
 
+		// Add alongside your other admin routes
+		Route::post('/get-cities-by-subregions', 'UsersController@getCitiesBySubRegions');
+
 		Route::get('users/{id}/products', 'UsersController@userProducts')
         ->name('admin.users.products');
 
