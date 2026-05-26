@@ -2687,6 +2687,7 @@ class ExecutiveController extends Controller
             $message = "Fetched successfully";
             $result['users'] =  $users;
             $result['dealers'] =  $dealers;
+            $result['cities'] =  $reporting_resp['cities'];
             $result['declaration'] = "I hereby declare that the customer information provided has been duly verified by me and is accurate to the best of my knowledge. I will submit any missing details, such as email ID or business card, at a later stage. Please approve this customer on my behalf.";
             $result['declaration_short'] = "I hereby declare that the customer information provided has been duly verified by me and is accurate to the best of my knowledge.";
             return response()->json(apiSuccessResponse($message,$result),200);

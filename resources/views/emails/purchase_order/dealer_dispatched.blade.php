@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Order Dispatched</title>
+    <title>Dispatch Info</title>
     <style>
 
         /* ── Reset ── */
@@ -109,7 +109,7 @@
                     </tr>
                 </table>
 
-                <div class="header-title">Your Order Has Been Dispatched!</div>
+                <div class="header-title">Your Material Has Been Dispatched!</div>
                 <div class="header-date">{{ \Carbon\Carbon::parse($dispatch_date)->format('d F Y') }}</div>
 
             </td>
@@ -122,7 +122,7 @@
             <td class="ribbon">
                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                     <tr>
-                        <td class="ribbon-ref">🚚 &nbsp;PO Reference: <strong>{{ $po->po_ref_no_string }}</strong></td>
+                        <!-- <td class="ribbon-ref">🚚 &nbsp;PO Reference: <strong>{{ $po->po_ref_no_string }}</strong></td> -->
                         <td align="right"><span class="ribbon-badge">DISPATCHED</span></td>
                     </tr>
                 </table>
@@ -137,7 +137,7 @@
                 <div class="greeting-box">
                     <div class="greeting-name">Dear {{ $dealer->business_name ?? ($dealer->name ?? 'Valued Dealer') }},</div>
                     <div class="greeting-body">
-                        Great news! Your order has been <strong>dispatched</strong> and is now on its way to you.
+                        Great news! Your material has been <strong>dispatched</strong> and is now on its way to you.
                         Please find the shipment and product details below.
                         Kindly arrange to receive the delivery at your end.
                     </div>
