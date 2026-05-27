@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Redirect;
 use DB;
 use Session;
 use App\UserCustomerShare;
-
+use App\Helpers\EmployeeHelper;
 class MoveCustomerController extends Controller
 {
     /**
@@ -17,30 +17,12 @@ class MoveCustomerController extends Controller
      */
     public function index()
     {
+        Session::put('active','moveCustomers'); 
         $title = 'Move Customers';
 
-        // Marketing department ID = 2
-        $marketingDeptId = 2;
-
-        // Source dropdown: only Marketing employees
-        $employees = DB::table('users')
-            ->join('user_departments', 'user_departments.user_id', '=', 'users.id')
-            ->where('users.type', 'employee')
-            ->where('user_departments.department_id', $marketingDeptId)
-            ->orderBy('users.name')
-            ->select('users.id', 'users.name', 'users.designation')
-            ->distinct()
-            ->get();
-
-        // "Move To" dropdown: only Marketing employees
-        $moveToUsers = DB::table('users')
-            ->join('user_departments', 'user_departments.user_id', '=', 'users.id')
-            ->where('users.type', 'employee')
-            ->where('user_departments.department_id', $marketingDeptId)
-            ->orderBy('users.name')
-            ->select('users.id', 'users.name', 'users.designation')
-            ->distinct()
-            ->get();
+        // Replace both raw DB queries with the helper
+        $employees   = EmployeeHelper::getEmployeesWithCustomers();
+        $moveToUsers = EmployeeHelper::getEmployeesWithCustomers(); // same pool
 
         return view('admin.move_customers.index', compact('title', 'employees', 'moveToUsers'));
     }

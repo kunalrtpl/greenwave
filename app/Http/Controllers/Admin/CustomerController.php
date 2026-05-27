@@ -182,8 +182,10 @@ class CustomerController extends Controller
             return response()->json($records);
         }
         $title = "Customers";
+        
         $linkedDealers = \App\Dealer::where('status',1)->where('parent_id',NULL)->select('id','business_name')->get();
-        $executives = \App\User::where('status',1)->where('type','!=','admin')->get(); 
+
+        $executives = \App\Helpers\EmployeeHelper::getEmployeesWithCustomers(); 
         return View::make('admin.customers.customers')->with(compact('title','linkedDealers','executives'));
     }
 

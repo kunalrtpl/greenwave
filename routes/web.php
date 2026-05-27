@@ -483,19 +483,48 @@ Route::post('/email-templates/{id}',    'EmailTemplateController@update')->name(
 	
 	Route::group(['prefix' => 'move-customers', 'as' => 'admin.move-customers.'], function () {
  
-    // Show the main form
-    Route::get('/','MoveCustomerController@index')
-         ->name('index');
- 
-    // AJAX: load customers for selected employee + subordinates
-    Route::get('load-customers',  'MoveCustomerController@loadCustomers')
-         ->name('load-customers');
- 
-    // POST: perform the move
-    Route::post('move','MoveCustomerController@moveCustomers')
-         ->name('move');
-});
+		    // Show the main form
+		    Route::get('/','MoveCustomerController@index')
+		         ->name('index');
+		 
+		    // AJAX: load customers for selected employee + subordinates
+		    Route::get('load-customers',  'MoveCustomerController@loadCustomers')
+		         ->name('load-customers');
+		 
+		    // POST: perform the move
+		    Route::post('move','MoveCustomerController@moveCustomers')
+		         ->name('move');
+		});
+		// Add this BELOW your existing move-customers route group
+		// in routes/web.php (inside your admin middleware group)
 
+		Route::group(['prefix' => 'dealer-move-customers', 'as' => 'admin.dealer-move-customers.'], function () {
+
+		    // Show the main form
+		    Route::get('/', 'DealerMoveCustomerController@index')
+		         ->name('index');
+
+		    // AJAX: load customers for selected source (business_model / dealer)
+		    Route::get('load-customers', 'DealerMoveCustomerController@loadCustomers')
+		         ->name('load-customers');
+
+		    // POST: perform the move (updates business_model + dealer_id on customers table)
+		    Route::post('move', 'DealerMoveCustomerController@moveCustomers')
+		         ->name('move');
+		});
+
+		// Add inside your admin middleware/prefix route group in routes/web.php
+
+		Route::group(['prefix' => 'product-pricing', 'as' => 'admin.product-pricing.'], function () {
+
+		    // Show product list with latest dealer prices
+		    Route::get('/', 'ProductPricingController@index')
+		         ->name('index');
+
+		    // AJAX POST: update a single product row
+		    Route::post('update/{id}', 'ProductPricingController@update')
+		         ->name('update');
+		});
 
 
 	});
