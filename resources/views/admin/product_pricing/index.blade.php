@@ -84,8 +84,8 @@
     }
     .filter-result strong { color: #3598dc; }
 
-    /* ── Table wrapper — NO overflow scroll ─────────────────── */
-    .pricing-wrap { width: 100%; }
+    /* ── Table wrapper ──────────────────────────────────────── */
+    .pricing-wrap { width: 100%; overflow-x: auto; }
 
     /* ── Table ───────────────────────────────────────────────── */
     .pricing-table {
@@ -95,15 +95,15 @@
         table-layout: fixed;
     }
 
-    /* Column widths */
-    .pricing-table col.c-no       { width: 42px; }
-    .pricing-table col.c-name     { width: auto; }
-    .pricing-table col.c-moq      { width: 100px; }
-    .pricing-table col.c-dispatch { width: 100px; }
-    .pricing-table col.c-na       { width: 92px; }
-    .pricing-table col.c-dp       { width: 110px; }
-    .pricing-table col.c-date     { width: 100px; }
-    .pricing-table col.c-action   { width: 96px; }
+    /* Column widths - Serial No stays small; all other major data columns get uniform spacing */
+    .pricing-table col.c-no       { width: 50px; }
+    .pricing-table col.c-name     { width: 16%; }
+    .pricing-table col.c-moq      { width: 14%; }
+    .pricing-table col.c-dispatch { width: 14%; }
+    .pricing-table col.c-na       { width: 14%; }
+    .pricing-table col.c-dp       { width: 14%; }
+    .pricing-table col.c-date     { width: 14%; }
+    .pricing-table col.c-action   { width: 14%; }
 
     /* Head */
     .pricing-table thead tr th {
@@ -127,6 +127,8 @@
         vertical-align: middle;
         color: #2d3748;
         background: #fff;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     /* Row states */
@@ -146,7 +148,7 @@
     .pricing-table tbody tr.is-dirty:nth-child(even) td { background: #fffde7 !important; }
 
     /* ── Product Name cell ──────────────────────────────────── */
-    .prod-name  { font-weight: 600; color: #2d3748; font-size: 13px; display: block; line-height: 1.3; }
+    .prod-name  { font-weight: 600; color: #2d3748; font-size: 13px; display: block; line-height: 1.3; word-wrap: break-word; }
     .prod-code  { font-size: 11px; color: #a0aec0; display: block; margin-top: 1px; }
 
     /* ── Inline inputs ──────────────────────────────────────── */
@@ -160,6 +162,7 @@
         width: 100%;
         height: 30px;
         transition: border-color 0.18s, box-shadow 0.18s;
+        box-sizing: border-box;
     }
     .inline-input:focus {
         outline: none;
@@ -180,11 +183,12 @@
     }
 
     /* ── Dealer Price cell ───────────────────────────────────── */
-    .dp-wrap { display: flex; align-items: center; gap: 4px; }
+    .dp-wrap { display: flex; align-items: center; gap: 4px; width: 100%; }
     .dp-wrap .cur { font-size: 12px; color: #888; flex-shrink: 0; }
-    .dp-input { width: 75px !important; }
+    .dp-input { flex-grow: 1; min-width: 0; }
 
     /* ── Price date badge ────────────────────────────────────── */
+    .price-date-td { text-align: center; }
     .pd-badge {
         display: inline-block;
         font-size: 10px;
@@ -200,7 +204,8 @@
 
     /* ── Update button ───────────────────────────────────────── */
     .btn-update {
-        width: 72px;
+        width: 100%;
+        max-width: 84px;
         padding: 4px 0;
         font-size: 11px;
         font-weight: 700;
@@ -360,7 +365,7 @@
                     <div class="fg">
                         <label>&nbsp;</label>
                         <div class="fg-check">
-                            <input type="checkbox" id="filter-na" id="filter-na">
+                            <input type="checkbox" id="filter-na">
                             <label for="filter-na">Not Available only</label>
                         </div>
                     </div>
@@ -386,13 +391,13 @@
                         </colgroup>
                         <thead>
                             <tr>
-                                <th>#</th>
+                                <th class="center">#</th>
                                 <th>Product Name</th>
                                 <th>MOQ</th>
                                 <th>Dispatch</th>
                                 <th class="center">Not Avail.</th>
                                 <th>DP (₹)</th>
-                                <th>Price Date</th>
+                                <th class="center">Price Date</th>
                                 <th class="center">Action</th>
                             </tr>
                         </thead>
@@ -450,10 +455,10 @@
                                 </div>
                             </td>
 
-                            <td>
+                            <td class="price-date-td">
                                 @if($hasPrice)
                                     <span class="pd-badge {{ $isToday ? 'pd-today' : 'pd-old' }} price-date-label">
-                                        {{ $isToday ? 'Today' : $product->price_date }}
+                                        {{ $isToday ? 'Today' : \Carbon\Carbon::parse($product->price_date)->format('d/m/Y') }}
                                     </span>
                                 @else
                                     <span class="pd-badge pd-none price-date-label">No Price</span>
@@ -559,7 +564,7 @@ $(document).ready(function () {
         $.ajax({
             url:    '/admin/product-pricing/update/' + pid,
             method: 'POST',
-            data:   payload,
+            data:    payload,
             success: function (resp) {
                 if (!resp.success) { showToast('danger', resp.message); return; }
 
