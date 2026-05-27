@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Dispatch Info</title>
+    <title>Material Dispatched</title>
     <style>
 
         /* ── Reset ── */
@@ -49,22 +49,38 @@
         .section-count      { font-size: 11px; color: #81c784; font-weight: 600; }
 
         /* ── Items Table ── */
-        .items-table            { width: 100%; border: 1px solid #c8e6c9; border-radius: 12px; overflow: hidden; font-size: 13px; }
+        .items-table            { width: 100%; border: 1px solid #c8e6c9; border-radius: 12px; overflow: hidden; font-size: 12px; }
         .items-header           { background: linear-gradient(135deg, #2e7d32 0%, #43a047 100%); }
-        .items-header td        { padding: 13px 14px; color: #fff; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-        .items-header .center   { text-align: center; }
-        .item-row-even          { background: #f9fbe7; border-bottom: 1px solid #e8f5e9; }
-        .item-row-odd           { background: #ffffff; border-bottom: 1px solid #e8f5e9; }
-        .item-num               { padding: 14px 14px; color: #a5d6a7; font-size: 12px; font-weight: 700; }
-        .item-product           { padding: 14px 14px; }
-        .item-product-name      { font-size: 13px; font-weight: 700; color: #1b5e20; }
-        .item-pack-size         { font-size: 11px; color: #81c784; font-weight: 500; margin-top: 3px; }
-        .item-qty               { padding: 14px 14px; text-align: center; }
-        .item-qty-val           { font-size: 18px; font-weight: 800; color: #2e7d32; }
-        .item-qty-unit          { font-size: 11px; color: #a5d6a7; margin-left: 2px; }
-        .items-footer           { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border-top: 2px solid #c8e6c9; }
-        .items-footer-left      { padding: 13px 14px; font-size: 12px; color: #558b2f; font-weight: 700; text-transform: uppercase; }
-        .items-footer-right     { padding: 13px 14px; text-align: center; font-size: 14px; color: #1b5e20; font-weight: 800; }
+        .items-header td        { padding: 11px 12px; color: #fff; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; text-align: center; border-right: 1px solid rgba(255,255,255,0.15); }
+        .items-header td:last-child { border-right: none; }
+
+        /* product group cols — shared via rowspan */
+        .prod-num               { padding: 10px 10px; font-size: 12px; font-weight: 800; color: #2e7d32; text-align: center; vertical-align: middle; background: #e8f5e9; border-right: 1px solid #c8e6c9; }
+        .prod-name-cell         { padding: 10px 12px; vertical-align: middle; background: #e8f5e9; border-right: 1px solid #c8e6c9; }
+        .prod-name-text         { font-size: 12px; font-weight: 800; color: #1b5e20; }
+        .prod-code-text         { font-size: 10px; color: #81c784; margin-top: 2px; }
+        .prod-total-cell        { padding: 10px 12px; text-align: center; vertical-align: middle; background: #e8f5e9; border-right: 1px solid #c8e6c9; }
+        .prod-total-val         { font-size: 14px; font-weight: 800; color: #1b5e20; }
+        .prod-total-unit        { font-size: 10px; color: #81c784; }
+
+        /* sub rows */
+        .sub-row-odd            { background: #ffffff; border-bottom: 1px solid #e8f5e9; }
+        .sub-row-even           { background: #f9fbe7; border-bottom: 1px solid #e8f5e9; }
+        .sub-cell               { padding: 10px 12px; text-align: center; vertical-align: middle; border-right: 1px solid #e8f5e9; }
+        .sub-cell:last-child    { border-right: none; }
+        .sub-cell-left          { padding: 10px 12px; text-align: left; vertical-align: middle; border-right: 1px solid #e8f5e9; border-left: 1px solid #e8f5e9; }
+
+        .po-ref                 { font-size: 12px; font-weight: 700; color: #2e7d32; }
+        .po-date                { font-size: 10px; color: #81c784; margin-top: 2px; }
+
+        .sub-qty-val            { font-size: 15px; font-weight: 800; color: #1b5e20; }
+        .sub-qty-unit           { font-size: 10px; color: #a5d6a7; }
+        .sub-batch-no           { font-size: 10px; color: #81c784; margin-top: 3px; }
+
+        /* footer */
+        .items-footer           { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border-top: 2px solid #43a047; }
+        .items-footer-left      { padding: 11px 12px; font-size: 12px; color: #558b2f; font-weight: 700; text-transform: uppercase; }
+        .items-footer-right     { padding: 11px 12px; text-align: center; font-size: 13px; color: #1b5e20; font-weight: 800; }
 
         /* ── Footer ── */
         .footer             { background: linear-gradient(160deg, #1b5e20 0%, #2e7d32 100%); border-radius: 12px; padding: 28px 32px; text-align: center; }
@@ -100,7 +116,6 @@
 
                 <div class="header-divider"></div>
 
-                {{-- Plain truck emoji centered — no circle, no box --}}
                 <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 0 auto 18px;">
                     <tr>
                         <td align="center" style="font-size: 52px; line-height: 1; padding: 0;">
@@ -122,7 +137,7 @@
             <td class="ribbon">
                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                     <tr>
-                        <!-- <td class="ribbon-ref">🚚 &nbsp;PO Reference: <strong>{{ $po->po_ref_no_string }}</strong></td> -->
+                        <td class="ribbon-ref">🚚 &nbsp;LR No: <strong>{{ $lr_no }}</strong></td>
                         <td align="right"><span class="ribbon-badge">DISPATCHED</span></td>
                     </tr>
                 </table>
@@ -135,10 +150,10 @@
         <tr>
             <td class="section">
                 <div class="greeting-box">
-                    <div class="greeting-name">Dear {{ $dealer->business_name ?? ($dealer->name ?? 'Valued Dealer') }},</div>
+                    <div class="greeting-name">Dear Dealer ({{ $dealer->business_name ?? ($dealer->name ?? 'Valued Dealer') }}),</div>
                     <div class="greeting-body">
                         Great news! Your material has been <strong>dispatched</strong> and is now on its way to you.
-                        Please find the shipment and product details below.
+                        Please find the shipment and material details below.
                         Kindly arrange to receive the delivery at your end.
                     </div>
                 </div>
@@ -166,13 +181,19 @@
                         <td class="transport-label">Dispatch Date</td>
                         <td class="transport-value">{{ \Carbon\Carbon::parse($dispatch_date)->format('d M Y') }}</td>
                     </tr>
+                    <tr>
+                        <td class="transport-label">Dispatched By </td>
+                        <td class="transport-value">{{$dispatched_by}}</td>
+                    </tr>
                 </table>
             </td>
         </tr>
 
-        {{-- ══════════════════════════════════ --}}
-        {{-- DISPATCHED ITEMS                  --}}
-        {{-- ══════════════════════════════════ --}}
+        {{-- ══════════════════════════════════════════════════ --}}
+        {{-- DISPATCHED ITEMS TABLE                            --}}
+        {{-- S.No | Product (Code) | Total Qty | PO No | Qty  --}}
+        {{--                                          (Batch) --}}
+        {{-- ══════════════════════════════════════════════════ --}}
         <tr>
             <td class="section">
 
@@ -180,7 +201,7 @@
                     <tr>
                         <td>
                             <span class="section-label-bar"></span>
-                            <span class="section-label">Dispatched Items</span>
+                            <span class="section-label">Dispatched Materials</span>
                         </td>
                         <td align="right">
                             <span class="section-count">{{ count($dispatched_items) }} product(s)</span>
@@ -190,35 +211,80 @@
 
                 <table class="items-table" cellpadding="0" cellspacing="0" border="0">
 
+                    {{-- Header --}}
                     <tr class="items-header">
-                        <td style="width: 30px;">#</td>
-                        <td>Product</td>
-                        <td class="center">Dispatched Qty</td>
+                        <td style="width: 28px;">S.No</td>
+                        <td style="text-align: left; width: 34%;">Product Name<br><span style="font-weight: 400; opacity: 0.75; font-size: 9px;">(Product Code)</span></td>
+                        <td style="width: 13%;">Total Qty</td>
+                        <td style="width: 30%;">P.O. No.<br><span style="font-weight: 400; opacity: 0.75; font-size: 9px;">(Date)</span></td>
+                        <td style="width: 18%;">Qty<br><span style="font-weight: 400; opacity: 0.75; font-size: 9px;">(Batch No.)</span></td>
                     </tr>
 
-                    @foreach($dispatched_items as $idx => $item)
-                    <tr class="{{ $idx % 2 == 0 ? 'item-row-odd' : 'item-row-even' }}">
+                    @php $grandTotalQty = 0; @endphp
 
-                        <td class="item-num">{{ $idx + 1 }}</td>
+                    @foreach($dispatched_items as $pIdx => $product)
+                    @php
+                        $rowCount = count($product['rows']);
+                        $grandTotalQty += $product['total_qty'];
+                    @endphp
 
-                        <td class="item-product">
-                            <div class="item-product-name">{{ $item['product_name'] }}</div>
-                            @if(!empty($item['pack_size']))
-                                <div class="item-pack-size">{{ $item['pack_size'] }}</div>
+                        @foreach($product['rows'] as $rIdx => $row)
+                        <tr class="{{ $rIdx % 2 == 0 ? 'sub-row-odd' : 'sub-row-even' }}"
+                            style="{{ $rIdx == 0 ? 'border-top: 2px solid #43a047;' : '' }}">
+
+                            {{-- S.No — rowspan over all sub-rows --}}
+                            @if($rIdx == 0)
+                            <td rowspan="{{ $rowCount }}" class="prod-num">
+                                {{ $pIdx + 1 }}
+                            </td>
                             @endif
-                        </td>
 
-                        <td class="item-qty">
-                            <span class="item-qty-val">{{ $item['qty'] }}</span>
-                            <span class="item-qty-unit">kg</span>
-                        </td>
+                            {{-- Product Name + Code — rowspan --}}
+                            @if($rIdx == 0)
+                            <td rowspan="{{ $rowCount }}" class="prod-name-cell">
+                                <div class="prod-name-text">{{ $product['product_name'] }}</div>
+                                @if(!empty($product['product_code']))
+                                    <div class="prod-code-text">({{ $product['product_code'] }})</div>
+                                @endif
+                            </td>
+                            @endif
 
-                    </tr>
+                            {{-- Total Qty — rowspan --}}
+                            @if($rIdx == 0)
+                            <td rowspan="{{ $rowCount }}" class="prod-total-cell">
+                                <span class="prod-total-val">{{ $product['total_qty'] }}</span><br>
+                                <span class="prod-total-unit">kg</span>
+                            </td>
+                            @endif
+
+                            {{-- PO No (Date) --}}
+                            <td class="sub-cell-left">
+                                <div class="po-ref">{{ $row['po_ref_no'] }}</div>
+                                <div class="po-date">({{ $row['po_date'] }})</div>
+                            </td>
+
+                            {{-- Qty + Batch No below --}}
+                            <td class="sub-cell">
+                                <span class="sub-qty-val">{{ $row['qty'] }}</span>
+                                <span class="sub-qty-unit"> kg</span>
+                                @if(!empty($row['batch_no']))
+                                    <div class="sub-batch-no">Batch: {{ $row['batch_no'] }}</div>
+                                @endif
+                            </td>
+
+                        </tr>
+                        @endforeach
+
                     @endforeach
 
+                    {{-- Footer --}}
                     <tr class="items-footer">
-                        <td colspan="2" class="items-footer-left">Total Products: {{ count($dispatched_items) }}</td>
-                        <td class="items-footer-right">Total: {{ array_sum(array_column($dispatched_items, 'qty')) }} kg</td>
+                        <td colspan="3" class="items-footer-left">
+                            Total Products: {{ count($dispatched_items) }}
+                        </td>
+                        <td colspan="2" class="items-footer-right">
+                            Total: {{ $grandTotalQty }} kg
+                        </td>
                     </tr>
 
                 </table>
