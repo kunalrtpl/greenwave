@@ -150,7 +150,7 @@
         <tr>
             <td class="section">
                 <div class="greeting-box">
-                    <div class="greeting-name">Dear Dealer,</div>
+                    <div class="greeting-name">Dear Dealer ({{ $po->dealer->business_name ?? ($po->dealer->name ?? 'Valued Dealer') }}),</div>
                     <div class="greeting-body">
                         Your Purchase Order has been successfully received and is now under review by our team. Here is a summary of the items you ordered. We will notify you as soon as it is processed.
 
