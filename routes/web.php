@@ -494,6 +494,10 @@ Route::post('/email-templates/{id}',    'EmailTemplateController@update')->name(
 		    // POST: perform the move
 		    Route::post('move','MoveCustomerController@moveCustomers')
 		         ->name('move');
+		        // GET: export PDF (respects bm_filter, city_filter, user_id params)
+    		Route::get('export-pdf', 'MoveCustomerController@exportPdf')
+         		->name('export-pdf');
+
 		});
 		// Add this BELOW your existing move-customers route group
 		// in routes/web.php (inside your admin middleware group)
@@ -511,6 +515,7 @@ Route::post('/email-templates/{id}',    'EmailTemplateController@update')->name(
 		    // POST: perform the move (updates business_model + dealer_id on customers table)
 		    Route::post('move', 'DealerMoveCustomerController@moveCustomers')
 		         ->name('move');
+		     Route::get('dealer-move-customers/export-pdf',       'DealerMoveCustomerController@exportPdf')->name('export-pdf');
 		});
 
 		// Add inside your admin middleware/prefix route group in routes/web.php
@@ -524,6 +529,9 @@ Route::post('/email-templates/{id}',    'EmailTemplateController@update')->name(
 		    // AJAX POST: update a single product row
 		    Route::post('update/{id}', 'ProductPricingController@update')
 		         ->name('update');
+		    Route::get('product-pricing/export-pdf', 'ProductPricingController@exportPdf')
+     		->name('export-pdf');
+
 		});
 
 

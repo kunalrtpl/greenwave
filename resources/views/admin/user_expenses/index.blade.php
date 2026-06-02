@@ -520,7 +520,7 @@ $currentYear  = date('Y');
                 @endif
                 @if(!empty($expense->remarks))
                     <div class="remarks-txt" title="{{ $expense->remarks }}">
-                        {!! svgico('comment',11,'style="color:#b0bcc8;flex-shrink:0;margin-top:1px"') !!}{{ \Illuminate\Support\Str::limit($expense->remarks, 45) }}
+                        {!! svgico('comment',11,'style="color:#b0bcc8;flex-shrink:0;margin-top:1px"') !!}{{ $expense->remarks }}
                     </div>
                 @endif
             </div>

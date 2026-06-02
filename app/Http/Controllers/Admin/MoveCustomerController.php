@@ -7,8 +7,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Redirect;
 use DB;
 use Session;
-use App\UserCustomerShare;
+use PDF;
 use App\Helpers\EmployeeHelper;
+
 class MoveCustomerController extends Controller
 {
     /**
@@ -17,20 +18,19 @@ class MoveCustomerController extends Controller
      */
     public function index()
     {
-        Session::put('active','moveCustomers'); 
+        Session::put('active', 'moveCustomers');
         $title = 'Move Customers';
 
-        // Replace both raw DB queries with the helper
         $employees   = EmployeeHelper::getEmployeesWithCustomers();
-        $moveToUsers = EmployeeHelper::getEmployeesWithCustomers(); // same pool
+        $moveToUsers = EmployeeHelper::getEmployeesWithCustomers();
 
         return view('admin.move_customers.index', compact('title', 'employees', 'moveToUsers'));
     }
 
     /**
      * Load customers for the selected employee + all subordinates (recursive).
+     * Subordinates with 0 customers AND inactive status are excluded.
      * GET /admin/move-customers/load-customers?user_id=X
-     * Returns JSON.
      */
     public function loadCustomers(Request $request)
     {
@@ -40,26 +40,28 @@ class MoveCustomerController extends Controller
             return response()->json(['error' => 'No user selected'], 400);
         }
 
-        // Get the selected employee
         $rootUser = DB::table('users')->where('id', $userId)->first();
         if (!$rootUser) {
             return response()->json(['error' => 'User not found'], 404);
         }
 
-        // Build the full hierarchy: selected user + all subordinates (recursive)
+        // Build full hierarchy: selected user + all subordinates (recursive)
         $allUserIds = $this->getAllSubordinateIds($userId);
-        array_unshift($allUserIds, (int)$userId); // put root first
+        array_unshift($allUserIds, (int)$userId);
         $allUserIds = array_unique($allUserIds);
+
+        // ── Filter out inactive subordinates who have 0 customers ──
+        // Root user always stays regardless of status or customer count
+        $allUserIds = $this->filterValidSubordinates($allUserIds, (int)$userId);
 
         // Fetch user info for all IDs
         $usersMap = DB::table('users')
             ->whereIn('id', $allUserIds)
-            ->select('id', 'name', 'designation')
+            ->select('id', 'name', 'designation', 'status')
             ->get()
             ->keyBy('id');
 
-        // Fetch customers for each user via user_customer_shares
-        // LEFT JOIN customer_cities in the same query — no N+1
+        // Fetch customers via user_customer_shares — no N+1
         $shares = DB::table('user_customer_shares')
             ->whereIn('user_customer_shares.user_id', $allUserIds)
             ->join('customers', 'customers.id', '=', 'user_customer_shares.customer_id')
@@ -90,7 +92,7 @@ class MoveCustomerController extends Controller
             $grouped[$share->user_id][] = $share;
         }
 
-        // Build the response array in hierarchy order
+        // Build response in hierarchy order
         $result = [];
         foreach ($allUserIds as $uid) {
             $user = isset($usersMap[$uid]) ? $usersMap[$uid] : null;
@@ -103,7 +105,7 @@ class MoveCustomerController extends Controller
                 'user_name'   => $user->name,
                 'designation' => $user->designation,
                 'is_root'     => ($uid == $userId),
-                'customers'   => array_map(function($c) {
+                'customers'   => array_map(function ($c) {
                     return [
                         'customer_id'          => $c->customer_id,
                         'customer_name'        => $c->customer_name,
@@ -129,19 +131,128 @@ class MoveCustomerController extends Controller
     }
 
     /**
+     * Export customer list to PDF respecting filters.
+     * GET /admin/move-customers/export-pdf
+     */
+    public function exportPdf(Request $request)
+    {
+        $userId    = $request->get('user_id');
+        $bmFilter  = $request->get('bm_filter', '');
+        $cityFilter = $request->get('city_filter', '');
+
+        if (!$userId) {
+            Session::flash('error', 'No employee selected for PDF export.');
+            return Redirect::route('admin.move-customers.index');
+        }
+
+        $rootUser = DB::table('users')->where('id', $userId)->first();
+        if (!$rootUser) {
+            Session::flash('error', 'Employee not found.');
+            return Redirect::route('admin.move-customers.index');
+        }
+
+        // Build hierarchy
+        $allUserIds = $this->getAllSubordinateIds($userId);
+        array_unshift($allUserIds, (int)$userId);
+        $allUserIds = array_unique($allUserIds);
+        $allUserIds = $this->filterValidSubordinates($allUserIds, (int)$userId);
+
+        // Fetch user info
+        $usersMap = DB::table('users')
+            ->whereIn('id', $allUserIds)
+            ->select('id', 'name', 'designation')
+            ->get()
+            ->keyBy('id');
+
+        // Fetch customers
+        $query = DB::table('user_customer_shares')
+            ->whereIn('user_customer_shares.user_id', $allUserIds)
+            ->join('customers', 'customers.id', '=', 'user_customer_shares.customer_id')
+            ->leftJoin('dealers', 'dealers.id', '=', 'customers.dealer_id')
+            ->leftJoin('customer_cities', 'customer_cities.customer_id', '=', 'customers.id')
+            ->select(
+                'user_customer_shares.user_id',
+                'user_customer_shares.customer_id',
+                'customers.name as customer_name',
+                'customers.contact_person_name',
+                'customers.designation as customer_designation',
+                'customers.department',
+                'customers.business_model',
+                'dealers.business_name as dealer_business_name',
+                'customer_cities.city_name'
+            )
+            ->orderBy('user_customer_shares.user_id')
+            ->orderBy('customers.name');
+
+        // Apply BM filter
+        if ($bmFilter) {
+            if (in_array($bmFilter, ['Direct Customer', 'Open'])) {
+                $query->where('customers.business_model', $bmFilter);
+            } else {
+                // Dealer name filter
+                $query->where('customers.business_model', 'Dealer')
+                      ->where('dealers.business_name', $bmFilter);
+            }
+        }
+
+        // Apply city filter
+        if ($cityFilter) {
+            $query->where('customer_cities.city_name', $cityFilter);
+        }
+
+        $shares = $query->get();
+
+        // Group by user_id
+        $grouped = [];
+        foreach ($shares as $share) {
+            $grouped[$share->user_id][] = $share;
+        }
+
+        // Build groups array
+        $groups = [];
+        foreach ($allUserIds as $uid) {
+            $user = isset($usersMap[$uid]) ? $usersMap[$uid] : null;
+            if (!$user) continue;
+            $customers = isset($grouped[$uid]) ? $grouped[$uid] : [];
+            if (empty($customers)) continue; // skip empty groups in PDF
+
+            $groups[] = [
+                'user_name'   => $user->name,
+                'designation' => $user->designation,
+                'is_root'     => ($uid == $userId),
+                'customers'   => $customers,
+            ];
+        }
+
+        $filterLabel = '';
+        if ($bmFilter)   $filterLabel .= 'Business Model: ' . $bmFilter . '  ';
+        if ($cityFilter) $filterLabel .= 'City: ' . $cityFilter;
+
+        $pdf = PDF::loadView('admin.move_customers.pdf', [
+            'groups'       => $groups,
+            'rootUser'     => $rootUser,
+            'filterLabel'  => trim($filterLabel),
+            'generatedAt'  => now()->format('d/m/Y H:i'),
+        ])->setPaper('a4', 'landscape');
+
+        $filename = 'customers_' . str_replace(' ', '_', $rootUser->name) . '_' . now()->format('Ymd_His') . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    /**
      * Move selected customers to a new user.
      * POST /admin/move-customers/move
      */
     public function moveCustomers(Request $request)
     {
-        $customerIds        = $request->get('customer_ids', []);
-        $fromUserId         = $request->get('from_user_id');
-        $toUserId           = $request->get('to_user_id');
-        $bmFilter           = $request->get('bm_filter', '');
-        $cityFilter         = $request->get('city_filter', '');
-        $sourceEmployeeId   = $request->get('source_employee_id', '');
+        $customerIds      = $request->get('customer_ids', []);
+        $fromUserId       = $request->get('from_user_id');
+        $toUserId         = $request->get('to_user_id');
+        $bmFilter         = $request->get('bm_filter', '');
+        $cityFilter       = $request->get('city_filter', '');
+        $sourceEmployeeId = $request->get('source_employee_id', '');
 
-        // Basic validation
         if (empty($customerIds) || !$toUserId) {
             Session::flash('error', 'Please select at least one customer and a target user.');
             return Redirect::back();
@@ -153,40 +264,24 @@ class MoveCustomerController extends Controller
         DB::beginTransaction();
         try {
             foreach ($customerIds as $item) {
-                // Each item is "originalUserId_customerId"
                 $parts          = explode('_', $item);
                 $originalUserId = $parts[0];
                 $customerId     = $parts[1];
 
-                // Skip if customer already belongs to target user
-                if ($originalUserId == $toUserId) {
-                    $skipped++;
-                    continue;
-                }
+                if ($originalUserId == $toUserId) { $skipped++; continue; }
 
-                // Check if target user already has this customer assigned
                 $existing = DB::table('user_customer_shares')
                     ->where('user_id', $toUserId)
                     ->where('customer_id', $customerId)
                     ->first();
+                if ($existing) { $skipped++; continue; }
 
-                if ($existing) {
-                    $skipped++;
-                    continue;
-                }
-
-                // Get original share record
                 $originalShare = DB::table('user_customer_shares')
                     ->where('user_id', $originalUserId)
                     ->where('customer_id', $customerId)
                     ->first();
+                if (!$originalShare) { $skipped++; continue; }
 
-                if (!$originalShare) {
-                    $skipped++;
-                    continue;
-                }
-
-                // Insert for new user
                 DB::table('user_customer_shares')->insert([
                     'user_id'       => $toUserId,
                     'customer_id'   => $customerId,
@@ -197,7 +292,6 @@ class MoveCustomerController extends Controller
                     'updated_at'    => now(),
                 ]);
 
-                // Remove from original user
                 DB::table('user_customer_shares')
                     ->where('user_id', $originalUserId)
                     ->where('customer_id', $customerId)
@@ -219,38 +313,66 @@ class MoveCustomerController extends Controller
             Session::flash('error', 'An error occurred: ' . $e->getMessage());
         }
 
-        // Build query params to restore the UI state after redirect
         $queryParams = [];
-        if ($sourceEmployeeId) {
-            $queryParams['source_employee'] = $sourceEmployeeId;
-        }
-        if ($bmFilter) {
-            $queryParams['bm_filter'] = $bmFilter;
-        }
-        if ($cityFilter) {
-            $queryParams['city_filter'] = $cityFilter;
-        }
+        if ($sourceEmployeeId) $queryParams['source_employee'] = $sourceEmployeeId;
+        if ($bmFilter)         $queryParams['bm_filter']       = $bmFilter;
+        if ($cityFilter)       $queryParams['city_filter']     = $cityFilter;
 
         return Redirect::route('admin.move-customers.index', $queryParams);
     }
 
     /**
-     * Recursively get all subordinate user IDs for a given user,
-     * based on user_departments.report_to -> users.id chain.
-     *
-     * @param  int   $userId
-     * @param  array $visited  (prevent infinite loops)
-     * @return array
+     * Filter user IDs: keep root always, keep subordinates only if
+     * they have customers > 0 OR are active (inactive + 0 customers → excluded).
+     */
+    private function filterValidSubordinates(array $allUserIds, int $rootUserId): array
+    {
+        // Get customer counts per user
+        $counts = DB::table('user_customer_shares')
+            ->whereIn('user_id', $allUserIds)
+            ->select('user_id', DB::raw('COUNT(*) as cnt'))
+            ->groupBy('user_id')
+            ->pluck('cnt', 'user_id')
+            ->toArray();
+
+        // Get status per user
+        $statuses = DB::table('users')
+            ->whereIn('id', $allUserIds)
+            ->pluck('status', 'id')
+            ->toArray();
+
+        $filtered = [];
+        foreach ($allUserIds as $uid) {
+            // Root user always included
+            if ($uid === $rootUserId) {
+                $filtered[] = $uid;
+                continue;
+            }
+
+            $customerCount = isset($counts[$uid]) ? (int)$counts[$uid] : 0;
+            $isActive      = isset($statuses[$uid]) && $statuses[$uid] == 1;
+
+            // Exclude: inactive AND zero customers
+            if (!$isActive && $customerCount === 0) {
+                continue;
+            }
+
+            $filtered[] = $uid;
+        }
+
+        return $filtered;
+    }
+
+    /**
+     * Recursively get all subordinate user IDs.
      */
     private function getAllSubordinateIds($userId, $visited = [])
     {
-        // Prevent circular references
         if (in_array($userId, $visited)) {
             return [];
         }
         $visited[] = $userId;
 
-        // Find users that report to $userId via user_departments
         $subordinateIds = DB::table('user_departments')
             ->where('report_to', $userId)
             ->pluck('user_id')
@@ -261,9 +383,8 @@ class MoveCustomerController extends Controller
         $allIds = [];
         foreach ($subordinateIds as $subId) {
             $allIds[] = (int)$subId;
-            // Recurse
-            $deeper = $this->getAllSubordinateIds($subId, $visited);
-            $allIds = array_merge($allIds, $deeper);
+            $deeper   = $this->getAllSubordinateIds($subId, $visited);
+            $allIds   = array_merge($allIds, $deeper);
         }
 
         return array_unique($allIds);

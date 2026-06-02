@@ -114,17 +114,24 @@
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label class="col-md-3 control-label">Product Category <span class="asteric">*</span></label>
+                                    <label class="col-md-3 control-label">
+                                        Product Category <span class="asteric">*</span>
+                                    </label>
                                     <div class="col-md-4">
                                         <select class="form-control select2" name="product_detail_id">
                                             <option value="">Please Select</option>
-                                            @foreach(product_details() as $prodetail)
-                                                <?php $getLevel = getProductDetailLevel($prodetail['id']); ?>
-                                                <option data-level="{{$getLevel}}" value="{{$prodetail['id']}}" {{(!empty($productdata) && $productdata['product_detail_id'] == $prodetail['id'])?'selected': '' }}>{{$prodetail['name']}}</option>
-                                            @endforeach 
+                                            @foreach(product_details_with_levels() as $prodetail)
+                                                <option
+                                                    data-level="{{ $prodetail['level'] }}"
+                                                    value="{{ $prodetail['id'] }}"
+                                                    {{ (!empty($productdata) && $productdata['product_detail_id'] == $prodetail['id']) ? 'selected' : '' }}
+                                                >
+                                                    {{ $prodetail['name'] }}
+                                                </option>
+                                            @endforeach
                                         </select>
                                         <h6 id="ShowLevel"></h6>
-                                        <h4 class="text-center text-danger pt-3" style="display: none;" id="Product-product_detail_id"></h4>
+                                        <h4 class="text-center text-danger pt-3" style="display:none;" id="Product-product_detail_id"></h4>
                                     </div>
                                 </div>
                                 <div class="form-group">

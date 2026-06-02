@@ -85,10 +85,11 @@
     .cust-cb-wrap { margin-right: 14px; display: flex; align-items: center; flex-shrink: 0; }
     .cust-cb      { transform: scale(1.2); cursor: pointer; accent-color: #3598dc; }
 
-    /* Three equal columns */
-    .cust-info   { flex: 1 1 0; min-width: 0; }
-    .cust-center { flex: 1 1 0; min-width: 0; padding-left: 16px; border-left: 1px solid #edf2f7; }
-    .cust-right  { flex: 1 1 0; min-width: 0; display: flex; justify-content: flex-end; align-items: center; }
+    /* Four columns */
+    .cust-info   { flex: 1.2 1 0; min-width: 0; }
+    .cust-center { flex: 0.8 1 0; min-width: 0; padding-left: 16px; border-left: 1px solid #edf2f7; }
+    .cust-user   { flex: 1 1 0; min-width: 0; padding-left: 16px; border-left: 1px solid #edf2f7; }
+    .cust-right  { flex: 0.7 1 0; min-width: 0; display: flex; justify-content: flex-end; align-items: center; }
 
     .cust-name { font-weight: 500; color: #2d3748; font-size: 13px; display: block; line-height: 1.3; }
     .cust-meta { font-size: 11px; color: #a0aec0; display: block; margin-top: 1px; }
@@ -98,6 +99,15 @@
         display: inline-flex; align-items: center; gap: 5px;
     }
     .cust-center-city i { font-size: 10px; color: #52b788; }
+
+    /* User column styles */
+    .cust-user-name {
+        font-size: 12px; font-weight: 600; color: #2b6cb0;
+        display: flex; align-items: center; gap: 5px;
+    }
+    .cust-user-name i { font-size: 10px; color: #63b3ed; }
+    .cust-user-desig { font-size: 10px; color: #a0aec0; margin-top: 2px; }
+    .cust-user-none  { font-size: 11px; color: #c0c8d4; font-style: italic; }
 
     .cust-badge {
         display: inline-block;
@@ -128,8 +138,32 @@
         margin-bottom: 16px; flex-wrap: wrap;
     }
     .filter-bar label { font-size: 12px; font-weight: 600; color: #4a5568; margin: 0; white-space: nowrap; }
-    .filter-bar select { border-radius: 6px !important; font-size: 13px; height: 36px; min-width: 200px; border: 1px solid #c8d0dc; }
+    .filter-bar select { border-radius: 6px !important; font-size: 13px; height: 36px; min-width: 180px; border: 1px solid #c8d0dc; }
     .filter-count { font-size: 12px; color: #718096; margin-left: 6px; }
+
+    /* PDF button in filter bar */
+    .btn-export-pdf {
+        margin-left: auto;
+        padding: 6px 16px;
+        font-size: 12px;
+        font-weight: 600;
+        border-radius: 6px !important;
+        border: 1px solid #e53e3e;
+        background: #fff5f5;
+        color: #c53030;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        text-decoration: none;
+        transition: all 0.15s;
+        white-space: nowrap;
+    }
+    .btn-export-pdf:hover {
+        background: #e53e3e;
+        color: #fff;
+        text-decoration: none;
+    }
 
     /* ── Floating Save Bar ──────────────────────────────────── */
     .floating-save-bar {
@@ -173,9 +207,6 @@
 
     /* ── Alerts ─────────────────────────────────────────────── */
     .alert { border-radius: 6px !important; }
-
-    /* ── Dealer sub-select (shown when "dealer" chosen) ─────── */
-    #dealer-sub-wrap { display: none; }
 </style>
 
 <div class="page-content-wrapper">
@@ -241,16 +272,29 @@
                     <p>Select a source above to load customers.</p>
                 </div>
 
-                {{-- City filter --}}
+                {{-- Filters: User + City + PDF --}}
                 <div id="filter-bar-wrapper" style="display:none;">
                     <div class="filter-bar">
-                        <label><i class="fa fa-map-marker"></i> &nbsp;City:</label>
+                        {{-- User filter (populated dynamically from loaded customers) --}}
+                        <label><i class="fa fa-user"></i> &nbsp;User:</label>
+                        <select id="user-filter" class="form-control">
+                            <option value="">-- All Users --</option>
+                        </select>
+
+                        {{-- City filter --}}
+                        <label style="margin-left:10px;"><i class="fa fa-map-marker"></i> &nbsp;City:</label>
                         <select id="city-filter" class="form-control">
                             <option value="">-- All Cities --</option>
                         </select>
+
                         <span class="filter-count">
                             Showing <strong id="filter-visible-count">0</strong> customers
                         </span>
+
+                        {{-- PDF Export button --}}
+                        <a href="#" id="btn-export-pdf" class="btn-export-pdf">
+                            <i class="fa fa-file-pdf-o"></i> Export PDF
+                        </a>
                     </div>
                 </div>
 
@@ -265,11 +309,10 @@
 <div class="floating-save-bar" id="floating-bar" style="display:none;">
     <form method="POST" action="{{ route('admin.dealer-move-customers.move') }}" id="move-form">
         @csrf
-        {{-- hidden state for post-redirect restore --}}
         <input type="hidden" name="source_type"      id="source-type-hidden"       value="">
         <input type="hidden" name="source_dealer_id" id="source-dealer-id-hidden"  value="">
         <input type="hidden" name="city_filter"      id="city-filter-hidden"       value="">
-        {{-- Customer IDs injected by JS --}}
+        <input type="hidden" name="user_filter"      id="user-filter-hidden"       value="">
         <div id="hidden-customer-inputs"></div>
 
         <div class="save-bar-inner">
@@ -278,7 +321,6 @@
                 <span class="cnt-val" id="selected-count">0</span>
             </div>
 
-            {{-- Move To: type --}}
             <div class="move-to-wrap">
                 <label><i class="fa fa-arrow-right"></i> Move To:</label>
                 <select name="to_type" class="form-control" id="move-to-type" required>
@@ -293,7 +335,6 @@
                         @endforeach
                     </optgroup>
                 </select>
-                {{-- Hidden dealer ID input filled by JS when a dealer option is chosen --}}
                 <input type="hidden" name="to_dealer_id" id="to-dealer-id-input" value="">
             </div>
 
@@ -308,8 +349,9 @@
 $(document).ready(function () {
 
     /* ─── State ──────────────────────────────────────────────── */
-    var currentSourceType    = null;
+    var currentSourceType     = null;
     var currentSourceDealerId = null;
+    var allCustomersData      = []; // keep full data for user filter
 
     /* ─── Restore from URL on page load ─────────────────────── */
     (function restoreFromUrl() {
@@ -317,31 +359,30 @@ $(document).ready(function () {
         var srcType    = params.get('source_type');
         var srcDealer  = params.get('source_dealer_id');
         var cityFilter = params.get('city_filter');
+        var userFilter = params.get('user_filter');
 
         if (!srcType) return;
 
-        // Restore the source-type dropdown
         if (srcType === 'Direct Customer' || srcType === 'Open') {
             $('#source-type').val(srcType);
         } else if (srcType === 'dealer' && srcDealer) {
-            // Find the option whose data-dealer-id matches
             $('#source-type option[data-dealer-id="' + srcDealer + '"]').prop('selected', true);
         }
 
-        loadCustomers(srcType, srcDealer, cityFilter);
+        loadCustomers(srcType, srcDealer, cityFilter, userFilter);
     })();
 
     /* ─── Source dropdown change ─────────────────────────────── */
     $('#source-type').on('change', function () {
-        var $opt      = $(this).find(':selected');
-        var srcType   = $opt.val();                         // 'Direct Customer' | 'Open' | 'dealer'
-        var dealerId  = $opt.data('dealer-id') || null;     // only for dealer options
+        var $opt     = $(this).find(':selected');
+        var srcType  = $opt.val();
+        var dealerId = $opt.data('dealer-id') || null;
 
-        loadCustomers(srcType, dealerId, null);
+        loadCustomers(srcType, dealerId, null, null);
     });
 
     /* ─── Load Customers ─────────────────────────────────────── */
-    function loadCustomers(sourceType, dealerId, cityFilterToRestore) {
+    function loadCustomers(sourceType, dealerId, cityFilterToRestore, userFilterToRestore) {
         if (!sourceType) {
             resetAll();
             return;
@@ -350,7 +391,6 @@ $(document).ready(function () {
         currentSourceType     = sourceType;
         currentSourceDealerId = dealerId || null;
 
-        // Update URL params
         var url = new URL(window.location.href);
         url.searchParams.set('source_type', sourceType);
         if (dealerId) {
@@ -358,12 +398,10 @@ $(document).ready(function () {
         } else {
             url.searchParams.delete('source_dealer_id');
         }
-        if (cityFilterToRestore === null) {
-            url.searchParams.delete('city_filter');
-        }
+        if (!cityFilterToRestore)  url.searchParams.delete('city_filter');
+        if (!userFilterToRestore)  url.searchParams.delete('user_filter');
         history.replaceState(null, '', url.toString());
 
-        // UI reset
         $('#customers-placeholder').hide();
         $('#customers-container').hide().empty();
         $('#filter-bar-wrapper').hide();
@@ -388,18 +426,26 @@ $(document).ready(function () {
                     return;
                 }
 
+                allCustomersData = resp.data;
                 renderCustomers(resp.data);
                 populateCityFilter(resp.data);
+                populateUserFilter(resp.data);
                 $('#customers-container').show();
                 $('#filter-bar-wrapper').show();
 
-                var restoreCity = (cityFilterToRestore !== null) ? cityFilterToRestore : '';
+                // Restore filters
+                var restoreCity = cityFilterToRestore || '';
+                var restoreUser = userFilterToRestore || '';
                 $('#city-filter').val(restoreCity);
-                if (restoreCity) {
-                    applyFilter(true);
+                $('#user-filter').val(restoreUser);
+
+                if (restoreCity || restoreUser) {
+                    applyFilters(true);
                 } else {
                     updateFilterCount();
                 }
+
+                updatePdfLink();
             },
             error: function () {
                 $('#loader').hide();
@@ -417,9 +463,7 @@ $(document).ready(function () {
         // Header
         html += '<div class="customer-list-header">';
         html += '  <div class="header-left">';
-        html += '    <div>';
-        html += '      <div class="header-title">Customers</div>';
-        html += '    </div>';
+        html += '    <div class="header-title">Customers</div>';
         html += '  </div>';
         html += '  <div style="display:flex;align-items:center;gap:12px;">';
         html += '    <span class="badge-count" id="total-badge">' + customers.length + ' Customers</span>';
@@ -428,7 +472,7 @@ $(document).ready(function () {
         html += '      <span>All</span>';
         html += '    </div>';
         html += '  </div>';
-        html += '</div>'; // /header
+        html += '</div>';
 
         // Customer rows
         $.each(customers, function (i, cust) {
@@ -438,11 +482,15 @@ $(document).ready(function () {
             if (bm === 'Direct Customer') { bmClass = 'bm-direct'; }
             else if (bm === 'Dealer')     { bmClass = 'bm-dealer'; bmLabel = cust.dealer_business_name || 'Dealer'; }
 
-            html += '<div class="customer-item" id="ci-' + cust.customer_id + '" data-city="' + escHtml(cust.city_name || '') + '">';
+            // user data attributes for JS filter
+            var userId = cust.user_id ? String(cust.user_id) : '';
+
+            html += '<div class="customer-item" id="ci-' + cust.customer_id + '" data-city="' + escHtml(cust.city_name || '') + '" data-user-id="' + userId + '">';
             html += '  <div class="cust-no">' + (i + 1) + '</div>';
             html += '  <div class="cust-cb-wrap">';
             html += '    <input type="checkbox" class="cust-cb" value="' + cust.customer_id + '">';
             html += '  </div>';
+            // Col 1: Customer info
             html += '  <div class="cust-info">';
             html += '    <span class="cust-name">' + escHtml(cust.customer_name) + '</span>';
             html += '    <span class="cust-meta">';
@@ -451,20 +499,31 @@ $(document).ready(function () {
             if (cust.department)           html += ' &middot; ' + escHtml(cust.department);
             html += '    </span>';
             html += '  </div>';
-            // Col 2: city
+            // Col 2: City
             html += '  <div class="cust-center">';
             if (cust.city_name) {
                 html += '<div class="cust-center-city"><i class="fa fa-map-marker"></i>' + escHtml(cust.city_name) + '</div>';
             }
             html += '  </div>';
-            // Col 3: BM badge
+            // Col 3: Linked User (the red box area)
+            html += '  <div class="cust-user">';
+            if (cust.user_name) {
+                html += '<div class="cust-user-name"><i class="fa fa-user-circle"></i>' + escHtml(cust.user_name) + '</div>';
+                if (cust.user_designation) {
+                    html += '<div class="cust-user-desig">' + escHtml(cust.user_designation) + '</div>';
+                }
+            } else {
+                html += '<span class="cust-user-none">Not Assigned</span>';
+            }
+            html += '  </div>';
+            // Col 4: BM badge
             html += '  <div class="cust-right">';
             html += '    <span class="cust-badge ' + bmClass + '">' + escHtml(bmLabel) + '</span>';
             html += '  </div>';
-            html += '</div>'; // /customer-item
+            html += '</div>';
         });
 
-        html += '</div>'; // /customer-list-card
+        html += '</div>';
 
         $('#customers-container').html(html);
         bindEvents();
@@ -473,7 +532,6 @@ $(document).ready(function () {
     /* ─── Bind Events After Render ──────────────────────────── */
     function bindEvents() {
 
-        // Select All
         $(document).off('change', '#select-all-main').on('change', '#select-all-main', function () {
             var checked = $(this).is(':checked');
             $('.cust-cb').each(function () {
@@ -485,7 +543,6 @@ $(document).ready(function () {
             updateSelectionUI();
         });
 
-        // Individual checkbox
         $(document).off('change', '.cust-cb').on('change', '.cust-cb', function () {
             toggleRowHighlight($(this));
             syncSelectAll();
@@ -518,16 +575,15 @@ $(document).ready(function () {
 
         $('#selected-count').text(count);
 
-        // Sync hidden customer id inputs
         var $hidden = $('#hidden-customer-inputs').empty();
         $checked.each(function () {
             $hidden.append('<input type="hidden" name="customer_ids[]" value="' + $(this).val() + '">');
         });
 
-        // Keep source state hidden fields in sync
         $('#source-type-hidden').val(currentSourceType || '');
         $('#source-dealer-id-hidden').val(currentSourceDealerId || '');
         $('#city-filter-hidden').val($('#city-filter').val());
+        $('#user-filter-hidden').val($('#user-filter').val());
 
         if (count > 0) {
             $('#floating-bar').slideDown(200);
@@ -538,7 +594,7 @@ $(document).ready(function () {
         }
     }
 
-    /* ─── "Move To" select: extract dealer ID from data attr ─── */
+    /* ─── "Move To" select: extract dealer ID ───────────────── */
     $('#move-to-type').on('change', function () {
         var $opt     = $(this).find(':selected');
         var val      = $opt.val();
@@ -566,13 +622,12 @@ $(document).ready(function () {
             alert('Please select at least one customer to move.');
             return;
         }
-
         if (!confirm('Move ' + count + ' customer(s) to the selected target? This action cannot be undone.')) {
             e.preventDefault();
         }
     });
 
-    /* ─── City Filter ────────────────────────────────────────── */
+    /* ─── Filters ────────────────────────────────────────────── */
     function populateCityFilter(customers) {
         var cities = {};
         $.each(customers, function (i, c) {
@@ -580,30 +635,52 @@ $(document).ready(function () {
         });
 
         $('#city-filter option:gt(0)').remove();
+        $('#user-filter option:gt(0)').remove();
         $.each(Object.keys(cities).sort(), function (i, name) {
             $('#city-filter').append('<option value="' + name + '">' + name + '</option>');
         });
     }
 
-    function applyFilter(silent) {
+    function populateUserFilter(customers) {
+        var users = {};
+        $.each(customers, function (i, c) {
+            if (c.user_id && c.user_name) {
+                users[c.user_id] = c.user_name;
+            }
+        });
+
+        $('#user-filter option:gt(0)').remove();
+        // Sort by name then append
+        var sorted = Object.keys(users).map(function(id) {
+            return { id: id, name: users[id] };
+        }).sort(function(a, b) { return a.name.localeCompare(b.name); });
+
+        $.each(sorted, function (i, u) {
+            $('#user-filter').append('<option value="' + u.id + '">' + escHtml(u.name) + '</option>');
+        });
+    }
+
+    function applyFilters(silent) {
         var cityVal = $('#city-filter').val();
+        var userVal = $('#user-filter').val();
         var visible = 0;
 
         $('.customer-item').each(function () {
-            var city    = $(this).data('city') || '';
-            var show    = !cityVal || city === cityVal;
+            var city   = $(this).data('city') || '';
+            var userId = String($(this).data('user-id') || '');
+            var showCity = !cityVal || city === cityVal;
+            var showUser = !userVal || userId === userVal;
+            var show = showCity && showUser;
             $(this).toggle(show);
             if (show) visible++;
         });
 
         // Update badge
         var total = $('.customer-item').length;
-        if (cityVal) {
-            $('#total-badge').text(visible + ' / ' + total + ' Customers');
-        } else {
-            $('#total-badge').text(total + ' Customers');
-        }
+        var label = visible + (cityVal || userVal ? ' / ' + total : '') + ' Customers';
+        $('#total-badge').text(label);
 
+        renumberRows();
         syncSelectAll();
         updateFilterCount();
 
@@ -611,21 +688,58 @@ $(document).ready(function () {
             var url = new URL(window.location.href);
             if (cityVal) { url.searchParams.set('city_filter', cityVal); }
             else         { url.searchParams.delete('city_filter'); }
+            if (userVal) { url.searchParams.set('user_filter', userVal); }
+            else         { url.searchParams.delete('user_filter'); }
             history.replaceState(null, '', url.toString());
             $('#city-filter-hidden').val(cityVal);
+            $('#user-filter-hidden').val(userVal);
+            updatePdfLink();
         }
+    }
+
+    function renumberRows() {
+        var n = 0;
+        $('.customer-item:visible .cust-no').each(function () {
+            $(this).text(++n);
+        });
     }
 
     function updateFilterCount() {
         $('#filter-visible-count').text($('.customer-item:visible').length);
     }
 
-    $('#city-filter').on('change', function () { applyFilter(false); });
+    $('#city-filter').on('change', function () { applyFilters(false); });
+    $('#user-filter').on('change', function () { applyFilters(false); });
+
+    /* ─── PDF Export Link ────────────────────────────────────── */
+    function updatePdfLink() {
+        if (!currentSourceType) return;
+
+        var params = new URLSearchParams();
+        params.set('source_type', currentSourceType);
+        if (currentSourceDealerId) params.set('dealer_id', currentSourceDealerId);
+
+        var cityVal = $('#city-filter').val();
+        var userVal = $('#user-filter').val();
+        if (cityVal) params.set('city_filter', cityVal);
+        if (userVal) params.set('user_filter', userVal);
+
+        var pdfUrl = '{{ route("admin.dealer-move-customers.export-pdf") }}?' + params.toString();
+        $('#btn-export-pdf').attr('href', pdfUrl);
+    }
+
+    $('#btn-export-pdf').on('click', function (e) {
+        if (!currentSourceType) {
+            e.preventDefault();
+            alert('Please select a source first.');
+        }
+    });
 
     /* ─── Helpers ────────────────────────────────────────────── */
     function resetAll() {
         currentSourceType      = null;
         currentSourceDealerId  = null;
+        allCustomersData       = [];
         $('#customers-container').hide().empty();
         $('#customers-placeholder').show();
         $('#filter-bar-wrapper').hide();
@@ -635,6 +749,7 @@ $(document).ready(function () {
         url.searchParams.delete('source_type');
         url.searchParams.delete('source_dealer_id');
         url.searchParams.delete('city_filter');
+        url.searchParams.delete('user_filter');
         history.replaceState(null, '', url.toString());
     }
 
@@ -644,6 +759,7 @@ $(document).ready(function () {
         $('#floating-bar').hide();
         $('#btn-move').prop('disabled', true);
         $('#city-filter').val('');
+        $('#user-filter').val('');
         $('#city-filter option:gt(0)').remove();
     }
 

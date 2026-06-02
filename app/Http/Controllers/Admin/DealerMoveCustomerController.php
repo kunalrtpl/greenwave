@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Redirect;
 use DB;
 use Session;
+use PDF; // barryvdh/laravel-dompdf
 
 class DealerMoveCustomerController extends Controller
 {
@@ -16,17 +17,15 @@ class DealerMoveCustomerController extends Controller
      */
     public function index()
     {
-        Session::put('active','dealerMoveCustomers'); 
+        Session::put('active', 'dealerMoveCustomers');
         $title = 'Move Customers by Dealer / Business Model';
 
-        // Source options: Direct Customer, Open, + all dealers
         $dealers = DB::table('dealers')
             ->select('id', 'business_name')
-            ->whereNULL('parent_id')
+            ->whereNull('parent_id')
             ->orderBy('business_name')
             ->get();
 
-        // "Move To" options: same list
         $moveToOptions = $dealers;
 
         return view(
@@ -36,27 +35,25 @@ class DealerMoveCustomerController extends Controller
     }
 
     /**
-     * Load customers for a selected source (business_model or dealer).
+     * Load customers for a selected source.
      * GET /admin/dealer-move-customers/load-customers
-     *   ?source_type=Direct Customer   → business_model = 'Direct Customer'
-     *   ?source_type=Open              → business_model = 'Open'
-     *   ?source_type=dealer&dealer_id=5 → business_model = 'Dealer' AND dealer_id = 5
-     *
      * Returns JSON.
      */
     public function loadCustomers(Request $request)
     {
-        $sourceType = $request->get('source_type');   // 'Direct Customer' | 'Open' | 'dealer'
-        $dealerId   = $request->get('dealer_id');      // only used when source_type = 'dealer'
+        $sourceType = $request->get('source_type');
+        $dealerId   = $request->get('dealer_id');
 
         if (!$sourceType) {
             return response()->json(['error' => 'No source selected'], 400);
         }
 
-        // Build base query
         $query = DB::table('customers')
             ->leftJoin('dealers', 'dealers.id', '=', 'customers.dealer_id')
-            ->leftJoin('customer_cities', 'customer_cities.customer_id', '=', 'customers.id');
+            ->leftJoin('customer_cities', 'customer_cities.customer_id', '=', 'customers.id')
+            // Join to get linked user via user_customer_shares
+            ->leftJoin('user_customer_shares', 'user_customer_shares.customer_id', '=', 'customers.id')
+            ->leftJoin('users', 'users.id', '=', 'user_customer_shares.user_id');
 
         if ($sourceType === 'dealer') {
             if (!$dealerId) {
@@ -65,7 +62,6 @@ class DealerMoveCustomerController extends Controller
             $query->where('customers.business_model', 'Dealer')
                   ->where('customers.dealer_id', $dealerId);
         } else {
-            // 'Direct Customer' or 'Open'
             $query->where('customers.business_model', $sourceType);
         }
 
@@ -80,41 +76,37 @@ class DealerMoveCustomerController extends Controller
                 'customers.business_model',
                 'customers.dealer_id',
                 'dealers.business_name as dealer_business_name',
-                'customer_cities.city_name'
+                'customer_cities.city_name',
+                // User info
+                'users.id as user_id',
+                'users.name as user_name',
+                'users.designation as user_designation'
             )
             ->orderBy('customers.name')
             ->get();
 
         return response()->json([
-            'success'   => true,
+            'success'     => true,
             'source_type' => $sourceType,
             'dealer_id'   => $dealerId,
-            'data'      => $customers,
+            'data'        => $customers,
         ]);
     }
 
     /**
      * Move selected customers to a new business model / dealer.
      * POST /admin/dealer-move-customers/move
-     *
-     * Posted fields:
-     *   customer_ids[]   — array of customer IDs
-     *   to_type          — 'Direct Customer' | 'Open' | 'dealer'
-     *   to_dealer_id     — dealer ID (only when to_type = 'dealer')
-     *   source_type      — for redirect restore
-     *   source_dealer_id — for redirect restore
-     *   city_filter      — for redirect restore
      */
     public function moveCustomers(Request $request)
     {
-        $customerIds   = $request->get('customer_ids', []);
-        $toType        = $request->get('to_type');
-        $toDealerId    = $request->get('to_dealer_id');
-        $cityFilter    = $request->get('city_filter', '');
-        $sourceType    = $request->get('source_type', '');
+        $customerIds    = $request->get('customer_ids', []);
+        $toType         = $request->get('to_type');
+        $toDealerId     = $request->get('to_dealer_id');
+        $cityFilter     = $request->get('city_filter', '');
+        $userFilter     = $request->get('user_filter', '');
+        $sourceType     = $request->get('source_type', '');
         $sourceDealerId = $request->get('source_dealer_id', '');
 
-        // Basic validation
         if (empty($customerIds) || !$toType) {
             Session::flash('error', 'Please select at least one customer and a target.');
             return Redirect::back();
@@ -125,7 +117,6 @@ class DealerMoveCustomerController extends Controller
             return Redirect::back();
         }
 
-        // Determine new business_model value and dealer_id for the update
         if ($toType === 'Direct Customer') {
             $newBusinessModel = 'Direct Customer';
             $newDealerId      = null;
@@ -133,7 +124,6 @@ class DealerMoveCustomerController extends Controller
             $newBusinessModel = 'Open';
             $newDealerId      = null;
         } else {
-            // dealer
             $newBusinessModel = 'Dealer';
             $newDealerId      = $toDealerId;
         }
@@ -146,7 +136,6 @@ class DealerMoveCustomerController extends Controller
             foreach ($customerIds as $customerId) {
                 $customerId = (int) $customerId;
 
-                // Fetch current record
                 $customer = DB::table('customers')
                     ->where('id', $customerId)
                     ->select('id', 'business_model', 'dealer_id')
@@ -157,7 +146,6 @@ class DealerMoveCustomerController extends Controller
                     continue;
                 }
 
-                // Skip if already in the same destination
                 $alreadySame = (
                     $customer->business_model === $newBusinessModel
                     && (string)$customer->dealer_id === (string)$newDealerId
@@ -168,7 +156,6 @@ class DealerMoveCustomerController extends Controller
                     continue;
                 }
 
-                // Update the customer record
                 DB::table('customers')
                     ->where('id', $customerId)
                     ->update([
@@ -193,12 +180,89 @@ class DealerMoveCustomerController extends Controller
             Session::flash('error', 'An error occurred: ' . $e->getMessage());
         }
 
-        // Build query params to restore UI state after redirect
         $queryParams = [];
         if ($sourceType)     $queryParams['source_type']     = $sourceType;
         if ($sourceDealerId) $queryParams['source_dealer_id'] = $sourceDealerId;
         if ($cityFilter)     $queryParams['city_filter']      = $cityFilter;
+        if ($userFilter)     $queryParams['user_filter']      = $userFilter;
 
         return Redirect::route('admin.dealer-move-customers.index', $queryParams);
+    }
+
+    /**
+     * Export PDF of currently filtered customers.
+     * GET /admin/dealer-move-customers/export-pdf
+     */
+    public function exportPdf(Request $request)
+    {
+        $sourceType = $request->get('source_type');
+        $dealerId   = $request->get('dealer_id');
+        $cityFilter = $request->get('city_filter', '');
+        $userFilter = $request->get('user_filter', '');
+
+        // Build the query same as loadCustomers
+        $query = DB::table('customers')
+            ->leftJoin('dealers', 'dealers.id', '=', 'customers.dealer_id')
+            ->leftJoin('customer_cities', 'customer_cities.customer_id', '=', 'customers.id')
+            ->leftJoin('user_customer_shares', 'user_customer_shares.customer_id', '=', 'customers.id')
+            ->leftJoin('users', 'users.id', '=', 'user_customer_shares.user_id');
+
+        if ($sourceType === 'dealer') {
+            $query->where('customers.business_model', 'Dealer')
+                  ->where('customers.dealer_id', $dealerId);
+        } elseif ($sourceType) {
+            $query->where('customers.business_model', $sourceType);
+        }
+
+        // Apply city filter
+        if ($cityFilter) {
+            $query->where('customer_cities.city_name', $cityFilter);
+        }
+
+        // Apply user filter
+        if ($userFilter) {
+            $query->where('users.id', $userFilter);
+        }
+
+        $customers = $query
+            ->select(
+                'customers.id as customer_id',
+                'customers.name as customer_name',
+                'customers.contact_person_name',
+                'customers.designation as customer_designation',
+                'customers.department',
+                'customers.business_model',
+                'customers.dealer_id',
+                'dealers.business_name as dealer_business_name',
+                'customer_cities.city_name',
+                'users.id as user_id',
+                'users.name as user_name',
+                'users.designation as user_designation'
+            )
+            ->orderBy('customers.name')
+            ->get();
+
+        // Build label for header
+        $sourceLabel = $sourceType ?? 'All';
+        if ($sourceType === 'dealer' && $dealerId) {
+            $dealer = DB::table('dealers')->where('id', $dealerId)->first();
+            $sourceLabel = $dealer ? $dealer->business_name : 'Dealer';
+        }
+
+        $filterLabels = [];
+        if ($cityFilter)     $filterLabels[] = 'City: ' . $cityFilter;
+        if ($userFilter) {
+            $user = DB::table('users')->where('id', $userFilter)->first();
+            if ($user) $filterLabels[] = 'User: ' . $user->name;
+        }
+
+        $pdf = PDF::loadView('admin.dealer_move_customers.pdf', [
+            'customers'    => $customers,
+            'sourceLabel'  => $sourceLabel,
+            'filterLabels' => $filterLabels,
+            'generatedAt'  => now()->format('d M Y, h:i A'),
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download('customers-' . str_slug($sourceLabel) . '-' . now()->format('Ymd') . '.pdf');
     }
 }

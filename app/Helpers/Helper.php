@@ -193,6 +193,41 @@
 		return $levels;
 	}
 
+	function product_details_with_levels() {
+	    // Single query — fetch all rows at once
+	    $allDetails = DB::table('product_details')
+	        ->where('status', 1)
+	        ->get(['id', 'name', 'parent_id', 'type'])
+	        ->keyBy('id')
+	        ->toArray();
+
+	    // Build ancestor path for each "child" node in PHP (no extra queries)
+	    $results = [];
+	    foreach ($allDetails as $id => $row) {
+	        if ($row->type !== 'child') continue;
+
+	        $path  = [];
+	        $curr  = $row;
+	        while ($curr) {
+	            array_unshift($path, $curr->name);
+	            $curr = isset($allDetails[$curr->parent_id])
+	                    ? $allDetails[$curr->parent_id]
+	                    : null;
+	        }
+
+	        $results[] = [
+	            'id'    => $id,
+	            'name'  => $row->name,
+	            'level' => implode(' -> ', $path),
+	        ];
+	    }
+
+	    // Sort alphabetically by name
+	    usort($results, fn($a, $b) => strcasecmp($a['name'], $b['name']));
+
+	    return $results;
+	}
+
 	function getMaterialTypes(){
 		$materialTypes = array('RM'=>'Raw Material','PM'=>'Packing Material','PL'=>'Packing Label','SRM'=> 'Sale Return Material','RFDM'=>'Finished Product (RFD)');
 		return $materialTypes;

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Session;
+use PDF;
 class ProductPricingController extends Controller
 {
     /**
@@ -145,5 +146,89 @@ class ProductPricingController extends Controller
             DB::rollBack();
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Export filtered product pricing list as PDF.
+     * GET /admin/product-pricing/export-pdf
+     */
+    public function exportPdf(Request $request)
+    {
+        $today       = Carbon::today()->toDateString();
+        $productId   = $request->get('product_id');
+        $priceStatus = $request->get('price_status');
+        $search      = $request->get('search', '');
+        $naOnly      = $request->get('not_available', 0);
+
+        // Same base query as index()
+        $latestPricing = DB::table('product_pricings as pp')
+            ->select('pp.product_id', 'pp.dealer_price', 'pp.market_price', 'pp.dealer_markup', 'pp.price_date', 'pp.id as pricing_id')
+            ->whereRaw('pp.id = (
+                SELECT pp2.id FROM product_pricings pp2
+                WHERE pp2.product_id = pp.product_id
+                  AND pp2.price_date <= ?
+                ORDER BY pp2.price_date DESC, pp2.id DESC
+                LIMIT 1
+            )', [$today]);
+
+        $query = DB::table('products')
+            ->leftJoinSub($latestPricing, 'lp', function ($join) {
+                $join->on('lp.product_id', '=', 'products.id');
+            })
+            ->where('products.status', 1)
+            ->select(
+                'products.id', 'products.product_name', 'products.product_code',
+                'products.moq', 'products.average_dispatch_time', 'products.not_available',
+                'lp.dealer_price', 'lp.market_price', 'lp.dealer_markup',
+                'lp.price_date', 'lp.pricing_id'
+            );
+
+        // Apply filters
+        if ($productId) {
+            $query->where('products.id', $productId);
+        }
+
+        if ($priceStatus === 'has_price') {
+            $query->whereNotNull('lp.dealer_price');
+        } elseif ($priceStatus === 'no_price') {
+            $query->whereNull('lp.dealer_price');
+        } elseif ($priceStatus === 'today') {
+            $query->where('lp.price_date', $today);
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('products.product_name', 'like', '%' . $search . '%')
+                  ->orWhere('products.product_code', 'like', '%' . $search . '%');
+            });
+        }
+
+        if ($naOnly) {
+            $query->where('products.not_available', 1);
+        }
+
+        $products = $query->orderBy('products.product_name')->get();
+
+        // Build filter labels for PDF header
+        $filterLabels = [];
+        if ($productId) {
+            $prod = DB::table('products')->where('id', $productId)->first();
+            if ($prod) $filterLabels[] = 'Product: ' . $prod->product_name;
+        }
+        if ($priceStatus) {
+            $map = ['has_price' => 'Has Price', 'no_price' => 'No Price', 'today' => 'Updated Today'];
+            $filterLabels[] = 'Price Status: ' . ($map[$priceStatus] ?? $priceStatus);
+        }
+        if ($search)  $filterLabels[] = 'Search: ' . $search;
+        if ($naOnly)  $filterLabels[] = 'Not Available Only';
+
+        $pdf = PDF::loadView('admin.product_pricing.pdf', [
+            'products'     => $products,
+            'today'        => $today,
+            'filterLabels' => $filterLabels,
+            'generatedAt'  => now()->format('d M Y, h:i A'),
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download('product-pricing-' . now()->format('Ymd-His') . '.pdf');
     }
 }

@@ -4,98 +4,59 @@
 <style>
     .page-content { padding-bottom: 40px !important; }
 
-    /* ── Portlet shell ───────────────────────────────────────── */
     .portlet.light.bordered {
         border-radius: 6px;
         box-shadow: 0 1px 8px rgba(0,0,0,0.08);
         border: 1px solid #dde3ec;
     }
 
-    /* ── Filter strip ────────────────────────────────────────── */
+    /* ── Filter strip ── */
     .filter-strip {
-        display: flex;
-        align-items: flex-end;
-        gap: 14px;
-        flex-wrap: wrap;
-        background: #f4f6fa;
-        border: 1px solid #dde3ec;
-        border-radius: 6px;
-        padding: 14px 18px;
-        margin-bottom: 18px;
+        display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap;
+        background: #f4f6fa; border: 1px solid #dde3ec;
+        border-radius: 6px; padding: 14px 18px; margin-bottom: 18px;
     }
-    .filter-strip .fg {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
+    .filter-strip .fg { display: flex; flex-direction: column; gap: 4px; }
     .filter-strip label {
-        font-size: 11px;
-        font-weight: 700;
-        color: #5a6a85;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin: 0;
+        font-size: 11px; font-weight: 700; color: #5a6a85;
+        text-transform: uppercase; letter-spacing: 0.5px; margin: 0;
     }
     .filter-strip select,
     .filter-strip input[type="text"] {
-        height: 34px;
-        border: 1px solid #c8d0dc;
-        border-radius: 4px !important;
-        font-size: 13px;
-        color: #2d3748;
-        background: #fff;
-        padding: 0 10px;
+        height: 34px; border: 1px solid #c8d0dc; border-radius: 4px !important;
+        font-size: 13px; color: #2d3748; background: #fff; padding: 0 10px;
     }
-    .filter-strip select:focus,
-    .filter-strip input:focus {
-        outline: none;
-        border-color: #3598dc;
+    .filter-strip select:focus, .filter-strip input:focus {
+        outline: none; border-color: #3598dc;
         box-shadow: 0 0 0 2px rgba(53,152,220,0.15);
     }
     .filter-strip select { min-width: 220px; }
     .filter-strip input[type="text"] { width: 200px; }
-
-    .filter-strip .fg-check {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding-bottom: 6px;
-    }
+    .filter-strip .fg-check { display: flex; align-items: center; gap: 6px; padding-bottom: 6px; }
     .filter-strip .fg-check label {
-        font-size: 12px;
-        font-weight: 600;
-        color: #5a6a85;
-        text-transform: none;
-        letter-spacing: 0;
-        cursor: pointer;
+        font-size: 12px; font-weight: 600; color: #5a6a85;
+        text-transform: none; letter-spacing: 0; cursor: pointer;
     }
     .filter-strip .fg-check input[type="checkbox"] {
-        transform: scale(1.2);
-        accent-color: #e53e3e;
-        cursor: pointer;
+        transform: scale(1.2); accent-color: #e53e3e; cursor: pointer;
     }
-
-    .filter-result {
-        margin-left: auto;
-        font-size: 12px;
-        color: #718096;
-        padding-bottom: 6px;
-        white-space: nowrap;
-    }
+    .filter-result { margin-left: auto; font-size: 12px; color: #718096; padding-bottom: 6px; white-space: nowrap; }
     .filter-result strong { color: #3598dc; }
 
-    /* ── Table wrapper ──────────────────────────────────────── */
-    .pricing-wrap { width: 100%; overflow-x: auto; }
-
-    /* ── Table ───────────────────────────────────────────────── */
-    .pricing-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 13px;
-        table-layout: fixed;
+    /* PDF export button */
+    .btn-export-pdf {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 6px 14px; font-size: 12px; font-weight: 600;
+        border-radius: 4px !important; border: 1px solid #e53e3e;
+        background: #fff5f5; color: #c53030; cursor: pointer;
+        text-decoration: none; white-space: nowrap; transition: all 0.15s;
+        height: 34px;
     }
+    .btn-export-pdf:hover { background: #e53e3e; color: #fff; text-decoration: none; }
 
-    /* Column widths - Serial No stays small; all other major data columns get uniform spacing */
+    /* ── Table ── */
+    .pricing-wrap { width: 100%; overflow-x: auto; }
+    .pricing-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
     .pricing-table col.c-no       { width: 50px; }
     .pricing-table col.c-name     { width: 16%; }
     .pricing-table col.c-moq      { width: 14%; }
@@ -105,33 +66,16 @@
     .pricing-table col.c-date     { width: 14%; }
     .pricing-table col.c-action   { width: 14%; }
 
-    /* Head */
     .pricing-table thead tr th {
-        background: #eef1f7;
-        color: #4a5568;
-        font-weight: 700;
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.55px;
-        padding: 10px 12px;
-        border: 1px solid #d5dbe8;
-        white-space: nowrap;
-        text-align: left;
+        background: #eef1f7; color: #4a5568; font-weight: 700; font-size: 11px;
+        text-transform: uppercase; letter-spacing: 0.55px; padding: 10px 12px;
+        border: 1px solid #d5dbe8; white-space: nowrap; text-align: left;
     }
     .pricing-table thead tr th.center { text-align: center; }
-
-    /* Body cells */
     .pricing-table tbody td {
-        padding: 8px 12px;
-        border: 1px solid #e4e9f2;
-        vertical-align: middle;
-        color: #2d3748;
-        background: #fff;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        padding: 8px 12px; border: 1px solid #e4e9f2; vertical-align: middle;
+        color: #2d3748; background: #fff; overflow: hidden; text-overflow: ellipsis;
     }
-
-    /* Row states */
     .pricing-table tbody tr:hover td { background: #f8faff; }
     .pricing-table tbody tr.is-dirty td { background: #fffde7; }
 
@@ -140,152 +84,81 @@
         100% { background: #fff; }
     }
     .row-saved td { animation: rowFlash 1.6s ease forwards; }
-
-    /* Zebra */
     .pricing-table tbody tr:nth-child(even) td { background: #fafbfd; }
     .pricing-table tbody tr:nth-child(even):hover td { background: #f0f5ff; }
     .pricing-table tbody tr.is-dirty td,
     .pricing-table tbody tr.is-dirty:nth-child(even) td { background: #fffde7 !important; }
 
-    /* ── Product Name cell ──────────────────────────────────── */
-    .prod-name  { font-weight: 600; color: #2d3748; font-size: 13px; display: block; line-height: 1.3; word-wrap: break-word; }
-    .prod-code  { font-size: 11px; color: #a0aec0; display: block; margin-top: 1px; }
+    .prod-name { font-weight: 600; color: #2d3748; font-size: 13px; display: block; line-height: 1.3; word-wrap: break-word; }
+    .prod-code { font-size: 11px; color: #a0aec0; display: block; margin-top: 1px; }
 
-    /* ── Inline inputs ──────────────────────────────────────── */
     .inline-input {
-        border: 1px solid #e2e8f0;
-        border-radius: 4px !important;
-        padding: 4px 7px;
-        font-size: 13px;
-        color: #2d3748;
-        background: #fff;
-        width: 100%;
-        height: 30px;
-        transition: border-color 0.18s, box-shadow 0.18s;
-        box-sizing: border-box;
+        border: 1px solid #e2e8f0; border-radius: 4px !important;
+        padding: 4px 7px; font-size: 13px; color: #2d3748;
+        background: #fff; width: 100%; height: 30px;
+        transition: border-color 0.18s, box-shadow 0.18s; box-sizing: border-box;
     }
-    .inline-input:focus {
-        outline: none;
-        border-color: #3598dc;
-        box-shadow: 0 0 0 2px rgba(53,152,220,0.12);
-    }
-    .inline-input.changed {
-        border-color: #f6ad55 !important;
-        background: #fffdf5;
-    }
+    .inline-input:focus { outline: none; border-color: #3598dc; box-shadow: 0 0 0 2px rgba(53,152,220,0.12); }
+    .inline-input.changed { border-color: #f6ad55 !important; background: #fffdf5; }
 
-    /* ── Not Available toggle ────────────────────────────────── */
     .na-toggle { text-align: center; }
-    .na-toggle input[type="checkbox"] {
-        transform: scale(1.3);
-        accent-color: #e53e3e;
-        cursor: pointer;
-    }
+    .na-toggle input[type="checkbox"] { transform: scale(1.3); accent-color: #e53e3e; cursor: pointer; }
 
-    /* ── Dealer Price cell ───────────────────────────────────── */
     .dp-wrap { display: flex; align-items: center; gap: 4px; width: 100%; }
     .dp-wrap .cur { font-size: 12px; color: #888; flex-shrink: 0; }
     .dp-input { flex-grow: 1; min-width: 0; }
 
-    /* ── Price date badge ────────────────────────────────────── */
     .price-date-td { text-align: center; }
     .pd-badge {
-        display: inline-block;
-        font-size: 10px;
-        padding: 2px 8px;
-        border-radius: 10px !important;
-        font-weight: 700;
-        white-space: nowrap;
-        border: 1px solid transparent;
+        display: inline-block; font-size: 10px; padding: 2px 8px;
+        border-radius: 10px !important; font-weight: 700; white-space: nowrap; border: 1px solid transparent;
     }
     .pd-today { background: #e6fffa; color: #276749; border-color: #9ae6b4; }
     .pd-old   { background: #f7fafc; color: #718096; border-color: #e2e8f0; }
     .pd-none  { background: #fff5f5; color: #c53030; border-color: #feb2b2; }
 
-    /* ── Update button ───────────────────────────────────────── */
     .btn-update {
-        width: 100%;
-        max-width: 84px;
-        padding: 4px 0;
-        font-size: 11px;
-        font-weight: 700;
-        border-radius: 4px !important;
-        text-transform: uppercase;
-        letter-spacing: 0.4px;
-        transition: all 0.18s;
-        display: block;
-        margin: 0 auto;
-        text-align: center;
+        width: 100%; max-width: 84px; padding: 4px 0; font-size: 11px; font-weight: 700;
+        border-radius: 4px !important; text-transform: uppercase; letter-spacing: 0.4px;
+        transition: all 0.18s; display: block; margin: 0 auto; text-align: center;
     }
-    .btn-update:disabled {
-        opacity: 0.3;
-        cursor: not-allowed;
-        pointer-events: none;
-    }
-    .btn-update:not(:disabled):hover {
-        transform: translateY(-1px);
-        box-shadow: 0 3px 8px rgba(53,152,220,0.30);
-    }
+    .btn-update:disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
+    .btn-update:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(53,152,220,0.30); }
     .btn-update.saving { opacity: 0.6; pointer-events: none; }
 
-    /* ── Empty state ─────────────────────────────────────────── */
+    /* Sr no cell */
+    .sr-no-cell { color: #a0aec0; font-size: 11px; text-align: center; }
+
     #empty-row td {
-        text-align: center;
-        padding: 30px;
-        color: #a0aec0;
-        font-style: italic;
-        border: 1px solid #e4e9f2;
+        text-align: center; padding: 30px; color: #a0aec0;
+        font-style: italic; border: 1px solid #e4e9f2;
     }
 
-    /* ── Toast ───────────────────────────────────────────────── */
+    /* ── Toast ── */
     #toast-wrap {
-        position: fixed;
-        bottom: 24px; right: 24px;
-        z-index: 9999;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        pointer-events: none;
+        position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+        display: flex; flex-direction: column; gap: 8px; pointer-events: none;
     }
     .toast-item {
-        padding: 10px 18px;
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 600;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.12);
-        pointer-events: auto;
-        opacity: 0;
-        transition: opacity 0.28s;
-        border: 1px solid transparent;
+        padding: 10px 18px; border-radius: 6px; font-size: 13px; font-weight: 600;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.12); pointer-events: auto;
+        opacity: 0; transition: opacity 0.28s; border: 1px solid transparent;
     }
     .toast-success { background:#c6f6d5; color:#276749; border-color:#9ae6b4; }
     .toast-danger  { background:#fed7d7; color:#9b2c2c; border-color:#fc8181; }
 
-    /* ── Summary bar ─────────────────────────────────────────── */
-    .summary-bar {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 14px;
-        flex-wrap: wrap;
-    }
+    /* ── Summary bar ── */
+    .summary-bar { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
     .sum-card {
-        background: #f4f6fa;
-        border: 1px solid #dde3ec;
-        border-radius: 6px;
-        padding: 8px 16px;
-        font-size: 12px;
-        color: #5a6a85;
-        display: flex;
-        align-items: center;
-        gap: 6px;
+        background: #f4f6fa; border: 1px solid #dde3ec; border-radius: 6px;
+        padding: 8px 16px; font-size: 12px; color: #5a6a85;
+        display: flex; align-items: center; gap: 6px;
     }
     .sum-card strong { font-size: 15px; color: #2d3748; }
-    .sum-card .dot {
-        width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
-    }
-    .dot-total   { background: #3598dc; }
-    .dot-noprice  { background: #e53e3e; }
-    .dot-na      { background: #ed8936; }
+    .sum-card .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .dot-total  { background: #3598dc; }
+    .dot-noprice { background: #e53e3e; }
+    .dot-na     { background: #ed8936; }
 </style>
 
 <div class="page-content-wrapper">
@@ -308,14 +181,14 @@
                     </div>
                 @endif
 
-                {{-- ── Summary Cards ── --}}
+                {{-- Summary Cards --}}
                 <div class="summary-bar">
                     <div class="sum-card">
                         <span class="dot dot-total"></span>
                         Total Active &nbsp;<strong id="sum-total">{{ $products->count() }}</strong>
                     </div>
                     <div class="sum-card">
-                        <span class="dot dot-norice"></span>
+                        <span class="dot dot-noprice"></span>
                         No Price Set &nbsp;
                         <strong id="sum-noprice" style="color:#e53e3e;">
                             {{ $products->filter(fn($p) => is_null($p->dealer_price))->count() }}
@@ -330,10 +203,9 @@
                     </div>
                 </div>
 
-                {{-- ── Filters ── --}}
+                {{-- Filters --}}
                 <div class="filter-strip">
 
-                    {{-- Product name dropdown --}}
                     <div class="fg">
                         <label><i class="fa fa-cube"></i> &nbsp;Product</label>
                         <select id="filter-product" class="select2">
@@ -344,7 +216,6 @@
                         </select>
                     </div>
 
-                    {{-- Price status --}}
                     <div class="fg">
                         <label><i class="fa fa-inr"></i> &nbsp;Price Status</label>
                         <select id="filter-price-status">
@@ -355,13 +226,11 @@
                         </select>
                     </div>
 
-                    {{-- Search text --}}
                     <div class="fg">
                         <label><i class="fa fa-search"></i> &nbsp;Search</label>
                         <input type="text" id="filter-search" placeholder="Name or code...">
                     </div>
 
-                    {{-- Not Available checkbox --}}
                     <div class="fg">
                         <label>&nbsp;</label>
                         <div class="fg-check">
@@ -374,9 +243,18 @@
                         Showing <strong id="visible-count">{{ $products->count() }}</strong>
                         of {{ $products->count() }} products
                     </div>
+
+                    {{-- PDF Export --}}
+                    <div class="fg">
+                        <label>&nbsp;</label>
+                        <a href="#" id="btn-export-pdf" class="btn-export-pdf">
+                            <i class="fa fa-file-pdf-o"></i> Export PDF
+                        </a>
+                    </div>
+
                 </div>
 
-                {{-- ── Table ── --}}
+                {{-- Table --}}
                 <div class="pricing-wrap">
                     <table class="pricing-table" id="pricing-table">
                         <colgroup>
@@ -417,9 +295,11 @@
                             data-orig-dp="{{ $hasPrice ? number_format((float)$product->dealer_price,2,'.','') : '' }}"
                             data-pricing-id="{{ $product->pricing_id }}"
                             data-has-price="{{ $hasPrice ? 1 : 0 }}"
-                            data-is-today="{{ $isToday ? 1 : 0 }}">
+                            data-is-today="{{ $isToday ? 1 : 0 }}"
+                            data-name="{{ strtolower($product->product_name) }}"
+                            data-code="{{ strtolower($product->product_code) }}">
 
-                            <td style="color:#a0aec0; font-size:11px; text-align:center;">{{ $index+1 }}</td>
+                            <td class="sr-no-cell">{{ $index + 1 }}</td>
 
                             <td>
                                 <span class="prod-name">{{ $product->product_name }}</span>
@@ -483,14 +363,12 @@
                         </tbody>
                     </table>
                 </div>
-                {{-- /pricing-wrap --}}
 
-            </div>{{-- /portlet-body --}}
-        </div>{{-- /portlet --}}
+            </div>
+        </div>
     </div>
 </div>
 
-{{-- Toast container --}}
 <div id="toast-wrap"></div>
 
 <script>
@@ -498,9 +376,7 @@ $(document).ready(function () {
 
     var TODAY = '{{ $today }}';
 
-    /* ════════════════════════════════════════════════════════
-       1.  DIRTY TRACKING
-    ════════════════════════════════════════════════════════ */
+    /* ══ 1. DIRTY TRACKING ══ */
     function origDpStr($row) {
         var v = $row.data('orig-dp');
         return (v !== '' && v !== undefined && v !== null) ? parseFloat(v).toFixed(2) : '';
@@ -512,17 +388,13 @@ $(document).ready(function () {
 
     function checkDirty($row) {
         var dirty = (
-            $row.find('.field-moq').val().trim()      !== ($row.data('orig-moq') + '')           ||
-            $row.find('.field-dispatch').val().trim()  !== ($row.data('orig-dispatch') + '')      ||
-            ($row.find('.field-na').is(':checked') ? 1 : 0) !== parseInt($row.data('orig-na'))   ||
+            $row.find('.field-moq').val().trim()     !== ($row.data('orig-moq') + '')      ||
+            $row.find('.field-dispatch').val().trim() !== ($row.data('orig-dispatch') + '') ||
+            ($row.find('.field-na').is(':checked') ? 1 : 0) !== parseInt($row.data('orig-na')) ||
             curDpStr($row) !== origDpStr($row)
         );
-
-        var $btn = $row.find('.btn-update');
         $row.toggleClass('is-dirty', dirty);
-
-        $btn.prop('disabled', !dirty);
-
+        $row.find('.btn-update').prop('disabled', !dirty);
         $row.find('.field-moq').toggleClass('changed',
             $row.find('.field-moq').val().trim() !== ($row.data('orig-moq') + ''));
         $row.find('.field-dispatch').toggleClass('changed',
@@ -538,14 +410,11 @@ $(document).ready(function () {
         checkDirty($(this).closest('.product-row'));
     });
 
-    /* ════════════════════════════════════════════════════════
-       2.  UPDATE — AJAX per row
-    ════════════════════════════════════════════════════════ */
+    /* ══ 2. UPDATE AJAX ══ */
     $(document).on('click', '.btn-update:not(:disabled)', function () {
-        var $btn  = $(this);
-        var $row  = $btn.closest('.product-row');
-        var pid   = $row.data('product-id');
-
+        var $btn = $(this);
+        var $row = $btn.closest('.product-row');
+        var pid  = $row.data('product-id');
         var curDp = $row.find('.field-dp').val().trim();
         var dpChg = curDpStr($row) !== origDpStr($row);
 
@@ -564,11 +433,10 @@ $(document).ready(function () {
         $.ajax({
             url:    '/admin/product-pricing/update/' + pid,
             method: 'POST',
-            data:    payload,
+            data:   payload,
             success: function (resp) {
                 if (!resp.success) { showToast('danger', resp.message); return; }
 
-                /* Update stored originals */
                 $row.data('orig-moq',      payload.moq);
                 $row.data('orig-dispatch', payload.average_dispatch_time);
                 $row.data('orig-na',       payload.not_available);
@@ -586,7 +454,6 @@ $(document).ready(function () {
                 $row.find('.inline-input').removeClass('changed');
                 $row.addClass('row-saved');
                 setTimeout(function () { $row.removeClass('row-saved'); }, 1700);
-
                 showToast('success', '<i class="fa fa-check-circle"></i> &nbsp;' + resp.message);
             },
             error: function (xhr) {
@@ -600,9 +467,14 @@ $(document).ready(function () {
         });
     });
 
-    /* ════════════════════════════════════════════════════════
-       3.  FILTERS
-    ════════════════════════════════════════════════════════ */
+    /* ══ 3. FILTERS + RENUMBER ══ */
+    function renumberVisible() {
+        var n = 0;
+        $('#pricing-tbody .product-row:visible').each(function () {
+            $(this).find('.sr-no-cell').text(++n);
+        });
+    }
+
     function applyFilters() {
         var prodId      = $('#filter-product').val();
         var priceStatus = $('#filter-price-status').val();
@@ -613,24 +485,15 @@ $(document).ready(function () {
         $('#pricing-tbody .product-row').each(function () {
             var $r = $(this);
 
-            /* product dropdown */
-            if (prodId && $r.data('product-id') + '' !== prodId) {
-                $r.hide(); return;
-            }
-
-            /* price status */
-            if (priceStatus === 'has_price'  && $r.data('has-price') != 1) { $r.hide(); return; }
-            if (priceStatus === 'no_price'   && $r.data('has-price') == 1) { $r.hide(); return; }
-            if (priceStatus === 'today'      && $r.data('is-today')  != 1) { $r.hide(); return; }
-
-            /* search */
+            if (prodId && $r.data('product-id') + '' !== prodId)           { $r.hide(); return; }
+            if (priceStatus === 'has_price' && $r.data('has-price') != 1)  { $r.hide(); return; }
+            if (priceStatus === 'no_price'  && $r.data('has-price') == 1)  { $r.hide(); return; }
+            if (priceStatus === 'today'     && $r.data('is-today')  != 1)  { $r.hide(); return; }
             if (search) {
-                var name = $r.find('.prod-name').text().toLowerCase();
-                var code = $r.find('.prod-code').text().toLowerCase();
+                var name = $r.data('name') || '';
+                var code = $r.data('code') || '';
                 if (name.indexOf(search) === -1 && code.indexOf(search) === -1) { $r.hide(); return; }
             }
-
-            /* not-available */
             if (naOnly && !$r.find('.field-na').is(':checked')) { $r.hide(); return; }
 
             $r.show();
@@ -639,15 +502,33 @@ $(document).ready(function () {
 
         $('#visible-count').text(visible);
         $('#empty-row').toggle(visible === 0);
+        renumberVisible();
+        updatePdfLink();
     }
 
     $('#filter-product, #filter-price-status').on('change', applyFilters);
     $('#filter-search').on('input', applyFilters);
     $('#filter-na').on('change', applyFilters);
 
-    /* ════════════════════════════════════════════════════════
-       4.  TOAST
-    ════════════════════════════════════════════════════════ */
+    /* ══ 4. PDF EXPORT LINK ══ */
+    function updatePdfLink() {
+        var params = new URLSearchParams();
+        var prodId      = $('#filter-product').val();
+        var priceStatus = $('#filter-price-status').val();
+        var search      = $('#filter-search').val().trim();
+        var naOnly      = $('#filter-na').is(':checked');
+
+        if (prodId)      params.set('product_id',    prodId);
+        if (priceStatus) params.set('price_status',  priceStatus);
+        if (search)      params.set('search',         search);
+        if (naOnly)      params.set('not_available',  1);
+
+        $('#btn-export-pdf').attr('href', '{{ route("admin.product-pricing.export-pdf") }}?' + params.toString());
+    }
+
+    updatePdfLink(); // init
+
+    /* ══ 5. TOAST ══ */
     function showToast(type, html) {
         var $t = $('<div class="toast-item toast-' + type + '"></div>').html(html);
         $('#toast-wrap').append($t);
