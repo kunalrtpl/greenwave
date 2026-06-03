@@ -534,6 +534,21 @@ Route::post('/email-templates/{id}',    'EmailTemplateController@update')->name(
 
 		});
 
+		Route::group(['prefix' => 'product-documents', 'as' => 'admin.product-documents.'], function () {
+ 
+		    // Show all products with document status
+		    Route::get('/', 'ProductDocumentController@index')
+		         ->name('index');
+		 
+		    // AJAX POST: upload TL / MSDS for a single product
+		    Route::post('upload/{id}', 'ProductDocumentController@upload')
+		         ->name('upload');
+		 
+		    // AJAX POST: delete a specific document (TL or MSDS)
+		    Route::post('delete/{id}/{field}', 'ProductDocumentController@deleteDocument')
+		         ->name('delete');
+		});
+
 
 	});
 });
