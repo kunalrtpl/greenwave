@@ -75,7 +75,7 @@
         .next-card-icon     { font-size: 28px; margin-bottom: 10px; }
         .next-card-title    { font-size: 12px; font-weight: 700; color: #2e7d32; margin-bottom: 4px; }
         .next-card-body     { font-size: 11px; color: #a5d6a7; line-height: 1.5; }
-
+        .prod-code-text         { font-size: 10px; color: #81c784; margin-top: 2px; }
         /* ── Footer ── */
         .footer             { background: linear-gradient(160deg, #1b5e20 0%, #2e7d32 100%); border-radius: 12px; padding: 28px 32px; text-align: center; }
         .footer-logo-wrap   { display: inline-block; background: #ffffff; border-radius: 10px; padding: 8px 20px; box-shadow: 0 3px 12px rgba(0,0,0,0.15); margin-bottom: 18px; }
@@ -112,13 +112,11 @@
                 <div class="header-divider"></div>
 
                 {{-- Check Circle — using display:table for reliable centering --}}
-                <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 0 auto 18px;">
+               <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto 20px;">
                     <tr>
-                        <td align="center" style="padding: 0;">
-                            <div style="width: 68px; height: 68px; border-radius: 34px; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.55); display: table; margin: 0 auto;">
-                                <div style="display: table-cell; vertical-align: middle; text-align: center; font-size: 32px; color: #ffffff;">
-                                    ✓
-                                </div>
+                        <td width="68" height="68" style="width:68px; height:68px; padding:0;">
+                            <div style="width:68px; height:68px; border-radius:34px; background:rgba(255,255,255,0.15); border:2px solid rgba(255,255,255,0.55); text-align:center; line-height:68px; font-size:32px; color:#ffffff;">
+                                ✓
                             </div>
                         </td>
                     </tr>
@@ -138,6 +136,7 @@
                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                     <tr>
                         <td class="ribbon-ref">● &nbsp;PO Reference: <strong>{{ $po->po_ref_no_string }}</strong></td>
+                        <td class="ribbon-ref">Payment Term (Days): <strong>{{ $po->dealer->payment_term ?? '' }}</strong></td>
                         <td align="right" class="ribbon-status">Status: <strong>{{ ucwords($po->po_status ?? 'Pending') }}</strong></td>
                     </tr>
                 </table>
@@ -213,6 +212,9 @@
                         {{-- Product + Pack Size below --}}
                         <td class="item-product">
                             <div class="item-product-name">{{ $item->product->product_name ?? '—' }}</div>
+                            @if(!empty($item->product->product_code))
+                                <div class="prod-code-text">({{ $item->product->product_code ?? '—' }})</div>
+                            @endif
                             @if($packLabel)
                                 <div class="item-pack-size">{{ $packLabel }}</div>
                             @endif

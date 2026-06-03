@@ -6,7 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Purchase Order Approved</title>
     <style>
-
+ 
         /* ── Reset ── */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         img { border: 0; display: block; }
@@ -111,7 +111,7 @@
         .qty-note-box           { background: #fff7ed; border: 1px solid #fed7aa; border-left: 5px solid #f59e0b; border-radius: 10px; padding: 16px 20px; }
         .qty-note-title         { font-size: 13px; font-weight: 700; color: #92400e; margin-bottom: 5px; }
         .qty-note-body          { font-size: 12px; color: #78350f; line-height: 1.7; }
-
+        .prod-code-text         { font-size: 10px; color: #81c784; margin-top: 2px; }
         /* ── What Happens Next ── */
         .next-box               { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; overflow: hidden; }
         .next-header            { background: #d1fae5; padding: 13px 20px; border-bottom: 1px solid #a7f3d0; text-align: center; }
@@ -196,7 +196,7 @@
         <tr>
             <td class="section">
                 <div class="greeting-box">
-                    <div class="greeting-name">Dear Dealer,</div>
+                    <div class="greeting-name">Dear Dealer ({{ $po->dealer->business_name ?? ($po->dealer->name ?? 'Valued Dealer') }}),</div>
                     <div class="greeting-body">
                         Great news! Your Purchase Order has been <strong>reviewed and approved</strong> by our team.
                         Please find the complete order summary below including approved quantities and pricing details.
@@ -226,6 +226,10 @@
                         <td class="summary-value">{{ \Carbon\Carbon::now()->format('d M Y, h:i A') }}</td>
                         <td class="summary-label">Approved By</td>
                         <td class="summary-value">{{ $approvedBy }}</td>
+                    </tr>
+                    <tr class="summary-row-border">
+                        <td class="summary-label">Payment Term (Days)</td>
+                        <td class="summary-value">{{ $po->dealer->payment_term ?? '' }}</td>
                     </tr>
                     @if(!empty($po->remarks))
                     <tr>
@@ -300,6 +304,9 @@
                         {{-- Product + pack size below --}}
                         <td class="item-product">
                             <div class="item-product-name">{{ $item->product->product_name ?? '—' }}</div>
+                            @if(!empty($item->product->product_code))
+                                <div class="prod-code-text">({{ $item->product->product_code ?? '—' }})</div>
+                            @endif
                             @if($packLabel)
                                 <div class="item-pack-size">{{ $packLabel }}</div>
                             @endif
