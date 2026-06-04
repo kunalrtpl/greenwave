@@ -1518,11 +1518,16 @@ class OrdersController extends Controller
             'purchase_order.dealer',
         ])->whereIn('id', $saleInvoiceIds)->get();
 
-        // ── Load batch_no separately — item() relation does not select it ─
-        // One query for all invoice items keyed by sale_invoice_id
-        $batchNos = DB::table('sale_invoice_items')
-            ->whereIn('sale_invoice_id', $saleInvoiceIds)
-            ->pluck('batch_no', 'sale_invoice_id')
+        // ── Load batch_no + packing_size in one query ────────────────────
+        // Joins sale_invoice_items → purchase_order_items → packing_sizes
+        // Keyed by sale_invoice_id for O(1) lookup inside the loop
+        $itemDetails = DB::table('sale_invoice_items as sii')
+            ->join('purchase_order_items as poi', 'poi.id', '=', 'sii.purchase_order_item_id')
+            ->join('packing_sizes as ps', 'ps.id', '=', 'poi.packing_size_id')
+            ->whereIn('sii.sale_invoice_id', $saleInvoiceIds)
+            ->select('sii.sale_invoice_id', 'sii.batch_no', 'ps.size as packing_size')
+            ->get()
+            ->keyBy('sale_invoice_id')
             ->toArray();
 
         // ── Batch update collectors ──────────────────────────────────────
@@ -1561,8 +1566,11 @@ class OrdersController extends Controller
                 $dispatchedDealer = $poinfo->dealer;
                 $dispatchedPo     = $poinfo;
 
-                $productId = $saleInvoice->item->product_id;
-                $qty       = $saleInvoice->item->qty;
+                $productId   = $saleInvoice->item->product_id;
+                $qty         = $saleInvoice->item->qty;
+                $detail      = $itemDetails[$saleInvoice->id] ?? null;
+                $batchNo     = $detail->batch_no ?? null;
+                $packingSize = $detail->packing_size ?? null;
 
                 // Initialise product group on first encounter
                 if (!isset($dispatchedItemsMap[$productId])) {
@@ -1570,18 +1578,28 @@ class OrdersController extends Controller
                         'product_name' => $saleInvoice->item->productinfo->product_name ?? '—',
                         'product_code' => $saleInvoice->item->productinfo->product_code ?? '',
                         'total_qty'    => 0,
+                        'total_packs'  => 0,
                         'rows'         => [],
                     ];
                 }
 
-                $dispatchedItemsMap[$productId]['total_qty'] += $qty;
+                // Calculate packs for this row
+                $packs = ($packingSize && $packingSize > 0)
+                    ? ($qty / $packingSize)
+                    : null;
+
+                $dispatchedItemsMap[$productId]['total_qty']   += $qty;
+                $dispatchedItemsMap[$productId]['total_packs'] += ($packs ?? 0);
+
                 $dispatchedItemsMap[$productId]['rows'][] = [
-                    'po_ref_no' => $poinfo->po_ref_no_string ?? '—',
-                    'po_date'   => !empty($poinfo->po_date)
-                                       ? \Carbon\Carbon::parse($poinfo->po_date)->format('d/m/Y')
-                                       : \Carbon\Carbon::parse($poinfo->created_at)->format('d/m/Y'),
-                    'qty'       => $qty,
-                    'batch_no'  => $batchNos[$saleInvoice->id] ?? null,
+                    'po_ref_no'    => $poinfo->po_ref_no_string ?? '—',
+                    'po_date'      => !empty($poinfo->po_date)
+                                          ? \Carbon\Carbon::parse($poinfo->po_date)->format('d/m/Y')
+                                          : \Carbon\Carbon::parse($poinfo->created_at)->format('d/m/Y'),
+                    'qty'          => $qty,
+                    'batch_no'     => $batchNo,
+                    'packing_size' => $packingSize,
+                    'packs'        => $packs,
                 ];
 
             } else {
@@ -1625,6 +1643,7 @@ class OrdersController extends Controller
         }
 
         $dispatchedDealer->email = "mkanum786@gmail.com";
+
         // ── Send dispatch email — dealer orders only ─────────────────────
         if ($isDealerOrder && $dispatchedDealer && !empty($dispatchedDealer->email)) {
             \App\Services\EmailService::send(
@@ -1635,8 +1654,8 @@ class OrdersController extends Controller
                     'dispatched_items' => array_values($dispatchedItemsMap), // grouped by product
                     'transport_name'   => $data['transport_name'],
                     'lr_no'            => $data['lr_no'],
-                    'dispatch_date'    => \Carbon\Carbon::parse($data['dispatch_date'])->format('d M Y'), // formatted for subject
-                    'dispatched_by'    =>  auth()->user()->name
+                    'dispatch_date'    => \Carbon\Carbon::parse($data['dispatch_date'])->format('d M Y'),
+                    'dispatched_by'    => auth()->user()->name,
                 ],
                 $dispatchedDealer->email
             );

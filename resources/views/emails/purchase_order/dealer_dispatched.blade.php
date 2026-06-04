@@ -14,7 +14,7 @@
 
         /* ── Page ── */
         body, .bg-page  { background-color: #e8f5e9; font-family: Arial, Helvetica, sans-serif; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
-        .wrapper        { max-width: 660px; width: 100%; background: #ffffff; border-radius: 18px; overflow: hidden; box-shadow: 0 8px 40px rgba(0,100,0,0.14); }
+        .wrapper        { max-width: 700px; width: 100%; background: #ffffff; border-radius: 18px; overflow: hidden; box-shadow: 0 8px 40px rgba(0,100,0,0.14); }
 
         /* ── Header ── */
         .header         { background: linear-gradient(160deg, #1b5e20 0%, #2e7d32 55%, #388e3c 100%); padding: 40px 32px 32px; text-align: center; }
@@ -62,6 +62,7 @@
         .prod-total-cell        { padding: 10px 12px; text-align: center; vertical-align: middle; background: #e8f5e9; border-right: 1px solid #c8e6c9; }
         .prod-total-val         { font-size: 14px; font-weight: 800; color: #1b5e20; }
         .prod-total-unit        { font-size: 10px; color: #81c784; }
+        .prod-total-packs       { font-size: 11px; color: #558b2f; font-weight: 700; margin-top: 3px; }
 
         /* sub rows */
         .sub-row-odd            { background: #ffffff; border-bottom: 1px solid #e8f5e9; }
@@ -76,6 +77,9 @@
         .sub-qty-val            { font-size: 15px; font-weight: 800; color: #1b5e20; }
         .sub-qty-unit           { font-size: 10px; color: #a5d6a7; }
         .sub-batch-no           { font-size: 10px; color: #81c784; margin-top: 3px; }
+
+        .packing-detail-val     { font-size: 12px; font-weight: 700; color: #1b5e20; }
+        .packing-detail-sub     { font-size: 10px; color: #81c784; margin-top: 3px; }
 
         /* footer */
         .items-footer           { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border-top: 2px solid #43a047; }
@@ -177,23 +181,26 @@
                         <td class="transport-label">LR Number</td>
                         <td class="transport-value">{{ $lr_no }}</td>
                     </tr>
-                    <tr>
+                    <tr class="transport-row-border">
                         <td class="transport-label">Dispatch Date</td>
                         <td class="transport-value">{{ \Carbon\Carbon::parse($dispatch_date)->format('d M Y') }}</td>
                     </tr>
                     <tr>
-                        <td class="transport-label">Dispatched By </td>
-                        <td class="transport-value">{{$dispatched_by}}</td>
+                        <td class="transport-label">Dispatched By</td>
+                        <td class="transport-value">{{ $dispatched_by }}</td>
+                    </tr>
+                    <tr>
+                        <td class="transport-label">Payment Term (Days)</td>
+                        <td class="transport-value">{{ $dealer->payment_term ?? '' }}</td>
                     </tr>
                 </table>
             </td>
         </tr>
 
-        {{-- ══════════════════════════════════════════════════ --}}
-        {{-- DISPATCHED ITEMS TABLE                            --}}
-        {{-- S.No | Product (Code) | Total Qty | PO No | Qty  --}}
-        {{--                                          (Batch) --}}
-        {{-- ══════════════════════════════════════════════════ --}}
+        {{-- ══════════════════════════════════════════════════════════ --}}
+        {{-- DISPATCHED ITEMS TABLE                                    --}}
+        {{-- S.No | Product (Code) | Total Qty | PO No | Qty | Packing --}}
+        {{-- ══════════════════════════════════════════════════════════ --}}
         <tr>
             <td class="section">
 
@@ -211,21 +218,23 @@
 
                 <table class="items-table" cellpadding="0" cellspacing="0" border="0">
 
-                    {{-- Header --}}
+                    {{-- ── Table Header ── --}}
                     <tr class="items-header">
                         <td style="width: 28px;">S.No</td>
-                        <td style="text-align: left; width: 34%;">Product Name<br><span style="font-weight: 400; opacity: 0.75; font-size: 9px;">(Product Code)</span></td>
+                        <td style="text-align: left; width: 28%;">Product Name<br><span style="font-weight: 400; opacity: 0.75; font-size: 9px;">(Product Code)</span></td>
                         <td style="width: 13%;">Total Qty</td>
-                        <td style="width: 30%;">P.O. No.<br><span style="font-weight: 400; opacity: 0.75; font-size: 9px;">(Date)</span></td>
-                        <td style="width: 18%;">Qty<br><span style="font-weight: 400; opacity: 0.75; font-size: 9px;">(Batch No.)</span></td>
+                        <td style="width: 22%;">P.O. No.<br><span style="font-weight: 400; opacity: 0.75; font-size: 9px;">(Date)</span></td>
+                        <td style="width: 13%;">Qty<br><span style="font-weight: 400; opacity: 0.75; font-size: 9px;">(Batch No.)</span></td>
+                        <td style="width: 18%;">Packing Detail</td>
                     </tr>
 
-                    @php $grandTotalQty = 0; @endphp
+                    @php $grandTotalQty = 0; $grandTotalPacks = 0; @endphp
 
                     @foreach($dispatched_items as $pIdx => $product)
                     @php
                         $rowCount = count($product['rows']);
-                        $grandTotalQty += $product['total_qty'];
+                        $grandTotalQty   += $product['total_qty'];
+                        $grandTotalPacks += $product['total_packs'] ?? 0;
                     @endphp
 
                         @foreach($product['rows'] as $rIdx => $row)
@@ -249,11 +258,16 @@
                             </td>
                             @endif
 
-                            {{-- Total Qty — rowspan --}}
+                            {{-- Total Qty + Total Packs — rowspan --}}
                             @if($rIdx == 0)
                             <td rowspan="{{ $rowCount }}" class="prod-total-cell">
                                 <span class="prod-total-val">{{ $product['total_qty'] }}</span><br>
                                 <span class="prod-total-unit">kg</span>
+                                <!-- @if(!empty($product['total_packs']) && $product['total_packs'] > 0)
+                                    <div class="prod-total-packs">
+                                        {{ number_format($product['total_packs'], 0) }} packs
+                                    </div>
+                                @endif -->
                             </td>
                             @endif
 
@@ -263,7 +277,7 @@
                                 <div class="po-date">({{ $row['po_date'] }})</div>
                             </td>
 
-                            {{-- Qty + Batch No below --}}
+                            {{-- Qty + Batch No --}}
                             <td class="sub-cell">
                                 <span class="sub-qty-val">{{ $row['qty'] }}</span>
                                 <span class="sub-qty-unit"> kg</span>
@@ -272,18 +286,37 @@
                                 @endif
                             </td>
 
+                            {{-- Packing Detail --}}
+                            <td class="sub-cell">
+                                @if(!empty($row['packing_size']) && $row['packing_size'] > 0 && !empty($row['packs']))
+                                    <span class="packing-detail-val">
+                                        {{ number_format($row['packing_size'], 0) }} kg
+                                        &times;
+                                        {{ number_format($row['packs'], 0) }} packs
+                                    </span>
+                                @else
+                                    <span style="font-size:11px; color:#81c784;">—</span>
+                                @endif
+                            </td>
+
                         </tr>
                         @endforeach
 
                     @endforeach
 
-                    {{-- Footer --}}
+                    {{-- ── Footer Row ── --}}
                     <tr class="items-footer">
-                        <td colspan="3" class="items-footer-left">
+                        <td colspan="2" class="items-footer-left">
                             Total Products: {{ count($dispatched_items) }}
                         </td>
-                        <td colspan="2" class="items-footer-right">
-                            Total: {{ $grandTotalQty }} kg
+                        <td class="items-footer-right">
+                            {{ $grandTotalQty }} kg
+                        </td>
+                        <td class="items-footer-right" colspan="2">
+                            &nbsp;
+                        </td>
+                        <td class="items-footer-right">
+                            {{ number_format($grandTotalPacks, 0) }} packs
                         </td>
                     </tr>
 
