@@ -293,11 +293,19 @@ class UsersController extends Controller
                     foreach ($proofsArr as $key => $proofFile) {
                         if($request->hasFile($proofFile)){
                             $file = $request->file($proofFile);
-                            $img = Image::make($file);
                             $destination = public_path('/images/UserProofs/');
-                            $ext = $file->getClientOriginalExtension();
-                            $mainFilename = $proofFile.uniqid().time().".".$ext;
-                            $img->save($destination.$mainFilename);
+                            $ext = strtolower($file->getClientOriginalExtension());
+                            $mainFilename = $proofFile . uniqid() . time() . '.' . $ext;
+
+                            if ($ext === 'pdf') {
+                                // PDF — just move it, don't pass through Intervention Image
+                                $file->move($destination, $mainFilename);
+                            } else {
+                                // Image — process through Intervention Image as before
+                                $img = Image::make($file);
+                                $img->save($destination . $mainFilename);
+                            }
+
                             $user->$proofFile = $mainFilename;
                         }
                     }
