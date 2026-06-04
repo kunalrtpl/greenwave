@@ -504,6 +504,38 @@ class UsersController extends Controller
         }
     }
 
+    public function deleteUserProof(Request $request)
+    {
+        try {
+            if ($request->ajax()) {
+                $userId    = $request->input('user_id');
+                $proofField = $request->input('proof_field'); // e.g. pan_proof
+
+                $allowedFields = ['pan_proof', 'aadhar_proof', 'driving_license_proof'];
+                if (!in_array($proofField, $allowedFields)) {
+                    return response()->json(['status' => false, 'message' => 'Invalid field.']);
+                }
+
+                $user = User::find($userId);
+                if (!$user) {
+                    return response()->json(['status' => false, 'message' => 'User not found.']);
+                }
+
+                $filePath = public_path('/images/UserProofs/' . $user->$proofField);
+                if ($user->$proofField && file_exists($filePath)) {
+                    @unlink($filePath);
+                }
+
+                $user->$proofField = null;
+                $user->save();
+
+                return response()->json(['status' => true, 'message' => 'File deleted successfully.']);
+            }
+        } catch (\Exception $e) {
+            return response()->json(['status' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
     public function userProducts($id)
     {
         $user = User::findOrFail($id);

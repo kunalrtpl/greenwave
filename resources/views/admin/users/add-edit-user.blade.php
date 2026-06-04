@@ -609,7 +609,7 @@
                 </div>
             </div>
 
-            {{-- ═══════════════════════════════════════════════════════
+           {{-- ═══════════════════════════════════════════════════════
                  SECTION 3 — Identity & Documents
                  ═══════════════════════════════════════════════════════ --}}
             <div class="emp-section sec-orange">
@@ -619,6 +619,7 @@
                 </div>
                 <div class="emp-section-body">
                     <div class="row">
+
                         {{-- PAN --}}
                         <div class="col-md-6">
                             <div class="form-group">
@@ -633,15 +634,27 @@
                             <div class="form-group">
                                 <label class="col-md-4 control-label">PAN Proof</label>
                                 <div class="col-md-8">
-                                    <input type="file" name="pan_proof" class="form-control"/>
+                                    <input type="file" name="pan_proof" class="form-control"
+                                           accept=".jpg,.jpeg,.png,.gif,.bmp,.webp,.pdf"/>
                                     @if(!empty($empdata['pan_proof']))
-                                        <a target="_blank" href="{{ url('/images/UserProofs/'.$empdata['pan_proof']) }}" class="btn btn-xs btn-info btn-att-view" style="margin-top:5px;">
-                                            <i class="fa fa-eye"></i> View
-                                        </a>
+                                        <div class="proof-actions" id="wrapper_pan_proof" style="margin-top:5px;">
+                                            <a target="_blank" href="{{ url('/images/UserProofs/'.$empdata['pan_proof']) }}"
+                                               class="btn btn-xs btn-info btn-att-view">
+                                                <i class="fa fa-eye"></i> View
+                                            </a>
+                                            <a href="javascript:void(0)"
+                                               class="btn btn-xs btn-danger btn-delete-proof"
+                                               data-user-id="{{ $empdata['id'] }}"
+                                               data-proof-field="pan_proof"
+                                               data-wrapper="wrapper_pan_proof">
+                                                <i class="fa fa-trash"></i> Delete
+                                            </a>
+                                        </div>
                                     @endif
                                 </div>
                             </div>
                         </div>
+
                         {{-- Aadhar --}}
                         <div class="col-md-6">
                             <div class="form-group">
@@ -656,15 +669,27 @@
                             <div class="form-group">
                                 <label class="col-md-4 control-label">Aadhar Proof</label>
                                 <div class="col-md-8">
-                                    <input type="file" name="aadhar_proof" class="form-control"/>
+                                    <input type="file" name="aadhar_proof" class="form-control"
+                                           accept=".jpg,.jpeg,.png,.gif,.bmp,.webp,.pdf"/>
                                     @if(!empty($empdata['aadhar_proof']))
-                                        <a target="_blank" href="{{ url('/images/UserProofs/'.$empdata['aadhar_proof']) }}" class="btn btn-xs btn-info btn-att-view" style="margin-top:5px;">
-                                            <i class="fa fa-eye"></i> View
-                                        </a>
+                                        <div class="proof-actions" id="wrapper_aadhar_proof" style="margin-top:5px;">
+                                            <a target="_blank" href="{{ url('/images/UserProofs/'.$empdata['aadhar_proof']) }}"
+                                               class="btn btn-xs btn-info btn-att-view">
+                                                <i class="fa fa-eye"></i> View
+                                            </a>
+                                            <a href="javascript:void(0)"
+                                               class="btn btn-xs btn-danger btn-delete-proof"
+                                               data-user-id="{{ $empdata['id'] }}"
+                                               data-proof-field="aadhar_proof"
+                                               data-wrapper="wrapper_aadhar_proof">
+                                                <i class="fa fa-trash"></i> Delete
+                                            </a>
+                                        </div>
                                     @endif
                                 </div>
                             </div>
                         </div>
+
                         {{-- Driving License --}}
                         <div class="col-md-6">
                             <div class="form-group">
@@ -679,15 +704,27 @@
                             <div class="form-group">
                                 <label class="col-md-4 control-label">DL Proof</label>
                                 <div class="col-md-8">
-                                    <input type="file" name="driving_license_proof" class="form-control"/>
+                                    <input type="file" name="driving_license_proof" class="form-control"
+                                           accept=".jpg,.jpeg,.png,.gif,.bmp,.webp,.pdf"/>
                                     @if(!empty($empdata['driving_license_proof']))
-                                        <a target="_blank" href="{{ url('/images/UserProofs/'.$empdata['driving_license_proof']) }}" class="btn btn-xs btn-info btn-att-view" style="margin-top:5px;">
-                                            <i class="fa fa-eye"></i> View
-                                        </a>
+                                        <div class="proof-actions" id="wrapper_driving_license_proof" style="margin-top:5px;">
+                                            <a target="_blank" href="{{ url('/images/UserProofs/'.$empdata['driving_license_proof']) }}"
+                                               class="btn btn-xs btn-info btn-att-view">
+                                                <i class="fa fa-eye"></i> View
+                                            </a>
+                                            <a href="javascript:void(0)"
+                                               class="btn btn-xs btn-danger btn-delete-proof"
+                                               data-user-id="{{ $empdata['id'] }}"
+                                               data-proof-field="driving_license_proof"
+                                               data-wrapper="wrapper_driving_license_proof">
+                                                <i class="fa fa-trash"></i> Delete
+                                            </a>
+                                        </div>
                                     @endif
                                 </div>
                             </div>
                         </div>
+
                     </div>
                 </div>
             </div>
@@ -1713,6 +1750,39 @@ $(document).ready(function(){
             }
         });
     });
+    $(document).on('click', '.btn-delete-proof', function () {
+    var btn        = $(this);
+    var userId     = btn.data('user-id');
+    var proofField = btn.data('proof-field');
+    var wrapperId  = btn.data('wrapper');
+
+    if (!confirm('Are you sure you want to delete this file?')) return;
+
+    btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Deleting...');
+
+    $.ajax({
+        url  : '/admin/delete-user-proof',
+        type : 'POST',
+        data : {
+            _token      : $('meta[name="csrf-token"]').attr('content'),
+            user_id     : userId,
+            proof_field : proofField
+        },
+        success: function (res) {
+            if (res.status) {
+                // Just remove the View+Delete buttons; file input is already visible
+                $('#' + wrapperId).remove();
+            } else {
+                alert(res.message || 'Could not delete file.');
+                btn.prop('disabled', false).html('<i class="fa fa-trash"></i> Delete');
+            }
+        },
+        error: function () {
+            alert('Server error. Please try again.');
+            btn.prop('disabled', false).html('<i class="fa fa-trash"></i> Delete');
+        }
+    });
+});
 
 }); // end ready
 </script>
