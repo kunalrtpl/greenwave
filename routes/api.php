@@ -302,6 +302,8 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::get('app-manual', 'ExecutiveController@getAppManual');
 
 
+			Route::get('daily-activity', 'DailyActivityController@index');
+
 			// --- App Role Assignment Routes ---
 	        Route::post('roles/get', 'AppRoleAssignmentController@getUserAppRoles');
 	        Route::post('roles/save', 'AppRoleAssignmentController@saveAppRoles');
