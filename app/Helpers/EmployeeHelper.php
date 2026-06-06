@@ -9,22 +9,27 @@ use Illuminate\Support\Facades\DB;
 class EmployeeHelper
 {
     /**
-     * Get all Marketing department employees who have at least one customer,
-     * including per-model counts (Direct Customer, Open, Dealer).
+     * Get Marketing department employees for the main table.
+     *
+     * Rules:
+     *  - Active   + customers = 0  → INCLUDED  (show with zero counts)
+     *  - Active   + customers > 0  → INCLUDED
+     *  - Inactive + customers > 0  → INCLUDED
+     *  - Inactive + customers = 0  → EXCLUDED
      *
      * @param  int   $departmentId   Default: 2 (Marketing)
-     * @return Collection  Each item has: id, name, designation, status,
+     * @return Collection  id, name, designation, status,
      *                     customer_count, direct_count, open_count, dealer_count
      */
     public static function getEmployeesWithCustomerStats(int $departmentId = 2): Collection
     {
         return DB::table('users')
             ->join('user_departments', 'user_departments.user_id', '=', 'users.id')
-            ->join(
+            // LEFT JOIN so employees with 0 customers are still returned
+            ->leftJoin(
                 DB::raw('(SELECT user_id, COUNT(*) as customer_count FROM user_customer_shares GROUP BY user_id) as ucs'),
                 'ucs.user_id', '=', 'users.id'
             )
-            // Direct Customer count
             ->leftJoin(
                 DB::raw('(
                     SELECT ucs2.user_id, COUNT(*) as direct_count
@@ -35,7 +40,6 @@ class EmployeeHelper
                 ) as dc'),
                 'dc.user_id', '=', 'users.id'
             )
-            // Open count
             ->leftJoin(
                 DB::raw('(
                     SELECT ucs3.user_id, COUNT(*) as open_count
@@ -46,7 +50,6 @@ class EmployeeHelper
                 ) as oc'),
                 'oc.user_id', '=', 'users.id'
             )
-            // Dealer count
             ->leftJoin(
                 DB::raw('(
                     SELECT ucs4.user_id, COUNT(*) as dealer_count
@@ -59,14 +62,22 @@ class EmployeeHelper
             )
             ->where('users.type', 'employee')
             ->where('user_departments.department_id', $departmentId)
-            ->where('ucs.customer_count', '>', 0)
+            ->where(function ($q) {
+                // Active employees always shown (even with 0 customers)
+                // Inactive only shown if they have at least 1 customer
+                $q->where('users.status', 1)
+                  ->orWhere(function ($q2) {
+                      $q2->where('users.status', '!=', 1)
+                         ->whereRaw('COALESCE(ucs.customer_count, 0) > 0');
+                  });
+            })
             ->orderBy('users.name')
             ->select(
                 'users.id',
                 'users.name',
                 'users.designation',
                 'users.status',
-                DB::raw('ucs.customer_count'),
+                DB::raw('COALESCE(ucs.customer_count, 0) as customer_count'),
                 DB::raw('COALESCE(dc.direct_count, 0) as direct_count'),
                 DB::raw('COALESCE(oc.open_count, 0) as open_count'),
                 DB::raw('COALESCE(dlc.dealer_count, 0) as dealer_count')
@@ -76,30 +87,42 @@ class EmployeeHelper
     }
 
     /**
-     * Get all Marketing department employees who have at least one customer.
-     * Used for the "Move To" dropdown.
+     * Get employees for the "Move To" dropdown.
+     *
+     * Rules:
+     *  - Active   + any customer count → INCLUDED (can receive customers)
+     *  - Inactive + customers > 0      → INCLUDED
+     *  - Inactive + customers = 0      → EXCLUDED
      *
      * @param  int   $departmentId
-     * @return Collection  Each item has: id, name, designation, status, customer_count
+     * @return Collection  id, name, designation, status, customer_count
      */
     public static function getEmployeesWithCustomers(int $departmentId = 2): Collection
     {
         return DB::table('users')
             ->join('user_departments', 'user_departments.user_id', '=', 'users.id')
-            ->join(
+            ->leftJoin(
                 DB::raw('(SELECT user_id, COUNT(*) as customer_count FROM user_customer_shares GROUP BY user_id) as ucs'),
                 'ucs.user_id', '=', 'users.id'
             )
             ->where('users.type', 'employee')
             ->where('user_departments.department_id', $departmentId)
-            ->where('ucs.customer_count', '>', 0)
+            ->where(function ($q) {
+                // Active employees always appear — they can receive customers even if they have none yet
+                // Inactive only appear if they already have customers
+                $q->where('users.status', 1)
+                  ->orWhere(function ($q2) {
+                      $q2->where('users.status', '!=', 1)
+                         ->whereRaw('COALESCE(ucs.customer_count, 0) > 0');
+                  });
+            })
             ->orderBy('users.name')
             ->select(
                 'users.id',
                 'users.name',
                 'users.designation',
                 'users.status',
-                DB::raw('ucs.customer_count')
+                DB::raw('COALESCE(ucs.customer_count, 0) as customer_count')
             )
             ->distinct()
             ->get();

@@ -463,15 +463,23 @@
                                         @endif
                                     </td>
                                     <td class="td-cnt">
-                                        <span class="cnt-pill total">{{ $emp->customer_count }}</span>
+                                        @if($emp->customer_count > 0)
+                                            <span class="cnt-pill total">{{ $emp->customer_count }}</span>
+                                        @else
+                                            <span class="cnt-zero">—</span>
+                                        @endif
                                     </td>
                                     <td style="text-align:center;">
-                                        <button type="button"
-                                                class="btn-move-row state-idle"
-                                                data-user-id="{{ $emp->id }}"
-                                                data-user-name="{{ $emp->name }}">
-                                            <i class="fa fa-exchange"></i> Move Customers
-                                        </button>
+                                        @if($emp->customer_count > 0)
+                                            <button type="button"
+                                                    class="btn-move-row state-idle"
+                                                    data-user-id="{{ $emp->id }}"
+                                                    data-user-name="{{ $emp->name }}">
+                                                <i class="fa fa-exchange"></i> Move Customers
+                                            </button>
+                                        @else
+                                            <span style="font-size:11px;color:#cbd5e0;font-style:italic;">No customers</span>
+                                        @endif
                                     </td>
                                 </tr>
                             @empty
