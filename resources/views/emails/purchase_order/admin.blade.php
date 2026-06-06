@@ -11,7 +11,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         img { border: 0; display: block; }
         table { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
-
+        
         /* ── Page ── */
         body, .bg-page    { background-color: #e8f5e9; font-family: Arial, Helvetica, sans-serif; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
         .wrapper          { max-width: 680px; width: 100%; background: #ffffff; border-radius: 18px; overflow: hidden; box-shadow: 0 8px 40px rgba(0,100,0,0.14); }
@@ -36,7 +36,7 @@
         .greeting-box     { background: #f1f8e9; border: 1px solid #c5e1a5; border-left: 5px solid #558b2f; border-radius: 10px; padding: 20px 22px; }
         .greeting-name    { font-size: 15px; color: #33691e; font-weight: 700; margin-bottom: 8px; }
         .greeting-body    { font-size: 13px; color: #558b2f; line-height: 1.8; }
-
+        .prod-code-text         { font-size: 10px; color: #81c784; margin-top: 2px; }
         /* ── Order Info Table ── */
         .info-table               { width: 100%; border: 1px solid #c8e6c9; border-radius: 10px; overflow: hidden; }
         .info-table-header        { background: linear-gradient(135deg, #2e7d32 0%, #388e3c 100%); }
@@ -301,6 +301,9 @@
                         {{-- Product + Pack Size below --}}
                         <td class="item-product">
                             <div class="item-product-name">{{ $item->product->product_name ?? '—' }}</div>
+                            @if(!empty($item->product->product_code))
+                                <div class="prod-code-text">({{ $item->product->product_code ?? '—' }})</div>
+                            @endif
                             @if($packLabel)
                                 <div class="item-pack-size">{{ $packLabel }}</div>
                             @endif
