@@ -7,13 +7,15 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Redirect;
 use DB;
 use Session;
-use PDF;
+use Mpdf\Mpdf;
+use Mpdf\Config\ConfigVariables;
+use Mpdf\Config\FontVariables;
 use App\Helpers\EmployeeHelper;
 
 class MoveCustomerController extends Controller
 {
     /**
-     * Show the Move Customers form.
+     * Show the Move Customers page — employee table view.
      * GET /admin/move-customers
      */
     public function index()
@@ -21,15 +23,17 @@ class MoveCustomerController extends Controller
         Session::put('active', 'moveCustomers');
         $title = 'Move Customers';
 
-        $employees   = EmployeeHelper::getEmployeesWithCustomers();
+        // Full employee list with per-model counts for the table
+        $employeeStats = EmployeeHelper::getEmployeesWithCustomerStats();
+
+        // Target employees for the "Move To" dropdown
         $moveToUsers = EmployeeHelper::getEmployeesWithCustomers();
 
-        return view('admin.move_customers.index', compact('title', 'employees', 'moveToUsers'));
+        return view('admin.move_customers.index', compact('title', 'employeeStats', 'moveToUsers'));
     }
 
     /**
      * Load customers for the selected employee + all subordinates (recursive).
-     * Subordinates with 0 customers AND inactive status are excluded.
      * GET /admin/move-customers/load-customers?user_id=X
      */
     public function loadCustomers(Request $request)
@@ -45,23 +49,17 @@ class MoveCustomerController extends Controller
             return response()->json(['error' => 'User not found'], 404);
         }
 
-        // Build full hierarchy: selected user + all subordinates (recursive)
         $allUserIds = $this->getAllSubordinateIds($userId);
         array_unshift($allUserIds, (int)$userId);
         $allUserIds = array_unique($allUserIds);
-
-        // ── Filter out inactive subordinates who have 0 customers ──
-        // Root user always stays regardless of status or customer count
         $allUserIds = $this->filterValidSubordinates($allUserIds, (int)$userId);
 
-        // Fetch user info for all IDs
         $usersMap = DB::table('users')
             ->whereIn('id', $allUserIds)
             ->select('id', 'name', 'designation', 'status')
             ->get()
             ->keyBy('id');
 
-        // Fetch customers via user_customer_shares — no N+1
         $shares = DB::table('user_customer_shares')
             ->whereIn('user_customer_shares.user_id', $allUserIds)
             ->join('customers', 'customers.id', '=', 'user_customer_shares.customer_id')
@@ -86,19 +84,17 @@ class MoveCustomerController extends Controller
             ->orderBy('customers.name')
             ->get();
 
-        // Group by user_id
         $grouped = [];
         foreach ($shares as $share) {
             $grouped[$share->user_id][] = $share;
         }
 
-        // Build response in hierarchy order
         $result = [];
         foreach ($allUserIds as $uid) {
-            $user = isset($usersMap[$uid]) ? $usersMap[$uid] : null;
+            $user = $usersMap[$uid] ?? null;
             if (!$user) continue;
 
-            $customers = isset($grouped[$uid]) ? $grouped[$uid] : [];
+            $customers = $grouped[$uid] ?? [];
 
             $result[] = [
                 'user_id'     => $uid,
@@ -124,20 +120,17 @@ class MoveCustomerController extends Controller
             ];
         }
 
-        return response()->json([
-            'success' => true,
-            'data'    => $result,
-        ]);
+        return response()->json(['success' => true, 'data' => $result]);
     }
 
     /**
-     * Export customer list to PDF respecting filters.
+     * Export customer list to PDF.
      * GET /admin/move-customers/export-pdf
      */
     public function exportPdf(Request $request)
     {
-        $userId    = $request->get('user_id');
-        $bmFilter  = $request->get('bm_filter', '');
+        $userId     = $request->get('user_id');
+        $bmFilter   = $request->get('bm_filter', '');
         $cityFilter = $request->get('city_filter', '');
 
         if (!$userId) {
@@ -151,20 +144,17 @@ class MoveCustomerController extends Controller
             return Redirect::route('admin.move-customers.index');
         }
 
-        // Build hierarchy
         $allUserIds = $this->getAllSubordinateIds($userId);
         array_unshift($allUserIds, (int)$userId);
         $allUserIds = array_unique($allUserIds);
         $allUserIds = $this->filterValidSubordinates($allUserIds, (int)$userId);
 
-        // Fetch user info
         $usersMap = DB::table('users')
             ->whereIn('id', $allUserIds)
             ->select('id', 'name', 'designation')
             ->get()
             ->keyBy('id');
 
-        // Fetch customers
         $query = DB::table('user_customer_shares')
             ->whereIn('user_customer_shares.user_id', $allUserIds)
             ->join('customers', 'customers.id', '=', 'user_customer_shares.customer_id')
@@ -184,38 +174,30 @@ class MoveCustomerController extends Controller
             ->orderBy('user_customer_shares.user_id')
             ->orderBy('customers.name');
 
-        // Apply BM filter
         if ($bmFilter) {
             if (in_array($bmFilter, ['Direct Customer', 'Open'])) {
                 $query->where('customers.business_model', $bmFilter);
             } else {
-                // Dealer name filter
                 $query->where('customers.business_model', 'Dealer')
                       ->where('dealers.business_name', $bmFilter);
             }
         }
-
-        // Apply city filter
         if ($cityFilter) {
             $query->where('customer_cities.city_name', $cityFilter);
         }
 
         $shares = $query->get();
 
-        // Group by user_id
         $grouped = [];
         foreach ($shares as $share) {
             $grouped[$share->user_id][] = $share;
         }
 
-        // Build groups array
         $groups = [];
         foreach ($allUserIds as $uid) {
-            $user = isset($usersMap[$uid]) ? $usersMap[$uid] : null;
-            if (!$user) continue;
-            $customers = isset($grouped[$uid]) ? $grouped[$uid] : [];
-            if (empty($customers)) continue; // skip empty groups in PDF
-
+            $user      = $usersMap[$uid] ?? null;
+            $customers = $grouped[$uid] ?? [];
+            if (!$user || empty($customers)) continue;
             $groups[] = [
                 'user_name'   => $user->name,
                 'designation' => $user->designation,
@@ -228,16 +210,39 @@ class MoveCustomerController extends Controller
         if ($bmFilter)   $filterLabel .= 'Business Model: ' . $bmFilter . '  ';
         if ($cityFilter) $filterLabel .= 'City: ' . $cityFilter;
 
-        $pdf = PDF::loadView('admin.move_customers.pdf', [
-            'groups'       => $groups,
-            'rootUser'     => $rootUser,
-            'filterLabel'  => trim($filterLabel),
-            'generatedAt'  => now()->format('d/m/Y H:i'),
-        ])->setPaper('a4', 'landscape');
+        // ── Render Blade to HTML ──────────────────────────────────
+        $html = view('admin.move_customers.pdf', [
+            'groups'      => $groups,
+            'rootUser'    => $rootUser,
+            'filterLabel' => trim($filterLabel),
+            'generatedAt' => now()->format('d/m/Y H:i'),
+        ])->render();
 
-        $filename = 'customers_' . str_replace(' ', '_', $rootUser->name) . '_' . now()->format('Ymd_His') . '.pdf';
+        // ── Generate PDF with mPDF ────────────────────────────────
+        $mpdf = new Mpdf([
+            'mode'              => 'utf-8',
+            'format'            => 'A4',
+            'orientation'       => 'P',
+            'margin_top'        => 12,
+            'margin_bottom'     => 14,
+            'margin_left'       => 10,
+            'margin_right'      => 10,
+            'default_font'      => 'dejavusans',
+            'default_font_size' => 9,
+            'tempDir'           => storage_path('app/mpdf-temp'),
+        ]);
 
-        return $pdf->download($filename);
+        $mpdf->SetTitle('Customer List — ' . $rootUser->name);
+        $mpdf->SetAuthor('Greenwave');
+        $mpdf->WriteHTML($html);
+
+        $filename = 'customers_' . str_replace(' ', '_', $rootUser->name)
+                  . '_' . now()->format('Ymd_His') . '.pdf';
+
+        return response($mpdf->Output($filename, 'S'), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     }
 
     /**
@@ -313,21 +318,13 @@ class MoveCustomerController extends Controller
             Session::flash('error', 'An error occurred: ' . $e->getMessage());
         }
 
-        $queryParams = [];
-        if ($sourceEmployeeId) $queryParams['source_employee'] = $sourceEmployeeId;
-        if ($bmFilter)         $queryParams['bm_filter']       = $bmFilter;
-        if ($cityFilter)       $queryParams['city_filter']     = $cityFilter;
-
-        return Redirect::route('admin.move-customers.index', $queryParams);
+        return Redirect::route('admin.move-customers.index');
     }
 
-    /**
-     * Filter user IDs: keep root always, keep subordinates only if
-     * they have customers > 0 OR are active (inactive + 0 customers → excluded).
-     */
+    // ── Private helpers ──────────────────────────────────────
+
     private function filterValidSubordinates(array $allUserIds, int $rootUserId): array
     {
-        // Get customer counts per user
         $counts = DB::table('user_customer_shares')
             ->whereIn('user_id', $allUserIds)
             ->select('user_id', DB::raw('COUNT(*) as cnt'))
@@ -335,7 +332,6 @@ class MoveCustomerController extends Controller
             ->pluck('cnt', 'user_id')
             ->toArray();
 
-        // Get status per user
         $statuses = DB::table('users')
             ->whereIn('id', $allUserIds)
             ->pluck('status', 'id')
@@ -343,34 +339,19 @@ class MoveCustomerController extends Controller
 
         $filtered = [];
         foreach ($allUserIds as $uid) {
-            // Root user always included
-            if ($uid === $rootUserId) {
-                $filtered[] = $uid;
-                continue;
-            }
-
-            $customerCount = isset($counts[$uid]) ? (int)$counts[$uid] : 0;
+            if ($uid === $rootUserId) { $filtered[] = $uid; continue; }
+            $customerCount = (int)($counts[$uid] ?? 0);
             $isActive      = isset($statuses[$uid]) && $statuses[$uid] == 1;
-
-            // Exclude: inactive AND zero customers
-            if (!$isActive && $customerCount === 0) {
-                continue;
-            }
-
+            if (!$isActive && $customerCount === 0) continue;
             $filtered[] = $uid;
         }
 
         return $filtered;
     }
 
-    /**
-     * Recursively get all subordinate user IDs.
-     */
     private function getAllSubordinateIds($userId, $visited = [])
     {
-        if (in_array($userId, $visited)) {
-            return [];
-        }
+        if (in_array($userId, $visited)) return [];
         $visited[] = $userId;
 
         $subordinateIds = DB::table('user_departments')
@@ -379,12 +360,11 @@ class MoveCustomerController extends Controller
             ->toArray();
 
         $subordinateIds = array_unique($subordinateIds);
-
         $allIds = [];
+
         foreach ($subordinateIds as $subId) {
             $allIds[] = (int)$subId;
-            $deeper   = $this->getAllSubordinateIds($subId, $visited);
-            $allIds   = array_merge($allIds, $deeper);
+            $allIds   = array_merge($allIds, $this->getAllSubordinateIds($subId, $visited));
         }
 
         return array_unique($allIds);

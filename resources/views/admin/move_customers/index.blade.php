@@ -2,7 +2,7 @@
 
 @section('content')
 <style>
-    /* ── Layout & Base ─────────────────────────────────────── */
+    /* ── Base ─────────────────────────────────── */
     .page-content { padding-bottom: 90px !important; }
 
     .portlet.light.bordered {
@@ -10,39 +10,220 @@
         box-shadow: 0 2px 10px rgba(0,0,0,0.07);
     }
 
-    /* ── Top Control Panel ─────────────────────────────────── */
-    .control-panel {
+    /* ── Search / Filter Bar ─────────────────── */
+    .top-filter-bar {
         background: #f8f9fb;
         border: 1px solid #e1e5ec;
         border-radius: 8px;
-        padding: 20px 24px;
-        margin-bottom: 24px;
+        padding: 16px 20px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
     }
-    .control-panel .form-group { margin-bottom: 0; }
-    .control-panel label {
+    .top-filter-bar label {
         font-weight: 600;
         color: #4a5568;
-        font-size: 13px;
+        font-size: 12px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        margin-bottom: 6px;
-        display: block;
+        margin: 0;
+        white-space: nowrap;
     }
-    .control-panel select.form-control {
+    .top-filter-bar .search-input {
         border-radius: 6px !important;
         border: 1px solid #c8d0dc;
-        height: 42px;
+        height: 38px;
         font-size: 14px;
+        padding: 6px 12px;
+        min-width: 220px;
+        outline: none;
+    }
+    .top-filter-bar .search-input:focus {
+        border-color: #3598dc;
+        box-shadow: 0 0 0 3px rgba(53,152,220,0.12);
+    }
+    .emp-count-badge {
+        margin-left: auto;
+        font-size: 12px;
+        color: #718096;
+        white-space: nowrap;
+    }
+
+    /* ── Employee Table ──────────────────────── */
+    .emp-table-wrap {
+        border: 1px solid #e1e5ec;
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 24px;
+    }
+    .emp-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+    .emp-table thead th {
+        background: #f0f4f9;
+        color: #4a5568;
+        font-weight: 700;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        padding: 11px 14px;
+        border-bottom: 2px solid #dce4f0;
+        white-space: nowrap;
+    }
+    .emp-table thead th:first-child { width: 46px; text-align: center; }
+    .emp-table thead th.th-num  { text-align: center; }
+    .emp-table thead th.th-cnt  { text-align: center; min-width: 90px; }
+    .emp-table thead th.th-act  { text-align: center; min-width: 140px; }
+
+    .emp-table tbody tr {
+        border-bottom: 1px solid #f0f4f8;
+        transition: background 0.15s;
+    }
+    .emp-table tbody tr:last-child { border-bottom: none; }
+    .emp-table tbody tr:hover { background: #fafcff; }
+    .emp-table tbody tr.row-active { background: #f0f7ff; }
+
+    .emp-table td { padding: 11px 14px; vertical-align: middle; }
+    .emp-table td.td-no { text-align: center; color: #a0aec0; font-size: 12px; }
+    .emp-table td.td-cnt { text-align: center; }
+
+    /* Employee name cell */
+    .emp-cell { display: flex; align-items: center; gap: 10px; }
+    .emp-avatar-sm {
+        width: 32px; height: 32px;
+        border-radius: 50%;
+        background: #3598dc;
+        color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 12px; font-weight: 700;
+        flex-shrink: 0;
+    }
+    .emp-name-text  { font-weight: 600; color: #2d3748; line-height: 1.2; }
+    .emp-desig-text { font-size: 11px; color: #a0aec0; }
+    .badge-inactive {
+        display: inline-block;
+        font-size: 10px; padding: 1px 7px;
+        background: #fed7d7; color: #c53030;
+        border-radius: 8px !important;
+        font-weight: 700; margin-left: 4px;
+    }
+
+    /* Count pills */
+    .cnt-pill {
+        display: inline-block;
+        padding: 3px 11px;
+        border-radius: 10px !important;
+        font-size: 11px; font-weight: 700;
+        min-width: 34px; text-align: center;
+    }
+    .cnt-pill.direct { background: #e6fffa; color: #276749; }
+    .cnt-pill.open   { background: #fffbeb; color: #975a16; }
+    .cnt-pill.dealer { background: #ebf8ff; color: #2b6cb0; }
+    .cnt-pill.total  { background: #edf2f7; color: #4a5568; }
+    .cnt-zero        { color: #cbd5e0; font-size: 12px; }
+
+    /* Move button */
+    .btn-move-row {
+        border-radius: 20px !important;
+        font-size: 12px; font-weight: 700;
+        padding: 6px 16px;
+        letter-spacing: 0.3px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+    .btn-move-row.state-idle {
+        background: #3598dc; color: #fff;
+        box-shadow: 0 2px 6px rgba(53,152,220,0.3);
+    }
+    .btn-move-row.state-idle:hover {
+        background: #2980b9;
+        box-shadow: 0 4px 10px rgba(53,152,220,0.4);
+        transform: translateY(-1px);
+    }
+    .btn-move-row.state-active {
+        background: #e53e3e; color: #fff;
+        box-shadow: 0 2px 6px rgba(229,62,62,0.3);
+    }
+    .btn-move-row.state-active:hover {
+        background: #c53030;
+        box-shadow: 0 4px 10px rgba(229,62,62,0.4);
+        transform: translateY(-1px);
+    }
+
+    /* No results row */
+    .no-emp-row td {
+        text-align: center;
+        padding: 36px 20px;
+        color: #a0aec0;
+        font-size: 13px;
+    }
+    .no-emp-row i { font-size: 28px; display: block; margin-bottom: 8px; }
+
+    /* ── Customers Panel (inline, below table) ── */
+    #customers-panel { display: none; margin-top: 4px; }
+
+    .panel-header-bar {
+        display: flex; align-items: center; gap: 12px;
+        background: linear-gradient(135deg, #3598dc 0%, #2980b9 100%);
+        border-radius: 8px 8px 0 0;
+        padding: 12px 20px;
+        flex-wrap: wrap;
+    }
+    .panel-header-bar .ph-title {
+        font-weight: 700; color: #fff; font-size: 14px;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .panel-header-bar .ph-close {
+        margin-left: auto;
+        background: rgba(255,255,255,0.2);
+        border: none; color: #fff;
+        width: 28px; height: 28px;
+        border-radius: 50%; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 13px;
+        transition: background 0.2s;
+        flex-shrink: 0;
+    }
+    .panel-header-bar .ph-close:hover { background: rgba(255,255,255,0.35); }
+
+    /* ── Filter Bar ─────────────────────────────────────────── */
+    .filter-bar {
+        display: flex; align-items: center; gap: 10px;
+        background: #f8f9fb; border: 1px solid #e1e5ec;
+        border-top: none;
+        padding: 10px 16px;
+        flex-wrap: wrap;
+    }
+    .filter-bar label { font-size: 12px; font-weight: 600; color: #4a5568; margin: 0; white-space: nowrap; }
+    .filter-bar select { border-radius: 6px !important; font-size: 13px; height: 36px; min-width: 180px; border: 1px solid #c8d0dc; }
+    .filter-count { font-size: 12px; color: #718096; }
+    .btn-export-pdf {
+        margin-left: auto;
+        border-radius: 6px !important;
+        font-size: 12px; font-weight: 700;
+        padding: 6px 16px;
+        letter-spacing: 0.3px;
+        white-space: nowrap;
     }
 
     /* ── Employee Group Card ────────────────────────────────── */
-    .employee-group {
+    .customers-body {
         border: 1px solid #e1e5ec;
-        border-radius: 8px;
-        margin-bottom: 18px;
+        border-top: none;
+        border-radius: 0 0 8px 8px;
         overflow: hidden;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.04);
     }
+    .employee-group {
+        border-bottom: 1px solid #edf2f7;
+        overflow: hidden;
+    }
+    .employee-group:last-child { border-bottom: none; }
 
     .employee-header {
         display: flex;
@@ -55,7 +236,6 @@
         transition: background 0.2s;
     }
     .employee-header:hover { background: #e3ecf9; }
-
     .employee-header.is-root {
         background: linear-gradient(135deg, #3598dc 0%, #2980b9 100%);
         border-bottom: none;
@@ -68,35 +248,25 @@
     .emp-avatar {
         width: 36px; height: 36px;
         border-radius: 50%;
-        background: #3598dc;
-        color: #fff;
+        background: #3598dc; color: #fff;
         display: flex; align-items: center; justify-content: center;
         font-size: 14px; font-weight: 700;
         flex-shrink: 0;
     }
     .is-root .emp-avatar { background: rgba(255,255,255,0.3); }
-
-    .emp-name { font-weight: 600; color: #2d3748; font-size: 14px; line-height: 1.2; }
+    .emp-name        { font-weight: 600; color: #2d3748; font-size: 14px; line-height: 1.2; }
     .emp-designation { font-size: 12px; color: #718096; }
 
     .emp-right { display: flex; align-items: center; gap: 12px; }
     .badge-count {
-        background: #3598dc;
-        color: #fff;
-        padding: 2px 10px;
-        border-radius: 12px !important;
-        font-size: 11px;
-        font-weight: 700;
+        background: #3598dc; color: #fff;
+        padding: 2px 10px; border-radius: 12px !important;
+        font-size: 11px; font-weight: 700;
     }
 
-    /* Select All */
     .select-all-wrap {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 12px;
-        font-weight: 600;
-        color: #4a5568;
+        display: flex; align-items: center; gap: 6px;
+        font-size: 12px; font-weight: 600; color: #4a5568;
     }
     .is-root .select-all-wrap { color: #fff; }
     .select-all-cb { transform: scale(1.2); cursor: pointer; accent-color: #3598dc; }
@@ -104,12 +274,10 @@
     .chevron-icon { color: #888; transition: transform 0.25s; font-size: 13px; }
     .employee-header.collapsed .chevron-icon { transform: rotate(-90deg); }
 
-    /* ── Customer List ──────────────────────────────────────── */
+    /* Customer items */
     .customer-list { padding: 0; }
-
     .customer-item {
-        display: flex;
-        align-items: center;
+        display: flex; align-items: center;
         padding: 11px 18px;
         border-bottom: 1px solid #f0f4f8;
         transition: background 0.15s;
@@ -127,11 +295,10 @@
         flex-shrink: 0; margin-right: 12px;
     }
     .cust-cb-wrap { margin-right: 14px; display: flex; align-items: center; flex-shrink: 0; }
-    .cust-cb { transform: scale(1.2); cursor: pointer; accent-color: #3598dc; }
-
-    .cust-info   { flex: 1 1 0; min-width: 0; }
-    .cust-center { flex: 1 1 0; min-width: 0; padding-left: 16px; border-left: 1px solid #edf2f7; }
-    .cust-right  { flex: 1 1 0; min-width: 0; display: flex; justify-content: flex-end; align-items: center; }
+    .cust-cb      { transform: scale(1.2); cursor: pointer; accent-color: #3598dc; }
+    .cust-info    { flex: 1 1 0; min-width: 0; }
+    .cust-center  { flex: 1 1 0; min-width: 0; padding-left: 16px; border-left: 1px solid #edf2f7; }
+    .cust-right   { flex: 1 1 0; min-width: 0; display: flex; justify-content: flex-end; align-items: center; }
 
     .cust-name { font-weight: 500; color: #2d3748; font-size: 13px; display: block; line-height: 1.3; }
     .cust-meta { font-size: 11px; color: #a0aec0; display: block; margin-top: 1px; }
@@ -153,18 +320,14 @@
     .cust-badge.bm-open   { background: #fffbeb; color: #975a16; }
     .cust-badge.bm-dealer { background: #ebf8ff; color: #2b6cb0; }
 
-    /* Empty State */
     .empty-state { text-align: center; padding: 30px 20px; color: #a0aec0; }
     .empty-state i { font-size: 32px; margin-bottom: 10px; display: block; }
 
-    /* Placeholder */
-    #customers-placeholder {
-        text-align: center; padding: 50px 20px; color: #a0aec0;
-        border: 2px dashed #e1e5ec; border-radius: 8px;
-    }
-    #customers-placeholder i { font-size: 40px; margin-bottom: 12px; display: block; }
+    /* Loader */
+    #loader { display:none; text-align:center; padding:40px; }
+    #loader .spinner { font-size:30px; color:#3598dc; }
 
-    /* ── Floating Save Bar ──────────────────────────────────── */
+    /* ── Floating Move Bar ──────────────────────────────────── */
     .floating-save-bar {
         position: fixed; bottom: 0; left: 0; right: 0;
         background: rgba(255,255,255,0.95);
@@ -200,33 +363,6 @@
     .btn-move:hover    { box-shadow: 0 6px 18px rgba(53,152,220,0.45); transform: translateY(-1px); }
     .btn-move:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
-    /* Loader */
-    #loader { display: none; text-align: center; padding: 40px; }
-    #loader .spinner { font-size: 30px; color: #3598dc; }
-
-    /* ── Filter Bar ─────────────────────────────────────────── */
-    .filter-bar {
-        display: flex; align-items: center; gap: 10px;
-        background: #f8f9fb; border: 1px solid #e1e5ec;
-        border-radius: 8px; padding: 10px 16px;
-        margin-bottom: 16px; flex-wrap: wrap;
-    }
-    .filter-bar label { font-size: 12px; font-weight: 600; color: #4a5568; margin: 0; white-space: nowrap; }
-    .filter-bar select { border-radius: 6px !important; font-size: 13px; height: 36px; min-width: 180px; border: 1px solid #c8d0dc; }
-    .filter-count { font-size: 12px; color: #718096; }
-
-    /* PDF button */
-    .btn-export-pdf {
-        margin-left: auto;
-        border-radius: 6px !important;
-        font-size: 12px;
-        font-weight: 700;
-        padding: 6px 16px;
-        letter-spacing: 0.3px;
-        white-space: nowrap;
-    }
-    .btn-export-pdf:hover { opacity: 0.88; }
-
     /* Alerts */
     .alert { border-radius: 6px !important; }
 </style>
@@ -258,42 +394,114 @@
                     </div>
                 @endif
 
-                {{-- ── Step 1: Select Source Employee ── --}}
-                <div class="control-panel">
-                    <div class="row">
-                        <div class="col-md-5">
-                            <div class="form-group">
-                                <label><i class="fa fa-user"></i> &nbsp;Select Source Employee</label>
-                                <select id="source-employee" class="form-control">
-                                    <option value="">-- Choose Employee --</option>
-                                    @foreach($employees as $emp)
-                                        <option value="{{ $emp->id }}">
-                                            {{ $emp->name }}
-                                            @if($emp->designation) ({{ $emp->designation }}) @endif
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
+                {{-- ── Employee Search / Filter Bar ── --}}
+                <div class="top-filter-bar">
+                    <label><i class="fa fa-search"></i> &nbsp;Search Employee:</label>
+                    <input type="text"
+                           id="emp-search"
+                           class="form-control search-input"
+                           placeholder="Type name or designation...">
+                    <span class="emp-count-badge">
+                        Showing <strong id="emp-visible-count">{{ count($employeeStats) }}</strong>
+                        of {{ count($employeeStats) }} employees
+                    </span>
+                </div>
+
+                {{-- ── Employee Table ── --}}
+                <div class="emp-table-wrap">
+                    <table class="emp-table" id="emp-table">
+                        <thead>
+                            <tr>
+                                <th class="th-num">Sr.No</th>
+                                <th>Employee Name</th>
+                                <th class="th-cnt">Direct Customer</th>
+                                <th class="th-cnt">Open</th>
+                                <th class="th-cnt">Dealer</th>
+                                <th class="th-cnt">Total</th>
+                                <th class="th-act">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="emp-tbody">
+                            @forelse($employeeStats as $i => $emp)
+                                <tr class="emp-row" data-user-id="{{ $emp->id }}" data-name="{{ strtolower($emp->name) }}" data-desig="{{ strtolower($emp->designation ?? '') }}">
+                                    <td class="td-no">{{ $i + 1 }}</td>
+                                    <td>
+                                        <div class="emp-cell">
+                                            <div class="emp-avatar-sm">{{ substr($emp->name, 0, 1) }}</div>
+                                            <div>
+                                                <div class="emp-name-text">
+                                                    {{ $emp->name }}
+                                                    @if(!$emp->status)
+                                                        <span class="badge-inactive">Inactive</span>
+                                                    @endif
+                                                </div>
+                                                @if($emp->designation)
+                                                    <div class="emp-desig-text">{{ $emp->designation }}</div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="td-cnt">
+                                        @if($emp->direct_count > 0)
+                                            <span class="cnt-pill direct">{{ $emp->direct_count }}</span>
+                                        @else
+                                            <span class="cnt-zero">—</span>
+                                        @endif
+                                    </td>
+                                    <td class="td-cnt">
+                                        @if($emp->open_count > 0)
+                                            <span class="cnt-pill open">{{ $emp->open_count }}</span>
+                                        @else
+                                            <span class="cnt-zero">—</span>
+                                        @endif
+                                    </td>
+                                    <td class="td-cnt">
+                                        @if($emp->dealer_count > 0)
+                                            <span class="cnt-pill dealer">{{ $emp->dealer_count }}</span>
+                                        @else
+                                            <span class="cnt-zero">—</span>
+                                        @endif
+                                    </td>
+                                    <td class="td-cnt">
+                                        <span class="cnt-pill total">{{ $emp->customer_count }}</span>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <button type="button"
+                                                class="btn-move-row state-idle"
+                                                data-user-id="{{ $emp->id }}"
+                                                data-user-name="{{ $emp->name }}">
+                                            <i class="fa fa-exchange"></i> Move Customers
+                                        </button>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="7" style="text-align:center; padding:30px; color:#a0aec0;">
+                                        <i class="fa fa-inbox" style="font-size:28px;display:block;margin-bottom:8px;"></i>
+                                        No employees with customers found.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                {{-- ── Inline Customers Panel ── --}}
+                <div id="customers-panel">
+
+                    {{-- Panel header --}}
+                    <div class="panel-header-bar">
+                        <div class="ph-title">
+                            <i class="fa fa-users"></i>
+                            <span id="panel-title-text">Customers</span>
                         </div>
+                        <button class="ph-close" id="btn-close-panel" title="Close">
+                            <i class="fa fa-times"></i>
+                        </button>
                     </div>
-                </div>
 
-                {{-- Loader --}}
-                <div id="loader">
-                    <i class="fa fa-circle-o-notch fa-spin spinner"></i>
-                    <p style="color:#a0aec0; margin-top:10px;">Loading customers...</p>
-                </div>
-
-                {{-- Placeholder --}}
-                <div id="customers-placeholder">
-                    <i class="fa fa-users"></i>
-                    <p>Select an employee above to load their customers.</p>
-                </div>
-
-                {{-- ── Filter Bar (hidden until customers load) ── --}}
-                <div id="filter-bar-wrapper" style="display:none;">
+                    {{-- Filter bar --}}
                     <div class="filter-bar">
-
                         <label><i class="fa fa-filter"></i> &nbsp;Business Model:</label>
                         <select id="bm-filter" class="form-control">
                             <option value="">-- All Models --</option>
@@ -305,26 +513,28 @@
                         <label style="margin-left:4px;"><i class="fa fa-map-marker"></i> &nbsp;City:</label>
                         <select id="city-filter" class="form-control">
                             <option value="">-- All Cities --</option>
-                            {{-- City options injected by JS --}}
                         </select>
 
                         <span class="filter-count">
                             Showing <strong id="filter-visible-count">0</strong> customers
                         </span>
 
-                        {{-- PDF Export — href kept in sync by JS --}}
-                        <a href="#"
-                           id="btn-export-pdf"
-                           class="btn btn-danger btn-sm btn-export-pdf"
-                           target="_blank">
+                        <a href="#" id="btn-export-pdf"
+                           class="btn btn-danger btn-sm btn-export-pdf" target="_blank">
                             <i class="fa fa-file-pdf-o"></i> Export PDF
                         </a>
-
                     </div>
-                </div>
 
-                {{-- Customers Container --}}
-                <div id="customers-container" style="display:none;"></div>
+                    {{-- Loader --}}
+                    <div id="loader" style="border:1px solid #e1e5ec; border-top:none; border-radius: 0 0 8px 8px;">
+                        <i class="fa fa-circle-o-notch fa-spin spinner"></i>
+                        <p style="color:#a0aec0; margin-top:10px;">Loading customers...</p>
+                    </div>
+
+                    {{-- Customers Container --}}
+                    <div class="customers-body" id="customers-container"></div>
+
+                </div>{{-- /customers-panel --}}
 
             </div>{{-- /portlet-body --}}
         </div>{{-- /portlet --}}
@@ -373,52 +583,96 @@ $(document).ready(function () {
     var currentSourceUserId = null;
     var exportPdfBase       = '{{ route("admin.move-customers.export-pdf") }}';
 
-    /* ════════════════════════════════════════════════════════
-       RESTORE FROM URL on page load
-    ════════════════════════════════════════════════════════ */
-    (function restoreFromUrl() {
-        var params        = new URLSearchParams(window.location.search);
-        var savedEmployee = params.get('source_employee');
-        var savedBm       = params.get('bm_filter');    // null if absent
-        var savedCity     = params.get('city_filter');  // null if absent
+    /* ════════════════════════════════════════
+       EMPLOYEE SEARCH FILTER
+    ════════════════════════════════════════ */
+    $('#emp-search').on('input', function () {
+        var q = $(this).val().toLowerCase().trim();
+        var visible = 0;
+        $('.emp-row').each(function () {
+            var name  = $(this).data('name')  || '';
+            var desig = $(this).data('desig') || '';
+            var show  = !q || name.indexOf(q) !== -1 || desig.indexOf(q) !== -1;
+            $(this).toggle(show);
+            if (show) visible++;
+        });
+        $('#emp-visible-count').text(visible);
 
-        if (savedEmployee) {
-            $('#source-employee').val(savedEmployee);
-            loadCustomers(savedEmployee, savedBm, savedCity);
+        // Show no-results row if needed
+        var $noRow = $('#emp-no-results');
+        if (visible === 0) {
+            if ($noRow.length === 0) {
+                $('#emp-tbody').append(
+                    '<tr id="emp-no-results" class="no-emp-row"><td colspan="7">' +
+                    '<i class="fa fa-search"></i>No employees match "<strong>' + escHtml(q) + '</strong>".</td></tr>'
+                );
+            }
+        } else {
+            $noRow.remove();
         }
-    })();
+    });
 
-    /* ════════════════════════════════════════════════════════
-       LOAD CUSTOMERS
-    ════════════════════════════════════════════════════════ */
-    function loadCustomers(userId, bmFilterToRestore, cityFilterToRestore) {
-        if (!userId) {
-            $('#customers-container').hide().empty();
-            $('#customers-placeholder').show();
-            resetSelectionUI();
-            var url = new URL(window.location.href);
-            url.searchParams.delete('source_employee');
-            url.searchParams.delete('bm_filter');
-            url.searchParams.delete('city_filter');
-            history.replaceState(null, '', url.toString());
+    /* ════════════════════════════════════════
+       MOVE CUSTOMERS BUTTON (per row)
+    ════════════════════════════════════════ */
+    $(document).on('click', '.btn-move-row', function () {
+        var userId   = $(this).data('user-id');
+        var userName = $(this).data('user-name');
+
+        // If already active row — close panel
+        if ($(this).hasClass('state-active')) {
+            closePanel();
             return;
         }
 
+        // Reset all other buttons
+        $('.btn-move-row').removeClass('state-active').addClass('state-idle')
+            .html('<i class="fa fa-exchange"></i> Move Customers');
+        $('.emp-row').removeClass('row-active');
+
+        // Activate this row
+        $(this).removeClass('state-idle').addClass('state-active')
+               .html('<i class="fa fa-times"></i> Close');
+        $(this).closest('tr').addClass('row-active');
+
+        loadCustomers(userId, userName, null, null);
+    });
+
+    /* ════════════════════════════════════════
+       CLOSE PANEL
+    ════════════════════════════════════════ */
+    $('#btn-close-panel').on('click', function () {
+        closePanel();
+    });
+
+    function closePanel() {
+        $('.btn-move-row').removeClass('state-active').addClass('state-idle')
+            .html('<i class="fa fa-exchange"></i> Move Customers');
+        $('.emp-row').removeClass('row-active');
+        $('#customers-panel').slideUp(200);
+        resetSelectionUI();
+        currentSourceUserId = null;
+    }
+
+    /* ════════════════════════════════════════
+       LOAD CUSTOMERS
+    ════════════════════════════════════════ */
+    function loadCustomers(userId, userName, bmFilterToRestore, cityFilterToRestore) {
         currentSourceUserId = userId;
         $('#from-user-id-input').val(userId);
         $('#source-employee-hidden').val(userId);
 
-        var url = new URL(window.location.href);
-        url.searchParams.set('source_employee', userId);
-        if (bmFilterToRestore === null) {
-            url.searchParams.delete('bm_filter');
-            url.searchParams.delete('city_filter');
-        }
-        history.replaceState(null, '', url.toString());
+        $('#panel-title-text').text('Customers — ' + userName);
 
-        $('#customers-placeholder').hide();
         $('#customers-container').hide().empty();
         $('#loader').show();
+        if ($('#customers-panel').is(':visible')) {
+            // Already open — just scroll back to top of panel immediately
+            $('html, body').stop(true).animate({ scrollTop: $('#customers-panel').offset().top - 10 }, 300);
+        } else {
+            $('#customers-panel').slideDown(250);
+        }
+        resetFilters();
         resetSelectionUI();
 
         $.ajax({
@@ -428,19 +682,19 @@ $(document).ready(function () {
             success: function (resp) {
                 $('#loader').hide();
                 if (!resp.success || !resp.data || resp.data.length === 0) {
-                    $('#filter-bar-wrapper').hide();
-                    $('#customers-placeholder').show();
+                    $('#customers-container').html(
+                        '<div class="empty-state" style="padding:40px;"><i class="fa fa-inbox"></i><p>No customers found for this employee.</p></div>'
+                    ).show();
+                    scrollToPanel();
                     return;
                 }
 
                 renderCustomerGroups(resp.data);
                 $('#customers-container').show();
                 populateFilters(resp.data);
-                $('#filter-bar-wrapper').show();
 
-                var restoreBm   = (bmFilterToRestore   !== null) ? bmFilterToRestore   : '';
-                var restoreCity = (cityFilterToRestore  !== null) ? cityFilterToRestore : '';
-
+                var restoreBm   = bmFilterToRestore   || '';
+                var restoreCity = cityFilterToRestore  || '';
                 $('#bm-filter').val(restoreBm);
                 $('#city-filter').val(restoreCity);
 
@@ -449,35 +703,31 @@ $(document).ready(function () {
                 } else {
                     updateFilterCount();
                 }
-
                 updatePdfExportLink();
+                scrollToPanel();
             },
             error: function () {
                 $('#loader').hide();
-                alert('Failed to load customers. Please try again.');
-                $('#customers-placeholder').show();
+                $('#customers-container').html(
+                    '<div class="empty-state" style="padding:40px;"><i class="fa fa-exclamation-circle"></i><p>Failed to load customers. Please try again.</p></div>'
+                ).show();
+                scrollToPanel();
             }
         });
     }
 
-    $('#source-employee').on('change', function () {
-        loadCustomers($(this).val(), null, null);
-    });
-
-    /* ════════════════════════════════════════════════════════
+    /* ════════════════════════════════════════
        RENDER GROUPS
-    ════════════════════════════════════════════════════════ */
+    ════════════════════════════════════════ */
     function renderCustomerGroups(groups) {
         var html = '';
-
         $.each(groups, function (i, group) {
             var isRoot     = group.is_root;
             var customers  = group.customers || [];
-            var groupId    = 'group-' + group.user_id;
             var collapseId = 'collapse-' + group.user_id;
             var initials   = getInitials(group.user_name);
 
-            html += '<div class="employee-group" id="' + groupId + '" data-user-id="' + group.user_id + '">';
+            html += '<div class="employee-group" data-user-id="' + group.user_id + '">';
 
             /* Header */
             html += '<div class="employee-header' + (isRoot ? ' is-root' : '') + '" data-toggle-collapse="' + collapseId + '">';
@@ -500,15 +750,13 @@ $(document).ready(function () {
 
             /* Customer list */
             html += '<div class="customer-list" id="' + collapseId + '">';
-
             if (customers.length === 0) {
                 html += '<div class="empty-state"><i class="fa fa-inbox"></i><p>No customers assigned.</p></div>';
             } else {
                 $.each(customers, function (ci, cust) {
-                    var cbVal      = group.user_id + '_' + cust.customer_id;
-                    var bmVal      = cust.business_model || 'Open';
+                    var cbVal       = group.user_id + '_' + cust.customer_id;
+                    var bmVal       = cust.business_model || 'Open';
                     var dealerBmVal = (bmVal === 'Dealer' && cust.dealer_business_name) ? cust.dealer_business_name : '';
-
                     var bmClass = 'bm-open';
                     var bmLabel = bmVal;
                     if (bmVal === 'Direct Customer') { bmClass = 'bm-direct'; bmLabel = 'Direct Customer'; }
@@ -535,20 +783,17 @@ $(document).ready(function () {
                     html += '</div>';
                 });
             }
-
-            html += '</div>'; // /customer-list
-            html += '</div>'; // /employee-group
+            html += '</div></div>'; // /customer-list /employee-group
         });
 
         $('#customers-container').html(html);
         bindEvents();
     }
 
-    /* ════════════════════════════════════════════════════════
+    /* ════════════════════════════════════════
        BIND EVENTS
-    ════════════════════════════════════════════════════════ */
+    ════════════════════════════════════════ */
     function bindEvents() {
-
         $(document).off('click', '.employee-header').on('click', '.employee-header', function () {
             var targetId = $(this).data('toggle-collapse');
             $('#' + targetId).slideToggle(200);
@@ -588,13 +833,12 @@ $(document).ready(function () {
         $allCb.prop('indeterminate', checked > 0 && checked < total);
     }
 
-    /* ════════════════════════════════════════════════════════
+    /* ════════════════════════════════════════
        FLOATING BAR
-    ════════════════════════════════════════════════════════ */
+    ════════════════════════════════════════ */
     function updateSelectionUI() {
         var $checked = $('.cust-cb:checked');
         var count    = $checked.length;
-
         $('#selected-count').text(count);
 
         var $hidden = $('#hidden-customer-inputs').empty();
@@ -604,7 +848,7 @@ $(document).ready(function () {
 
         $('#bm-filter-hidden').val($('#bm-filter').val());
         $('#city-filter-hidden').val($('#city-filter').val());
-        $('#source-employee-hidden').val($('#source-employee').val());
+        $('#source-employee-hidden').val(currentSourceUserId || '');
 
         if (count > 0) {
             $('#floating-bar').slideDown(200);
@@ -620,17 +864,20 @@ $(document).ready(function () {
         $('#hidden-customer-inputs').empty();
         $('#floating-bar').hide();
         $('#btn-move').prop('disabled', true);
-        $('#filter-bar-wrapper').hide();
+        updatePdfExportLink();
+    }
+
+    function resetFilters() {
         $('#bm-filter').val('');
         $('#bm-filter option:gt(2)').remove();
         $('#city-filter').val('');
         $('#city-filter option:gt(0)').remove();
-        updatePdfExportLink();
+        $('#filter-visible-count').text(0);
     }
 
-    /* ════════════════════════════════════════════════════════
-       FORM SUBMIT VALIDATION
-    ════════════════════════════════════════════════════════ */
+    /* ════════════════════════════════════════
+       FORM SUBMIT
+    ════════════════════════════════════════ */
     $('#move-form').on('submit', function (e) {
         var toUser = $('#move-to-select').val();
         var count  = $('.cust-cb:checked').length;
@@ -648,44 +895,34 @@ $(document).ready(function () {
 
         var allSameUser = true;
         $('.cust-cb:checked').each(function () {
-            var originalUserId = $(this).val().split('_')[0];
-            if (originalUserId != toUser) { allSameUser = false; return false; }
+            if ($(this).val().split('_')[0] != toUser) { allSameUser = false; return false; }
         });
-
         if (allSameUser) {
             e.preventDefault();
             alert('All selected customers already belong to the target employee.');
             return;
         }
-
         if (!confirm('Move ' + count + ' customer(s) to the selected employee? This action cannot be undone.')) {
             e.preventDefault();
         }
     });
 
-    /* ════════════════════════════════════════════════════════
+    /* ════════════════════════════════════════
        FILTERS
-    ════════════════════════════════════════════════════════ */
+    ════════════════════════════════════════ */
     function populateFilters(groups) {
-        var dealers = {};
-        var cities  = {};
-
+        var dealers = {}, cities = {};
         $.each(groups, function (i, group) {
             $.each(group.customers || [], function (j, cust) {
-                if (cust.business_model === 'Dealer' && cust.dealer_business_name) {
+                if (cust.business_model === 'Dealer' && cust.dealer_business_name)
                     dealers[cust.dealer_business_name] = true;
-                }
-                if (cust.city_name) {
-                    cities[cust.city_name] = true;
-                }
+                if (cust.city_name) cities[cust.city_name] = true;
             });
         });
-
         $('#bm-filter option:gt(2)').remove();
         $.each(Object.keys(dealers).sort(), function (i, name) {
             $('#bm-filter').append('<option value="' + name + '">' + name + '</option>');
         });
-
         $('#city-filter option:gt(0)').remove();
         $.each(Object.keys(cities).sort(), function (i, name) {
             $('#city-filter').append('<option value="' + name + '">' + name + '</option>');
@@ -701,11 +938,9 @@ $(document).ready(function () {
             var bm       = $(this).data('bm')        || '';
             var dealerBm = $(this).data('dealer-bm') || '';
             var city     = $(this).data('city')      || '';
-
-            var bmMatch   = !bmVal   || bm === bmVal || dealerBm === bmVal;
-            var cityMatch = !cityVal || city === cityVal;
-            var show      = bmMatch && cityMatch;
-
+            var bmMatch  = !bmVal   || bm === bmVal || dealerBm === bmVal;
+            var cityMatch= !cityVal || city === cityVal;
+            var show     = bmMatch && cityMatch;
             $(this).toggle(show);
 
             var groupId = $(this).closest('.employee-group').data('user-id');
@@ -724,17 +959,10 @@ $(document).ready(function () {
         });
 
         updateFilterCount();
-
         if (!silent) {
-            var url = new URL(window.location.href);
-            if (bmVal)   { url.searchParams.set('bm_filter',   bmVal);   } else { url.searchParams.delete('bm_filter'); }
-            if (cityVal) { url.searchParams.set('city_filter', cityVal); } else { url.searchParams.delete('city_filter'); }
-            history.replaceState(null, '', url.toString());
+            $('#bm-filter-hidden').val(bmVal);
+            $('#city-filter-hidden').val(cityVal);
         }
-
-        $('#bm-filter-hidden').val(bmVal);
-        $('#city-filter-hidden').val(cityVal);
-
         updatePdfExportLink();
     }
 
@@ -742,45 +970,40 @@ $(document).ready(function () {
         $('#filter-visible-count').text($('.customer-item:visible').length);
     }
 
-    $('#bm-filter, #city-filter').on('change', function () {
-        applyFilter(false);
-    });
+    $('#bm-filter, #city-filter').on('change', function () { applyFilter(false); });
 
-    /* ════════════════════════════════════════════════════════
-       PDF EXPORT — keep href in sync with current filters
-    ════════════════════════════════════════════════════════ */
+    /* ════════════════════════════════════════
+       PDF EXPORT
+    ════════════════════════════════════════ */
     function updatePdfExportLink() {
-        if (!currentSourceUserId) {
-            $('#btn-export-pdf').attr('href', '#');
-            return;
-        }
-        var bmVal   = $('#bm-filter').val();
-        var cityVal = $('#city-filter').val();
-
+        if (!currentSourceUserId) { $('#btn-export-pdf').attr('href', '#'); return; }
         var href = exportPdfBase + '?user_id=' + encodeURIComponent(currentSourceUserId);
-        if (bmVal)   href += '&bm_filter='   + encodeURIComponent(bmVal);
-        if (cityVal) href += '&city_filter=' + encodeURIComponent(cityVal);
-
+        var bm   = $('#bm-filter').val();
+        var city = $('#city-filter').val();
+        if (bm)   href += '&bm_filter='   + encodeURIComponent(bm);
+        if (city) href += '&city_filter=' + encodeURIComponent(city);
         $('#btn-export-pdf').attr('href', href);
     }
 
-    /* ════════════════════════════════════════════════════════
+    /* ════════════════════════════════════════
        HELPERS
-    ════════════════════════════════════════════════════════ */
+    ════════════════════════════════════════ */
     function getInitials(name) {
-        return name.trim().split(' ')
-            .slice(0, 2)
-            .map(function (w) { return w[0].toUpperCase(); })
-            .join('');
+        return name.trim().split(' ').slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join('');
     }
-
     function escHtml(str) {
         if (!str) return '';
-        return String(str)
-            .replace(/&/g,  '&amp;')
-            .replace(/</g,  '&lt;')
-            .replace(/>/g,  '&gt;')
-            .replace(/"/g, '&quot;');
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    /* ════════════════════════════════════════
+       SCROLL TO BOTTOM OF CUSTOMER PANEL
+    ════════════════════════════════════════ */
+    function scrollToPanel() {
+        setTimeout(function () {
+            var top = $('#customers-panel').offset().top - 10;
+            $('html, body').stop(true).animate({ scrollTop: top }, 400);
+        }, 50);
     }
 
 });

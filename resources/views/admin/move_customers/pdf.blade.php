@@ -1,246 +1,441 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-<title>Customer List - {{ $rootUser->name }}</title>
+<meta charset="UTF-8"/>
 <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
-    body {
-        font-family: DejaVu Sans, sans-serif;
-        font-size: 10px;
-        color: #2d3748;
-        background: #fff;
-    }
+body {
+    font-family: DejaVu Sans, sans-serif;
+    font-size: 9px;
+    color: #2F3B2A; 
+    background: #ffffff;
+    line-height: 1.5;
+}
 
-    /* ── Header ── */
-    .pdf-header {
-        background: #2980b9;
-        color: #fff;
-        padding: 12px 16px;
-        margin-bottom: 14px;
-        border-radius: 4px;
-    }
-    .pdf-header .title {
-        font-size: 15px;
-        font-weight: bold;
-        letter-spacing: 0.5px;
-    }
-    .pdf-header .sub {
-        font-size: 9px;
-        opacity: 0.85;
-        margin-top: 3px;
-    }
-    .pdf-header .meta {
-        font-size: 8.5px;
-        opacity: 0.75;
-        margin-top: 2px;
-    }
+/* ═══════════════════════════════════════
+   CLEAN HORIZONTAL EXECUTIVE HEADER
+═══════════════════════════════════════ */
+.hdr-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
 
-    /* ── Filter pill ── */
-    .filter-pill {
-        display: inline-block;
-        background: #ebf5ff;
-        border: 1px solid #bee3f8;
-        color: #2b6cb0;
-        padding: 3px 10px;
-        border-radius: 10px;
-        font-size: 8.5px;
-        font-weight: bold;
-        margin-bottom: 12px;
-    }
+.hdr-left {
+    vertical-align: top;
+    text-align: left;
+}
 
-    /* ── Employee group ── */
-    .emp-group { margin-bottom: 16px; page-break-inside: avoid; }
+.hdr-right {
+    vertical-align: top;
+    text-align: right;
+}
 
-    .emp-header {
-        background: #eef3fb;
-        border-left: 4px solid #3598dc;
-        padding: 6px 10px;
-        margin-bottom: 0;
-        border-radius: 2px 2px 0 0;
-    }
-    .emp-header.is-root {
-        background: #2980b9;
-        border-left-color: #1a5c8c;
-        color: #fff;
-    }
-    .emp-name {
-        font-size: 11px;
-        font-weight: bold;
-        color: #2d3748;
-    }
-    .emp-header.is-root .emp-name { color: #fff; }
-    .emp-desig {
-        font-size: 8.5px;
-        color: #718096;
-        margin-top: 1px;
-    }
-    .emp-header.is-root .emp-desig { color: rgba(255,255,255,0.8); }
-    .emp-count {
-        float: right;
-        font-size: 9px;
-        font-weight: bold;
-        color: #3598dc;
-        margin-top: 2px;
-    }
-    .emp-header.is-root .emp-count { color: rgba(255,255,255,0.9); }
+.logo-img {
+    width: 150px;
+    height: auto;
+    margin-bottom: 12px;
+}
 
-    /* ── Customer Table ── */
-    .cust-table {
-        width: 100%;
-        border-collapse: collapse;
-        border: 1px solid #e1e5ec;
-        border-top: none;
-        border-radius: 0 0 2px 2px;
-    }
-    .cust-table thead th {
-        background: #f4f6fa;
-        color: #4a5568;
-        font-size: 8px;
-        font-weight: bold;
-        text-transform: uppercase;
-        letter-spacing: 0.4px;
-        padding: 5px 8px;
-        border-bottom: 1px solid #dde3ec;
-        border-right: 1px solid #e8ecf2;
-        text-align: left;
-    }
-    .cust-table tbody td {
-        padding: 5px 8px;
-        border-bottom: 1px solid #f0f4f8;
-        border-right: 1px solid #f0f4f8;
-        vertical-align: top;
-        font-size: 9px;
-        color: #2d3748;
-    }
-    .cust-table tbody tr:nth-child(even) td { background: #fafbfd; }
-    .cust-table tbody tr:last-child td { border-bottom: none; }
+.hdr-title-label {
+    font-size: 7.5px;
+    color: #7A8A73;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
 
-    .sr-no { color: #a0aec0; font-size: 8px; text-align: center; width: 20px; }
-    .cust-name-cell { font-weight: bold; font-size: 9px; }
-    .cust-meta { font-size: 8px; color: #718096; margin-top: 1px; }
+.hdr-user-name {
+    font-size: 15px;
+    font-weight: bold;
+    color: #1A2416;
+    letter-spacing: -0.2px;
+}
 
-    /* BM badges */
-    .bm-badge {
-        display: inline-block;
-        font-size: 7.5px;
-        font-weight: bold;
-        padding: 1px 6px;
-        border-radius: 8px;
-    }
-    .bm-direct { background: #e6fffa; color: #276749; }
-    .bm-open   { background: #fffbeb; color: #975a16; }
-    .bm-dealer { background: #ebf8ff; color: #2b6cb0; }
+.hdr-user-desig {
+    font-size: 8.5px;
+    color: #60705A;
+    margin-top: 1px;
+}
 
-    /* ── Footer ── */
-    .pdf-footer {
-        margin-top: 20px;
-        padding-top: 8px;
-        border-top: 1px solid #e1e5ec;
-        font-size: 8px;
-        color: #a0aec0;
-        text-align: center;
-    }
+.hdr-doc-type {
+    font-size: 12px;
+    font-weight: bold;
+    color: #44543C;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 4px;
+}
 
-    /* ── Summary row ── */
-    .summary-row {
-        margin-bottom: 12px;
-        font-size: 9px;
-        color: #4a5568;
-    }
-    .summary-row strong { color: #2d3748; }
+.hdr-date {
+    font-size: 8px;
+    color: #7A8A73;
+}
+
+/* ═══════════════════════════════════════
+   PREMIUM STRIP KPI METRICS
+═══════════════════════════════════════ */
+.summary-strip {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-bottom: 25px;
+}
+
+.s-box {
+    text-align: center;
+    vertical-align: middle;
+    padding: 10px 6px;
+    border: 1px solid #D6E0D2;
+    background-color: #FAFCF9; 
+}
+.s-box + .s-box { border-left: none; }
+
+.s-box-total { border-top: 3px solid #708A63; width: 16%; }
+.s-box-d     { border-top: 3px solid #BDD27B; width: 16%; }
+.s-box-o     { border-top: 3px solid #A4C497; width: 16%; }
+.s-box-dl    { border-top: 3px solid #CBD6C7; width: 16%; }
+.s-box-spacer { width: 36%; border: none; background: transparent; }
+
+.s-big    { font-size: 20px; font-weight: bold; display: block; line-height: 1; margin-bottom: 2px; color: #1A2416; }
+.s-tag    { font-size: 7.5px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.8px; display: block; color: #60705A; }
+
+/* ═══════════════════════════════════════
+   DATA SECTIONS & ROWS
+═══════════════════════════════════════ */
+.emp-group { 
+    margin-bottom: 22px; 
+    page-break-inside: avoid; 
+}
+
+.group-wrap {
+    border: 1px solid #D6E0D2;
+}
+
+.bm-section-table { 
+    width: 100%; 
+    border-collapse: collapse; 
+}
+
+.bm-sec-td {
+    background-color: #EAF2E6; 
+    padding: 8px 12px;
+    font-size: 8.5px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #2F3B2A;
+    vertical-align: middle;
+}
+
+.bm-sec-count-td {
+    background-color: #EAF2E6;
+    font-size: 8.5px;
+    font-weight: bold;
+    color: #44543C;
+    text-align: right;
+    padding-right: 14px;
+    vertical-align: middle;
+    width: 150px;
+}
+
+.cust-table { 
+    width: 100%; 
+    border-collapse: collapse; 
+}
+
+.cust-num-td {
+    width: 40px;
+    text-align: center;
+    vertical-align: middle;
+    padding: 10px 0;
+    color: #8AA081;
+    font-size: 8.5px;
+    font-weight: bold;
+    border-bottom: 1px solid #EBF0E9;
+}
+
+.cust-info-td {
+    vertical-align: middle;
+    padding: 10px 12px;
+    border-bottom: 1px solid #EBF0E9;
+}
+
+.cust-city-td {
+    vertical-align: middle;
+    padding: 10px 16px;
+    text-align: right;
+    width: 180px;
+    border-bottom: 1px solid #EBF0E9;
+    white-space: nowrap;
+}
+
+.cust-name-text {
+    font-size: 9.5px;
+    font-weight: bold;
+    color: #1A2416;
+}
+
+.cust-meta-text {
+    font-size: 8px;
+    color: #6A7A64;
+    margin-top: 2px;
+}
+
+.city-text { 
+    font-size: 8.5px; 
+    font-weight: bold; 
+    color: #44543C; 
+}
+
+.cust-even td { 
+    background-color: #FAFCF9; 
+}
+
+.section-divider { 
+    height: 1px; 
+    background-color: #D6E0D2; 
+}
+
+/* ═══════════════════════════════════════
+   PREMIUM FOOTER
+═══════════════════════════════════════ */
+.footer-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 30px;
+    border-top: 1px solid #BDD27B;
+    padding-top: 8px;
+}
+.footer-left  { font-size: 8px; font-weight: bold; color: #44543C; }
+.footer-mid   { font-size: 7.5px; color: #7A8A73; text-align: center; }
+.footer-right { font-size: 7.5px; color: #7A8A73; text-align: right; }
 </style>
 </head>
 <body>
 
-{{-- Header --}}
-<div class="pdf-header">
-    <div class="title">Customer List &mdash; {{ $rootUser->name }}</div>
-    <div class="sub">
-        {{ $rootUser->designation ?? '' }}
-    </div>
-    <div class="meta">Generated: {{ $generatedAt }}</div>
-</div>
-
-{{-- Active filters --}}
-@if($filterLabel)
-    <div class="filter-pill">&#9881; Filters: {{ $filterLabel }}</div>
-@endif
-
-{{-- Summary --}}
 @php
-    $totalCustomers = collect($groups)->sum(function($g) { return count($g['customers']); });
-    $totalGroups    = count($groups);
-@endphp
-<div class="summary-row">
-    Showing <strong>{{ $totalCustomers }}</strong> customer(s)
-    across <strong>{{ $totalGroups }}</strong> employee(s).
-</div>
-
-{{-- Groups --}}
-@foreach($groups as $group)
-@php $custCount = count($group['customers']); @endphp
-<div class="emp-group">
-
-    {{-- Employee header --}}
-    <div class="emp-header {{ $group['is_root'] ? 'is-root' : '' }}">
-        <span class="emp-count">{{ $custCount }} Customer(s)</span>
-        <div class="emp-name">{{ $group['user_name'] }}{{ $group['is_root'] ? ' (Selected)' : '' }}</div>
-        <div class="emp-desig">{{ $group['designation'] ?? '' }}</div>
-    </div>
-
-    {{-- Customer table --}}
-    <table class="cust-table">
-        <thead>
-            <tr>
-                <th class="sr-no">#</th>
-                <th style="width:22%;">Customer Name</th>
-                <th style="width:16%;">Contact Person</th>
-                <th style="width:13%;">Department</th>
-                <th style="width:13%;">City</th>
-                <th style="width:13%;">Business Model</th>
-                <th style="width:13%;">Category</th>
-            </tr>
-        </thead>
-        <tbody>
-        @foreach($group['customers'] as $i => $c)
-        @php
+    $totalAll = $totalDirect = $totalOpen = $totalDealer = 0;
+    foreach ($groups as $g) {
+        foreach ($g['customers'] as $c) {
+            $totalAll++;
             $bm = $c->business_model ?? 'Open';
-            $bmClass = 'bm-open';
-            $bmLabel = $bm;
-            if ($bm === 'Direct Customer') { $bmClass = 'bm-direct'; }
-            elseif ($bm === 'Dealer')      { $bmClass = 'bm-dealer'; $bmLabel = $c->dealer_business_name ?: 'Dealer'; }
-        @endphp
-        <tr>
-            <td class="sr-no">{{ $i + 1 }}</td>
-            <td>
-                <div class="cust-name-cell">{{ $c->customer_name }}</div>
-            </td>
-            <td>
-                <div>{{ $c->contact_person_name ?? '—' }}</div>
-                @if($c->customer_designation)
-                    <div class="cust-meta">{{ $c->customer_designation }}</div>
-                @endif
-            </td>
-            <td>{{ $c->department ?? '—' }}</td>
-            <td>{{ $c->city_name ?? '—' }}</td>
-            <td>
-                <span class="bm-badge {{ $bmClass }}">{{ $bmLabel }}</span>
-            </td>
-            <td>{{ $c->category ?? '—' }}</td>
-        </tr>
-        @endforeach
-        </tbody>
-    </table>
+            if ($bm === 'Direct Customer') $totalDirect++;
+            elseif ($bm === 'Open')        $totalOpen++;
+            else                           $totalDealer++;
+        }
+    }
+@endphp
 
+{{-- HORIZONTAL HEADER SETUP --}}
+<table class="hdr-table" cellspacing="0" cellpadding="0">
+    <tr>
+        <td class="hdr-left">
+            <img src="https://g2app.in/public/images/greenwave-logo-1-275-sl.jpg" class="logo-img" />
+            <div class="hdr-title-label">Prepared For</div>
+            <div class="hdr-user-name">{{ $rootUser->name }}</div>
+            @if($rootUser->designation)
+                <div class="hdr-user-desig">{{ $rootUser->designation }}</div>
+            @endif
+        </td>
+        <td class="hdr-right">
+            <div class="hdr-doc-type">Customer Report</div>
+            <div class="hdr-date">Generated on: {{ $generatedAt }}</div>
+        </td>
+    </tr>
+</table>
+
+{{-- SOLID STRUCTURAL KPI BOXES --}}
+<table class="summary-strip" cellspacing="0" cellpadding="0">
+    <tr>
+        <td class="s-box s-box-total">
+            <span class="s-big">{{ $totalAll }}</span>
+            <span class="s-tag">Total</span>
+        </td>
+        @if($totalDirect > 0)
+        <td class="s-box s-box-d">
+            <span class="s-big">{{ $totalDirect }}</span>
+            <span class="s-tag">Direct</span>
+        </td>
+        @endif
+        @if($totalOpen > 0)
+        <td class="s-box s-box-o">
+            <span class="s-big">{{ $totalOpen }}</span>
+            <span class="s-tag">Open</span>
+        </td>
+        @endif
+        @if($totalDealer > 0)
+        <td class="s-box s-box-dl">
+            <span class="s-big">{{ $totalDealer }}</span>
+            <span class="s-tag">Dealer</span>
+        </td>
+        @endif
+        <td class="s-box-spacer"></td>
+    </tr>
+</table>
+
+{{-- CUSTOMER DATA LOOPS --}}
+@foreach($groups as $group)
+@php
+    $isRoot  = $group['is_root'];
+    $cnt     = count($group['customers']);
+    $direct  = [];
+    $open    = [];
+    $dealers = [];
+    foreach ($group['customers'] as $c) {
+        $bm = $c->business_model ?? 'Open';
+        if ($bm === 'Direct Customer') {
+            $direct[] = $c;
+        } elseif ($bm === 'Open') {
+            $open[] = $c;
+        } else {
+            $dn = trim($c->dealer_business_name ?? '') ?: 'Dealer';
+            $dealers[$dn][] = $c;
+        }
+    }
+    ksort($dealers);
+    $hasDirect = count($direct) > 0;
+    $hasOpen   = count($open)   > 0;
+    $hasDealer = count($dealers) > 0;
+@endphp
+
+<div class="emp-group">
+    <div class="group-wrap">
+
+    {{-- DIRECT SECTION --}}
+    @if($hasDirect)
+    <table class="bm-section-table" cellspacing="0" cellpadding="0">
+        <tr>
+            <td class="bm-sec-td">&#10003;&nbsp; Direct Customers</td>
+            <td class="bm-sec-count-td">{{ count($direct) }} record(s)</td>
+        </tr>
+    </table>
+    <table class="cust-table" cellspacing="0" cellpadding="0">
+    @foreach($direct as $i => $c)
+    @php
+        $parts = array_filter([
+            $c->contact_person_name ?? null,
+            $c->customer_designation ?? null,
+            $c->department ?? null,
+        ]);
+        $rowClass = ($i % 2 === 1) ? 'cust-even' : '';
+    @endphp
+    <tr class="{{ $rowClass }}">
+        <td class="cust-num-td">{{ $i + 1 }}</td>
+        <td class="cust-info-td">
+            <div class="cust-name-text">{{ $c->customer_name }}</div>
+            @if(count($parts))
+            <div class="cust-meta-text">{{ implode(' &nbsp;·&nbsp; ', $parts) }}</div>
+            @endif
+        </td>
+        <td class="cust-city-td">
+            @if($c->city_name)
+            <span class="city-text">{{ $c->city_name }}</span>
+            @endif
+        </td>
+    </tr>
+    @endforeach
+    </table>
+    @endif
+
+    @if($hasDirect && ($hasOpen || $hasDealer))
+        <div class="section-divider"></div>
+    @endif
+
+    {{-- OPEN SECTION --}}
+    @if($hasOpen)
+    <table class="bm-section-table" cellspacing="0" cellpadding="0">
+        <tr>
+            <td class="bm-sec-td">&#9675;&nbsp; Open Customers</td>
+            <td class="bm-sec-count-td">{{ count($open) }} record(s)</td>
+        </tr>
+    </table>
+    <table class="cust-table" cellspacing="0" cellpadding="0">
+    @foreach($open as $i => $c)
+    @php
+        $parts = array_filter([
+            $c->contact_person_name ?? null,
+            $c->customer_designation ?? null,
+            $c->department ?? null,
+        ]);
+        $rowClass = ($i % 2 === 1) ? 'cust-even' : '';
+    @endphp
+    <tr class="{{ $rowClass }}">
+        <td class="cust-num-td">{{ $i + 1 }}</td>
+        <td class="cust-info-td">
+            <div class="cust-name-text">{{ $c->customer_name }}</div>
+            @if(count($parts))
+            <div class="cust-meta-text">{{ implode(' &nbsp;·&nbsp; ', $parts) }}</div>
+            @endif
+        </td>
+        <td class="cust-city-td">
+            @if($c->city_name)
+            <span class="city-text">{{ $c->city_name }}</span>
+            @endif
+        </td>
+    </tr>
+    @endforeach
+    </table>
+    @endif
+
+    @if($hasOpen && $hasDealer)
+        <div class="section-divider"></div>
+    @endif
+
+    {{-- DEALERS SECTIONS --}}
+    @if($hasDealer)
+    @php $dIdx = 0; $dTotal = count($dealers); @endphp
+    @foreach($dealers as $dealerName => $dRows)
+    @php $dIdx++; @endphp
+    <table class="bm-section-table" cellspacing="0" cellpadding="0">
+        <tr>
+            <td class="bm-sec-td">&#9632;&nbsp; {{ $dealerName }}</td>
+            <td class="bm-sec-count-td">{{ count($dRows) }} record(s)</td>
+        </tr>
+    </table>
+    <table class="cust-table" cellspacing="0" cellpadding="0">
+    @foreach($dRows as $i => $c)
+    @php
+        $parts = array_filter([
+            $c->contact_person_name ?? null,
+            $c->customer_designation ?? null,
+            $c->department ?? null,
+        ]);
+        $rowClass = ($i % 2 === 1) ? 'cust-even' : '';
+    @endphp
+    <tr class="{{ $rowClass }}">
+        <td class="cust-num-td">{{ $i + 1 }}</td>
+        <td class="cust-info-td">
+            <div class="cust-name-text">{{ $c->customer_name }}</div>
+            @if(count($parts))
+            <div class="cust-meta-text">{{ implode(' &nbsp;·&nbsp; ', $parts) }}</div>
+            @endif
+        </td>
+        <td class="cust-city-td">
+            @if($c->city_name)
+            <span class="city-text">{{ $c->city_name }}</span>
+            @endif
+        </td>
+    </tr>
+    @endforeach
+    </table>
+    @if($dIdx < $dTotal)<div class="section-divider"></div>@endif
+    @endforeach
+    @endif
+
+    </div>
 </div>
 @endforeach
 
-<div class="pdf-footer">
-    Greenwave &bull; Customer Move Report &bull; {{ $generatedAt }}
-</div>
+{{-- MINIMAL FOOTER LINE --}}
+<table class="footer-table" cellspacing="0" cellpadding="0">
+    <tr>
+        <td class="footer-left">Greenwave &bull; Business Intelligence</td>
+        <td class="footer-mid">Confidential Report</td>
+        <td class="footer-right">Total: {{ $totalAll }} records</td>
+    </tr>
+</table>
 
 </body>
 </html>
