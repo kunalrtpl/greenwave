@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use PDF;
+use Mpdf\Mpdf;
 use Session;
 
 class UserExpenseController extends Controller
@@ -16,6 +16,12 @@ class UserExpenseController extends Controller
     public function index(Request $request)
     {
         Session::put('active', 'expenses');
+
+        // ── DEFAULT to current month/year when no filter params exist in URL ──
+        // The blade visually defaults to current month/year, so the data must match.
+        // User can select "All" from the dropdown and click Apply to remove the filter.
+        $filterMonth = $request->filled('month') ? $request->month : date('n');
+        $filterYear  = $request->filled('year')  ? $request->year  : date('Y');
 
         $query = DB::table('user_expenses as ue')
             ->join('expense_categories as ec', 'ue.category_id', '=', 'ec.id')
@@ -56,12 +62,11 @@ class UserExpenseController extends Controller
         if ($request->filled('employee_id')) {
             $query->where('ue.user_id', $request->employee_id);
         }
-        if ($request->filled('month')) {
-            $query->whereMonth('ue.expense_date', $request->month);
-        }
-        if ($request->filled('year')) {
-            $query->whereYear('ue.expense_date', $request->year);
-        }
+
+        // Always apply month and year (defaults to current if not in URL)
+        $query->whereMonth('ue.expense_date', $filterMonth);
+        $query->whereYear('ue.expense_date', $filterYear);
+
         if ($request->filled('status')) {
             $query->where('ue.status', $request->status);
         }
@@ -139,7 +144,8 @@ class UserExpenseController extends Controller
     }
 
     /**
-     * Export filtered expenses as a beautifully formatted PDF (dompdf).
+     * Export filtered expenses as PDF using mPDF (A4 Portrait).
+     * Matches the design of the Move Customers PDF.
      */
     public function exportPdf(Request $request)
     {
@@ -205,24 +211,36 @@ class UserExpenseController extends Controller
                 ->first();
         }
 
-        $data = [
+        // ── Render Blade to HTML ──
+        $html = view('admin.user_expenses.expense_report_pdf', [
             'expenses'       => $expenses,
             'employee'       => $employee,
             'filterMonth'    => $request->month    ?? null,
             'filterYear'     => $request->year     ?? null,
             'filterStatus'   => $request->status   ?? null,
             'filterVerified' => $request->verified ?? null,
-        ];
+        ])->render();
 
-        $pdf = Pdf::loadView('admin.user_expenses.expense_report_pdf', $data)
-            ->setPaper('a4', 'landscape')
-            ->setOptions([
-                'defaultFont'          => 'DejaVu Sans',
-                'isHtml5ParserEnabled' => true,
-                'isPhpEnabled'         => false,
-                'dpi'                  => 120,
-            ]);
+        // ── Generate PDF with mPDF (A4 Portrait — same as Move Customers) ──
+        $mpdf = new Mpdf([
+            'mode'              => 'utf-8',
+            'format'            => 'A4',
+            'orientation'       => 'P',
+            'margin_top'        => 12,
+            'margin_bottom'     => 14,
+            'margin_left'       => 10,
+            'margin_right'      => 10,
+            'default_font'      => 'dejavusans',
+            'default_font_size' => 9,
+            'tempDir'           => storage_path('app/mpdf-temp'),
+        ]);
 
+        $titleName = $employee ? $employee->name : 'All Employees';
+        $mpdf->SetTitle('Expense Report — ' . $titleName);
+        $mpdf->SetAuthor('Greenwave');
+        $mpdf->WriteHTML($html);
+
+        // Build filename
         $filename = 'expense-report';
         if ($employee) {
             $filename .= '-' . \Illuminate\Support\Str::slug($employee->name);
@@ -234,7 +252,10 @@ class UserExpenseController extends Controller
         }
         $filename .= '.pdf';
 
-        return $pdf->download($filename);
+        return response($mpdf->Output($filename, 'S'), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     }
 
     /**
@@ -250,7 +271,7 @@ class UserExpenseController extends Controller
         $requestedAmount = (float) $expense->requested_amount;
 
         $request->validate([
-            'status'         => 'required|in:Approved,Partially Approved,Rejected',
+            'status'          => 'required|in:Approved,Partially Approved,Rejected',
             'approved_amount' => [
                 'required_if:status,Partially Approved',
                 'nullable',
