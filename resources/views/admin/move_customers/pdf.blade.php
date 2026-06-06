@@ -314,11 +314,17 @@ body {
     <table class="cust-table" cellspacing="0" cellpadding="0">
     @foreach($direct as $i => $c)
     @php
-        $parts = array_filter([
-            $c->contact_person_name ?? null,
-            $c->customer_designation ?? null,
-            $c->department ?? null,
-        ]);
+        // Clean out dirty database strings that hold literal &nbsp; or mid-dots
+        $cleanContact = str_replace(['&nbsp;', '·'], ['', ''], $c->contact_person_name ?? '');
+        $cleanDesig   = str_replace(['&nbsp;', '·'], ['', ''], $c->customer_designation ?? '');
+        $cleanDept    = str_replace(['&nbsp;', '·'], ['', ''], $c->department ?? '');
+
+        $parts = array_filter(array_map('trim', [
+            $cleanContact ?: null,
+            $cleanDesig ?: null,
+            $cleanDept ?: null,
+        ]));
+        
         $rowClass = ($i % 2 === 1) ? 'cust-even' : '';
     @endphp
     <tr class="{{ $rowClass }}">
@@ -326,7 +332,7 @@ body {
         <td class="cust-info-td">
             <div class="cust-name-text">{{ $c->customer_name }}</div>
             @if(count($parts))
-            <div class="cust-meta-text">{{ implode(' &nbsp;·&nbsp; ', $parts) }}</div>
+            <div class="cust-meta-text">{{ implode('  ', $parts) }}</div>
             @endif
         </td>
         <td class="cust-city-td">
@@ -354,11 +360,17 @@ body {
     <table class="cust-table" cellspacing="0" cellpadding="0">
     @foreach($open as $i => $c)
     @php
-        $parts = array_filter([
-            $c->contact_person_name ?? null,
-            $c->customer_designation ?? null,
-            $c->department ?? null,
-        ]);
+        // Clean out dirty database strings that hold literal &nbsp; or mid-dots
+        $cleanContact = str_replace(['&nbsp;', '·'], ['', ''], $c->contact_person_name ?? '');
+        $cleanDesig   = str_replace(['&nbsp;', '·'], ['', ''], $c->customer_designation ?? '');
+        $cleanDept    = str_replace(['&nbsp;', '·'], ['', ''], $c->department ?? '');
+
+        $parts = array_filter(array_map('trim', [
+            $cleanContact ?: null,
+            $cleanDesig ?: null,
+            $cleanDept ?: null,
+        ]));
+        
         $rowClass = ($i % 2 === 1) ? 'cust-even' : '';
     @endphp
     <tr class="{{ $rowClass }}">
@@ -366,7 +378,7 @@ body {
         <td class="cust-info-td">
             <div class="cust-name-text">{{ $c->customer_name }}</div>
             @if(count($parts))
-            <div class="cust-meta-text">{{ implode(' &nbsp;·&nbsp; ', $parts) }}</div>
+            <div class="cust-meta-text">{{ implode('  ', $parts) }}</div>
             @endif
         </td>
         <td class="cust-city-td">
@@ -397,11 +409,17 @@ body {
     <table class="cust-table" cellspacing="0" cellpadding="0">
     @foreach($dRows as $i => $c)
     @php
-        $parts = array_filter([
-            $c->contact_person_name ?? null,
-            $c->customer_designation ?? null,
-            $c->department ?? null,
-        ]);
+        // Clean out dirty database strings that hold literal &nbsp; or mid-dots
+        $cleanContact = str_replace(['&nbsp;', '·'], ['', ''], $c->contact_person_name ?? '');
+        $cleanDesig   = str_replace(['&nbsp;', '·'], ['', ''], $c->customer_designation ?? '');
+        $cleanDept    = str_replace(['&nbsp;', '·'], ['', ''], $c->department ?? '');
+
+        $parts = array_filter(array_map('trim', [
+            $cleanContact ?: null,
+            $cleanDesig ?: null,
+            $cleanDept ?: null,
+        ]));
+        
         $rowClass = ($i % 2 === 1) ? 'cust-even' : '';
     @endphp
     <tr class="{{ $rowClass }}">
@@ -409,7 +427,7 @@ body {
         <td class="cust-info-td">
             <div class="cust-name-text">{{ $c->customer_name }}</div>
             @if(count($parts))
-            <div class="cust-meta-text">{{ implode(' &nbsp;·&nbsp; ', $parts) }}</div>
+            <div class="cust-meta-text">{{ implode('  ', $parts) }}</div>
             @endif
         </td>
         <td class="cust-city-td">
