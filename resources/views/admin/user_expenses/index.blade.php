@@ -545,10 +545,10 @@ $currentYear  = date('Y');
                         <td>
                             <div class="date-main">{{ $expDate->format('d M Y') }} ({{ $expDate->format('D') }})</div>
                             <div class="date-sub">{{ \Carbon\Carbon::parse($expense->created_at)->format('d M, h:i A') }}</div>
-                            <div style="margin-top:5px;"><span class="a-req">₹{{ number_format($expense->requested_amount, 2) }}</span></div>
+                            <div style="margin-top:5px;"><span class="a-req">Rs. {{ number_format($expense->requested_amount, 2) }}</span></div>
                             @if($expense->is_travel && !empty($expense->travel_km))
                             <div style="margin-top:6px; padding-top:6px; border-top:1px dashed #e0e8f0;">
-                                <div class="tr-km">{!! svgico('road',11,'style="color:#3598dc"') !!} {{ $expense->travel_km }} km @ ₹{{ $expense->charge_per_km }}/km</div>
+                                <div class="tr-km">{!! svgico('road',11,'style="color:#3598dc"') !!} {{ $expense->travel_km }} km @ Rs. {{ $expense->charge_per_km }}/km</div>
                                 @if($expense->is_intercity && !empty($expense->intercity_route))
                                     <div class="tr-rt">{!! svgico('map',9,'style="color:#b0bcc8"') !!} {{ $expense->intercity_route }}</div>
                                 @endif
@@ -566,7 +566,7 @@ $currentYear  = date('Y');
                         {{-- Approved Amount --}}
                         <td style="text-align:right;" id="appr-{{ $expense->id }}">
                             @if($expense->approved_amount > 0)
-                                <span class="a-apr">₹{{ number_format($expense->approved_amount, 2) }}</span>
+                                <span class="a-apr">Rs. {{ number_format($expense->approved_amount, 2) }}</span>
                             @else
                                 <span class="a-nil">&mdash;</span>
                             @endif
@@ -984,7 +984,7 @@ $(document).ready(function(){
     /* ── Status modal ── */
     $(document).on('click','.btn-update-status',function(){
         var id=$(this).data('id'), st=$(this).data('status'), req=$(this).data('requested'), appr=$(this).data('approved'), rmks=$(this).data('admin-remarks')||'';
-        $('#m_id').val(id); $('#m_req').text('₹'+parseFloat(req).toFixed(2));
+        $('#m_id').val(id); $('#m_req').text('Rs. '+parseFloat(req).toFixed(2));
         $('#m_status').val(''); $('#m_appr').val(''); $('#m_admin_remarks').val(rmks);
         $('#m_partial').hide(); $('#m_err').hide();
         document.querySelectorAll('.m-sopt').forEach(function(el){ el.classList.remove('sa','sp','sr'); });
@@ -995,7 +995,7 @@ $(document).ready(function(){
         var id=$('#m_id').val(), st=$('#m_status').val(), appr=$('#m_appr').val(), rmks=$('#m_admin_remarks').val().trim(), $b=$(this);
         if(!st){ $('#m_err').html('Please select a status.').show(); return; }
         if(st==='Partially Approved'){
-            var av=parseFloat(appr), rv=parseFloat($('#m_req').text().replace('₹','').replace(/,/g,''));
+            var av=parseFloat(appr), rv=parseFloat($('#m_req').text().replace('Rs. ','').replace(/,/g,''));
             if(!appr||av<=0){ $('#m_err').html('Please enter a valid approved amount.').show(); return; }
             if(av>rv){ $('#m_err').html('Approved (\u20b9'+av.toFixed(2)+') cannot exceed requested (\u20b9'+rv.toFixed(2)+').').show(); return; }
         }
@@ -1010,8 +1010,8 @@ $(document).ready(function(){
                     $('#sbadge-'+id).attr('class','s-badge sb-'+k).text(st);
                     $('#row-'+id).removeClass('s-Requested s-Approved s-Partially s-Rejected s-PendingApproval').addClass('s-'+k);
                     if(st==='Approved'||st==='Partially Approved'){
-                        var a=st==='Partially Approved'?parseFloat(appr):parseFloat($('#m_req').text().replace('₹','').replace(/,/g,''));
-                        $('#appr-'+id).html('<span class="a-apr">₹'+a.toFixed(2)+'</span>');
+                        var a=st==='Partially Approved'?parseFloat(appr):parseFloat($('#m_req').text().replace('Rs. ','').replace(/,/g,''));
+                        $('#appr-'+id).html('<span class="a-apr">Rs. '+a.toFixed(2)+'</span>');
                     } else { $('#appr-'+id).html('<span class="a-nil">&mdash;</span>'); }
                     var $rmkEl=$('#appr-rmk-'+id);
                     rmks ? $rmkEl.text(rmks.substring(0,28)+(rmks.length>28?'..':'')).attr('title',rmks).show() : $rmkEl.hide();
