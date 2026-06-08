@@ -7,7 +7,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Session;
-use PDF;
+use Mpdf\Mpdf;
 class ProductPricingController extends Controller
 {
     /**
@@ -148,8 +148,18 @@ class ProductPricingController extends Controller
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Replace ONLY the exportPdf() method in ProductPricingController.php
+    // Keep all other methods (index, update) exactly as they are.
+    // Also add these two use statements at the top of the controller if not present:
+    //
+    //   use Mpdf\Mpdf;
+    //
+    // Remove:  use PDF;   ← delete this line
+    // ─────────────────────────────────────────────────────────────────────────────
+
     /**
-     * Export filtered product pricing list as PDF.
+     * Export filtered product pricing list as PDF using mPDF.
      * GET /admin/product-pricing/export-pdf
      */
     public function exportPdf(Request $request)
@@ -160,7 +170,7 @@ class ProductPricingController extends Controller
         $search      = $request->get('search', '');
         $naOnly      = $request->get('not_available', 0);
 
-        // Same base query as index()
+        // ── Same base query as index() ──
         $latestPricing = DB::table('product_pricings as pp')
             ->select('pp.product_id', 'pp.dealer_price', 'pp.market_price', 'pp.dealer_markup', 'pp.price_date', 'pp.id as pricing_id')
             ->whereRaw('pp.id = (
@@ -177,13 +187,20 @@ class ProductPricingController extends Controller
             })
             ->where('products.status', 1)
             ->select(
-                'products.id', 'products.product_name', 'products.product_code',
-                'products.moq', 'products.average_dispatch_time', 'products.not_available',
-                'lp.dealer_price', 'lp.market_price', 'lp.dealer_markup',
-                'lp.price_date', 'lp.pricing_id'
+                'products.id',
+                'products.product_name',
+                'products.product_code',
+                'products.moq',
+                'products.average_dispatch_time',
+                'products.not_available',
+                'lp.dealer_price',
+                'lp.market_price',
+                'lp.dealer_markup',
+                'lp.price_date',
+                'lp.pricing_id'
             );
 
-        // Apply filters
+        // ── Apply filters ──
         if ($productId) {
             $query->where('products.id', $productId);
         }
@@ -209,7 +226,7 @@ class ProductPricingController extends Controller
 
         $products = $query->orderBy('products.product_name')->get();
 
-        // Build filter labels for PDF header
+        // ── Build filter labels for PDF header ──
         $filterLabels = [];
         if ($productId) {
             $prod = DB::table('products')->where('id', $productId)->first();
@@ -222,13 +239,37 @@ class ProductPricingController extends Controller
         if ($search)  $filterLabels[] = 'Search: ' . $search;
         if ($naOnly)  $filterLabels[] = 'Not Available Only';
 
-        $pdf = PDF::loadView('admin.product_pricing.pdf', [
+        // ── Render Blade → HTML ──
+        $html = view('admin.product_pricing.pdf', [
             'products'     => $products,
             'today'        => $today,
             'filterLabels' => $filterLabels,
             'generatedAt'  => now()->format('d M Y, h:i A'),
-        ])->setPaper('a4', 'landscape');
+        ])->render();
 
-        return $pdf->download('product-pricing-' . now()->format('Ymd-His') . '.pdf');
+        // ── Generate PDF with mPDF (same config as MoveCustomerController) ──
+        $mpdf = new Mpdf([
+            'mode'              => 'utf-8',
+            'format'            => 'A4',
+            'orientation'       => 'P',          // Landscape — wider table
+            'margin_top'        => 12,
+            'margin_bottom'     => 14,
+            'margin_left'       => 10,
+            'margin_right'      => 10,
+            'default_font'      => 'dejavusans',
+            'default_font_size' => 9,
+            'tempDir'           => storage_path('app/mpdf-temp'),
+        ]);
+
+        $mpdf->SetTitle('Product Pricing Report');
+        $mpdf->SetAuthor('Greenwave');
+        $mpdf->WriteHTML($html);
+
+        $filename = 'product-pricing-' . now()->format('Ymd-His') . '.pdf';
+
+        return response($mpdf->Output($filename, 'S'), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     }
 }

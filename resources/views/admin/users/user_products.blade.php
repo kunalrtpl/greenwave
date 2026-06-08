@@ -132,10 +132,19 @@
     }
     .info-pill.na-yes {
         background: #fff5f5; border-color: #feb2b2; color: #c53030; font-weight: 700;
+        padding: 3px 8px;
     }
     .info-pill.na-no {
         background: #f0fff4; border-color: #9ae6b4; color: #276749;
+        padding: 3px 8px;
     }
+    .pd-badge {
+        display: inline-block; font-size: 10px; padding: 2px 8px;
+        border-radius: 10px; font-weight: 700; white-space: nowrap; border: 1px solid transparent;
+    }
+    .pd-today { background: #e6fffa; color: #276749; border-color: #9ae6b4; }
+    .pd-old   { background: #f7fafc; color: #718096; border-color: #e2e8f0; }
+    .pd-none  { background: #fff5f5; color: #c53030; border-color: #feb2b2; }
     .info-pill.dp-val {
         background: #ebf5ff; border-color: #90cdf4; color: #2b78ad; font-weight: 700;
     }
@@ -280,10 +289,11 @@
                                     <th class="center">#</th>
                                     <th class="center"><i class="fa fa-check"></i></th>
                                     <th>Product Name</th>
+                                    <th class="center">Not Avail.</th>
                                     <th>MOQ</th>
                                     <th>Dispatch (days)</th>
-                                    <th class="center">Not Avail.</th>
                                     <th>DP (₹)</th>
+                                    <th class="center">Price Date</th>
                                 </tr>
                             </thead>
                             <tbody id="link-tbody">
@@ -297,7 +307,7 @@
 
                                 {{-- Parent group header row --}}
                                 <tr class="group-parent-row" data-parent-id="{{ $parent['id'] }}" data-target="parent-{{ $parent['id'] }}">
-                                    <td colspan="7">
+                                    <td colspan="8">
                                         <div class="gp-inner">
                                             <div class="gp-left">
                                                 <i class="fa fa-folder-open" style="color:rgba(255,255,255,0.8);"></i>
@@ -317,7 +327,7 @@
 
                                     {{-- Child group sub-header row --}}
                                     <tr class="group-child-row child-of-{{ $parent['id'] }}" data-child-id="{{ $child['id'] }}" data-parent-id="{{ $parent['id'] }}" data-target="child-{{ $child['id'] }}">
-                                        <td colspan="7">
+                                        <td colspan="8">
                                             <div class="gc-inner">
                                                 <div class="gc-left">
                                                     <i class="fa fa-tag" style="color:#3598dc; font-size:11px;"></i>
@@ -364,20 +374,20 @@
                                             @endif
                                         </td>
 
+                                        <td class="center-cell">
+                                            @if($isNA)
+                                                <span class="info-pill na-yes"><i class="fa fa-times"></i></span>
+                                            @else
+                                                <span class="info-pill na-no"><i class="fa fa-check"></i></span>
+                                            @endif
+                                        </td>
+
                                         <td>
                                             <span class="info-pill">{{ $product['moq'] ?? '—' }}</span>
                                         </td>
 
                                         <td>
                                             <span class="info-pill">{{ $product['average_dispatch_time'] ?? '—' }}</span>
-                                        </td>
-
-                                        <td class="center-cell">
-                                            @if($isNA)
-                                                <span class="info-pill na-yes"><i class="fa fa-times"></i> Yes</span>
-                                            @else
-                                                <span class="info-pill na-no"><i class="fa fa-check"></i> No</span>
-                                            @endif
                                         </td>
 
                                         <td>
@@ -388,6 +398,20 @@
                                             @endif
                                         </td>
 
+                                        <td class="center-cell">
+                                            @php
+                                                $priceDate = $product['price_date'] ?? null;
+                                                $isToday   = $priceDate && $priceDate === \Carbon\Carbon::today()->toDateString();
+                                            @endphp
+                                            @if($priceDate)
+                                                <span class="pd-badge {{ $isToday ? 'pd-today' : 'pd-old' }}">
+                                                    {{ $isToday ? 'Today' : \Carbon\Carbon::parse($priceDate)->format('d/m/Y') }}
+                                                </span>
+                                            @else
+                                                <span class="pd-badge pd-none">No Price</span>
+                                            @endif
+                                        </td>
+
                                     </tr>
                                     @endforeach
 
@@ -395,8 +419,7 @@
                             @endforeach
 
                             <tr id="empty-row" style="display:none;">
-                                <td colspan="7">
-                                    <i class="fa fa-inbox" style="font-size:22px; display:block; margin-bottom:6px;"></i>
+                                <td colspan="8"> style="font-size:22px; display:block; margin-bottom:6px;"></i>
                                     No products match the current filters.
                                 </td>
                             </tr>
