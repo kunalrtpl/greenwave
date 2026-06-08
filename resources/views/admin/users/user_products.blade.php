@@ -4,109 +4,153 @@
 <style>
     .page-content { padding-bottom: 90px !important; }
 
-    /* ── Header counter ── */
-    .total-counter-wrapper {
-        display: inline-flex; align-items: center; gap: 6px;
-        background: #ebf5ff; border: 1px solid #3598dc;
-        padding: 4px 14px; border-radius: 20px !important;
-        margin-left: 15px; vertical-align: middle;
+    .portlet.light.bordered {
+        border-radius: 6px;
+        box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+        border: 1px solid #dde3ec;
     }
-    .total-label        { font-size: 12px; color: #3598dc; font-weight: 600; text-transform: uppercase; }
-    .total-count-global { font-size: 15px; color: #2b78ad; font-weight: 800; }
 
-    /* ── Search ── */
-    .search-wrap { position: relative; margin-bottom: 20px; }
-    .search-wrap .fa-search {
-        position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
-        color: #a0aec0; font-size: 14px; pointer-events: none;
+    /* ── Summary bar ── */
+    .summary-bar { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+    .sum-card {
+        background: #f4f6fa; border: 1px solid #dde3ec; border-radius: 6px;
+        padding: 8px 16px; font-size: 12px; color: #5a6a85;
+        display: flex; align-items: center; gap: 6px;
     }
-    #product-search {
-        width: 100%; height: 42px; padding: 0 38px 0 38px;
-        border: 1px solid #c8d0dc; border-radius: 8px !important;
-        font-size: 14px; color: #2d3748;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        transition: border-color 0.2s, box-shadow 0.2s;
+    .sum-card strong { font-size: 15px; color: #2d3748; }
+    .sum-card .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .dot-total    { background: #3598dc; }
+    .dot-selected { background: #36c6d3; }
+    .dot-na       { background: #ed8936; }
+
+    /* ── Filter strip ── */
+    .filter-strip {
+        display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap;
+        background: #f4f6fa; border: 1px solid #dde3ec;
+        border-radius: 6px; padding: 14px 18px; margin-bottom: 18px;
     }
-    #product-search:focus {
+    .filter-strip .fg { display: flex; flex-direction: column; gap: 4px; }
+    .filter-strip label {
+        font-size: 11px; font-weight: 700; color: #5a6a85;
+        text-transform: uppercase; letter-spacing: 0.5px; margin: 0;
+    }
+    .filter-strip select,
+    .filter-strip input[type="text"] {
+        height: 34px; border: 1px solid #c8d0dc; border-radius: 4px !important;
+        font-size: 13px; color: #2d3748; background: #fff; padding: 0 10px;
+    }
+    .filter-strip select:focus, .filter-strip input:focus {
         outline: none; border-color: #3598dc;
-        box-shadow: 0 0 0 3px rgba(53,152,220,0.15);
+        box-shadow: 0 0 0 2px rgba(53,152,220,0.15);
     }
-    #search-clear {
-        position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
-        color: #a0aec0; cursor: pointer; font-size: 14px; display: none;
+    .filter-strip select { min-width: 220px; }
+    .filter-strip input[type="text"] { width: 200px; }
+    .filter-strip .fg-check { display: flex; align-items: center; gap: 6px; padding-bottom: 6px; }
+    .filter-strip .fg-check label {
+        font-size: 12px; font-weight: 600; color: #5a6a85;
+        text-transform: none; letter-spacing: 0; cursor: pointer;
     }
-    #search-clear:hover { color: #e53e3e; }
+    .filter-strip .fg-check input[type="checkbox"] {
+        transform: scale(1.2); accent-color: #e53e3e; cursor: pointer;
+    }
+    .filter-result { margin-left: auto; font-size: 12px; color: #718096; padding-bottom: 6px; white-space: nowrap; }
+    .filter-result strong { color: #3598dc; }
 
-    /* ── Parent row (full width) ── */
-    .parent-section { margin-bottom: 10px; border: 1px solid #d1d9e3; border-radius: 8px; overflow: hidden; }
+    /* ── Table ── */
+    .link-wrap { width: 100%; overflow-x: auto; }
+    .link-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 
-    .parent-toggle {
-        width: 100%; display: flex; align-items: center; justify-content: space-between;
-        padding: 13px 18px;
+    .link-table thead tr th {
+        background: #eef1f7; color: #4a5568; font-weight: 700; font-size: 11px;
+        text-transform: uppercase; letter-spacing: 0.55px; padding: 10px 12px;
+        border: 1px solid #d5dbe8; white-space: nowrap; text-align: left;
+    }
+    .link-table thead tr th.center { text-align: center; }
+
+    /* Category group header */
+    .link-table tr.group-parent-row td {
         background: linear-gradient(135deg, #3598dc 0%, #2980b9 100%);
-        border: none; cursor: pointer; text-align: left;
+        color: #fff; font-weight: 700; font-size: 13px;
+        padding: 10px 14px; border: none; cursor: pointer;
+        user-select: none;
     }
-    .parent-toggle:hover { filter: brightness(1.05); }
-    .parent-toggle .pt-left  { display: flex; align-items: center; gap: 10px; }
-    .parent-toggle .pt-name  { font-size: 14px; font-weight: 700; color: #fff; }
-    .parent-toggle .pt-badge {
+    .link-table tr.group-parent-row td .gp-inner {
+        display: flex; align-items: center; justify-content: space-between;
+    }
+    .link-table tr.group-parent-row td .gp-left { display: flex; align-items: center; gap: 10px; }
+    .link-table tr.group-parent-row td .gp-badge {
         background: rgba(255,255,255,0.25); color: #fff;
         font-size: 11px; font-weight: 700; padding: 2px 10px;
-        border-radius: 12px !important;
+        border-radius: 12px; display: inline-block;
     }
-    .parent-toggle .pt-arrow { color: rgba(255,255,255,0.8); font-size: 11px; transition: transform 0.2s; }
-    .parent-toggle.collapsed .pt-arrow { transform: rotate(-90deg); }
-
-    .parent-body { display: block; }
-    .parent-body.collapsed { display: none; }
-
-    /* ── Child row (full width, inside parent) ── */
-    .child-section { border-top: 1px solid #e1e5ec; }
-    .child-section:first-child { border-top: none; }
-
-    .child-toggle {
-        width: 100%; display: flex; align-items: center; justify-content: space-between;
-        padding: 11px 18px 11px 28px;
-        background: #f4f7fb; border: none; cursor: pointer; text-align: left;
+    .link-table tr.group-parent-row td .gp-arrow {
+        font-size: 11px; transition: transform 0.2s; color: rgba(255,255,255,0.8);
     }
-    .child-toggle:hover { background: #edf2f7; }
-    .child-toggle .ct-left   { display: flex; align-items: center; gap: 8px; }
-    .child-toggle .ct-name   { font-size: 13px; font-weight: 600; color: #2d3748; }
-    .badge-blue     { background: #3598dc; color: #fff; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 10px !important; }
-    .badge-selected { background: #36c6d3; color: #fff; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 10px !important; }
-    .child-toggle .ct-arrow  { color: #a0aec0; font-size: 10px; transition: transform 0.2s; }
-    .child-toggle.collapsed .ct-arrow { transform: rotate(-90deg); }
+    .link-table tr.group-parent-row.collapsed td .gp-arrow { transform: rotate(-90deg); }
 
-    .child-body { display: block; }
-    .child-body.collapsed { display: none; }
-
-    /* ── Product rows ── */
-    .product-list-item {
-        display: flex; align-items: center;
-        padding: 10px 18px 10px 42px;
-        border-top: 1px solid #f0f4f8;
-        transition: background 0.15s;
+    /* Child group sub-header */
+    .link-table tr.group-child-row td {
+        background: #f4f7fb; color: #2d3748; font-weight: 600; font-size: 12px;
+        padding: 9px 14px 9px 28px; border: 1px solid #e1e5ec; cursor: pointer;
+        user-select: none;
     }
-    .product-list-item:hover { background: #fafcff; }
-    .product-list-item.hidden { display: none; }
-
-    .sr-no {
-        width: 26px; height: 26px; background: #e2e8f0; color: #4a5568;
-        border-radius: 50% !important; display: flex; align-items: center;
-        justify-content: center; font-size: 10px; font-weight: 700;
-        flex-shrink: 0; margin-right: 12px;
+    .link-table tr.group-child-row td .gc-inner {
+        display: flex; align-items: center; justify-content: space-between;
     }
-    .product-action { margin-right: 14px; display: flex; align-items: center; flex-shrink: 0; }
-    .custom-checkbox { transform: scale(1.2); cursor: pointer; accent-color: #3598dc; }
-    .product-info { flex: 1; min-width: 0; }
-    .product-name { font-weight: 500; color: #2d3748; display: block; line-height: 1.3; }
-    .product-desc { font-size: 12px; color: #718096; font-style: italic; }
+    .link-table tr.group-child-row td .gc-left { display: flex; align-items: center; gap: 8px; }
+    .badge-blue     { background: #3598dc; color: #fff; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 10px; display: inline-block; }
+    .badge-selected { background: #36c6d3; color: #fff; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 10px; display: inline-block; }
+    .link-table tr.group-child-row td .gc-arrow {
+        font-size: 10px; color: #a0aec0; transition: transform 0.2s;
+    }
+    .link-table tr.group-child-row.collapsed td .gc-arrow { transform: rotate(-90deg); }
 
-    /* no results */
-    .no-results-msg { text-align: center; padding: 30px; color: #a0aec0; display: none; }
-    .no-results-msg i { font-size: 30px; margin-bottom: 8px; display: block; }
+    /* Product rows */
+    .link-table tr.product-row td {
+        padding: 8px 12px; border: 1px solid #e4e9f2;
+        vertical-align: middle; color: #2d3748; background: #fff;
+    }
+    .link-table tr.product-row:hover td { background: #f8faff; }
+    .link-table tr.product-row:nth-child(even) td { background: #fafbfd; }
+    .link-table tr.product-row:nth-child(even):hover td { background: #f0f5ff; }
+    .link-table tr.product-row.hidden { display: none; }
+    .link-table tr.product-row.selected-row td { background: #eaf7fb !important; }
 
-    /* ── Floating Save Bar ── */
+    .sr-no-cell { color: #a0aec0; font-size: 11px; text-align: center; width: 46px; }
+
+    .cb-cell { text-align: center; width: 46px; }
+    .custom-checkbox { transform: scale(1.25); cursor: pointer; accent-color: #3598dc; }
+
+    .prod-name { font-weight: 600; color: #2d3748; font-size: 13px; display: block; line-height: 1.3; }
+    .prod-desc { font-size: 11px; color: #a0aec0; font-style: italic; display: block; margin-top: 1px; }
+
+    /* Read-only info pills */
+    .info-pill {
+        display: inline-block; background: #f4f6fa; border: 1px solid #dde3ec;
+        border-radius: 4px; padding: 3px 9px; font-size: 12px;
+        color: #4a5568; font-weight: 500; white-space: nowrap;
+    }
+    .info-pill.na-yes {
+        background: #fff5f5; border-color: #feb2b2; color: #c53030; font-weight: 700;
+    }
+    .info-pill.na-no {
+        background: #f0fff4; border-color: #9ae6b4; color: #276749;
+    }
+    .info-pill.dp-val {
+        background: #ebf5ff; border-color: #90cdf4; color: #2b78ad; font-weight: 700;
+    }
+    .info-pill.dp-none {
+        background: #fff5f5; border-color: #feb2b2; color: #c53030;
+    }
+    .center-cell { text-align: center; }
+
+    /* No results */
+    #empty-row td {
+        text-align: center; padding: 30px; color: #a0aec0;
+        font-style: italic; border: 1px solid #e4e9f2;
+    }
+
+    /* ── Floating save bar ── */
     .floating-save-bar {
         position: fixed; bottom: 0; left: 0; right: 0;
         background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
@@ -120,6 +164,16 @@
         letter-spacing: 1px; border-radius: 30px !important;
         box-shadow: 0 4px 12px rgba(53,152,220,0.35);
     }
+
+    /* Top header counter */
+    .total-counter-wrapper {
+        display: inline-flex; align-items: center; gap: 6px;
+        background: #ebf5ff; border: 1px solid #3598dc;
+        padding: 4px 14px; border-radius: 20px;
+        margin-left: 15px; vertical-align: middle;
+    }
+    .total-label        { font-size: 12px; color: #3598dc; font-weight: 600; text-transform: uppercase; }
+    .total-count-global { font-size: 15px; color: #2b78ad; font-weight: 800; }
 </style>
 
 <div class="page-content-wrapper">
@@ -138,96 +192,218 @@
             </div>
 
             <div class="portlet-body">
+
+                {{-- Summary Cards --}}
+                <div class="summary-bar">
+                    <div class="sum-card">
+                        <span class="dot dot-total"></span>
+                        Total Products &nbsp;<strong id="sum-total">
+                            @php $totalProducts = 0; foreach($hierarchy as $p) foreach($p['children'] ?? [] as $c) $totalProducts += count($c['products'] ?? []); @endphp
+                            {{ $totalProducts }}
+                        </strong>
+                    </div>
+                    <div class="sum-card">
+                        <span class="dot dot-selected"></span>
+                        Selected &nbsp;<strong id="sum-selected" style="color:#36c6d3;">{{ count($selectedProducts) }}</strong>
+                    </div>
+                    <div class="sum-card">
+                        <span class="dot dot-na"></span>
+                        Not Available &nbsp;<strong id="sum-na" style="color:#ed8936;">
+                            @php
+                                $naCount = 0;
+                                foreach($hierarchy as $p) foreach($p['children'] ?? [] as $c) foreach($c['products'] ?? [] as $pr) if(!empty($pr['not_available'])) $naCount++;
+                            @endphp
+                            {{ $naCount }}
+                        </strong>
+                    </div>
+                </div>
+
+                {{-- Filter strip --}}
+                <div class="filter-strip">
+                    <div class="fg">
+                        <label><i class="fa fa-folder"></i> &nbsp;Category</label>
+                        <select id="filter-parent">
+                            <option value="">— All Categories —</option>
+                            @foreach($hierarchy as $parent)
+                                <option value="{{ $parent['id'] }}">{{ $parent['name'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="fg">
+                        <label><i class="fa fa-tag"></i> &nbsp;Sub-Category</label>
+                        <select id="filter-child">
+                            <option value="">— All —</option>
+                            @foreach($hierarchy as $parent)
+                                @foreach($parent['children'] ?? [] as $child)
+                                    <option value="{{ $child['id'] }}" data-parent="{{ $parent['id'] }}">{{ $child['name'] }}</option>
+                                @endforeach
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="fg">
+                        <label><i class="fa fa-check-square-o"></i> &nbsp;Selection</label>
+                        <select id="filter-selection">
+                            <option value="">— All —</option>
+                            <option value="selected">Selected</option>
+                            <option value="unselected">Not Selected</option>
+                        </select>
+                    </div>
+
+                    <div class="fg">
+                        <label><i class="fa fa-search"></i> &nbsp;Search</label>
+                        <input type="text" id="filter-search" placeholder="Search by product name...">
+                    </div>
+
+                    <div class="fg">
+                        <label>&nbsp;</label>
+                        <div class="fg-check">
+                            <input type="checkbox" id="filter-na">
+                            <label for="filter-na">Not Available only</label>
+                        </div>
+                    </div>
+
+                    <div class="filter-result">
+                        Showing <strong id="visible-count">{{ $totalProducts }}</strong>
+                        of {{ $totalProducts }} products
+                    </div>
+                </div>
+
+                {{-- Table --}}
                 <form method="POST" action="{{ route('admin.users.products.save', $user->id) }}">
                     @csrf
+                    <div class="link-wrap">
+                        <table class="link-table" id="link-table">
+                            <thead>
+                                <tr>
+                                    <th class="center">#</th>
+                                    <th class="center"><i class="fa fa-check"></i></th>
+                                    <th>Product Name</th>
+                                    <th>MOQ</th>
+                                    <th>Dispatch (days)</th>
+                                    <th class="center">Not Avail.</th>
+                                    <th>DP (₹)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="link-tbody">
 
-                    {{-- Search --}}
-                    <div class="search-wrap">
-                        <i class="fa fa-search"></i>
-                        <input type="text" id="product-search" placeholder="Search products by name...">
-                        <i class="fa fa-times" id="search-clear"></i>
-                    </div>
+                            @foreach($hierarchy as $parent)
+                                @php
+                                    $allChildIds = [];
+                                    foreach($parent['children'] ?? [] as $c) foreach($c['products'] ?? [] as $p) $allChildIds[] = $p['id'];
+                                    $parentSel = count(array_intersect($allChildIds, $selectedProducts));
+                                @endphp
 
-                    <div id="no-results-msg" class="no-results-msg">
-                        <i class="fa fa-search"></i>
-                        No products found matching your search.
-                    </div>
+                                {{-- Parent group header row --}}
+                                <tr class="group-parent-row" data-parent-id="{{ $parent['id'] }}" data-target="parent-{{ $parent['id'] }}">
+                                    <td colspan="7">
+                                        <div class="gp-inner">
+                                            <div class="gp-left">
+                                                <i class="fa fa-folder-open" style="color:rgba(255,255,255,0.8);"></i>
+                                                <span>{{ $parent['name'] }}</span>
+                                                <span class="gp-badge parent-count" data-parent-id="{{ $parent['id'] }}">{{ $parentSel }} selected</span>
+                                            </div>
+                                            <i class="fa fa-chevron-down gp-arrow"></i>
+                                        </div>
+                                    </td>
+                                </tr>
 
-                    {{-- ── Full-width accordion ── --}}
-                    @foreach($hierarchy as $pKey => $parent)
-                        @php
-                            $allChildProductIds = [];
-                            foreach($parent['children'] ?? [] as $c) {
-                                foreach($c['products'] ?? [] as $p) { $allChildProductIds[] = $p['id']; }
-                            }
-                            $parentSelectedCount = count(array_intersect($allChildProductIds, $selectedProducts));
-                        @endphp
-
-                        <div class="parent-section" data-parent-id="{{ $parent['id'] }}">
-
-                            {{-- Parent full-width toggle --}}
-                            <button type="button" class="parent-toggle" data-target="pb-{{ $parent['id'] }}">
-                                <div class="pt-left">
-                                    <i class="fa fa-folder-open" style="color:rgba(255,255,255,0.8);"></i>
-                                    <span class="pt-name">{{ $parent['name'] }}</span>
-                                    <span class="pt-badge parent-count" data-parent-id="{{ $parent['id'] }}">{{ $parentSelectedCount }} selected</span>
-                                </div>
-                                <i class="fa fa-chevron-down pt-arrow"></i>
-                            </button>
-
-                            {{-- Parent body --}}
-                            <div class="parent-body" id="pb-{{ $parent['id'] }}">
-
-                                @foreach($parent['children'] ?? [] as $cKey => $child)
+                                @foreach($parent['children'] ?? [] as $child)
                                     @php
-                                        $childProductIds    = array_column($child['products'] ?? [], 'id');
-                                        $childSelectedCount = count(array_intersect($childProductIds, $selectedProducts));
+                                        $childIds  = array_column($child['products'] ?? [], 'id');
+                                        $childSel  = count(array_intersect($childIds, $selectedProducts));
                                     @endphp
 
-                                    <div class="child-section" data-child-id="{{ $child['id'] }}">
-
-                                        {{-- Child full-width toggle --}}
-                                        <button type="button" class="child-toggle" data-target="cb-{{ $child['id'] }}">
-                                            <div class="ct-left">
-                                                <i class="fa fa-tag" style="color:#3598dc; font-size:11px;"></i>
-                                                <span class="ct-name">{{ $child['name'] }}</span>
-                                                <span class="badge-blue">{{ count($child['products'] ?? []) }} Products</span>
-                                                <span class="badge-selected child-count" data-child-id="{{ $child['id'] }}">{{ $childSelectedCount }} Selected</span>
-                                            </div>
-                                            <i class="fa fa-chevron-down ct-arrow"></i>
-                                        </button>
-
-                                        {{-- Products --}}
-                                        <div class="child-body" id="cb-{{ $child['id'] }}">
-                                            @foreach($child['products'] ?? [] as $index => $product)
-                                            <div class="product-list-item"
-                                                 data-name="{{ strtolower($product['product_name']) }}"
-                                                 data-child-id="{{ $child['id'] }}"
-                                                 data-parent-id="{{ $parent['id'] }}">
-                                                <div class="sr-no">{{ $index + 1 }}</div>
-                                                <div class="product-action">
-                                                    <input type="checkbox"
-                                                           class="custom-checkbox product-cb"
-                                                           name="products[]"
-                                                           value="{{ $product['id'] }}"
-                                                           data-child-id="{{ $child['id'] }}"
-                                                           data-parent-id="{{ $parent['id'] }}"
-                                                           {{ in_array($product['id'], $selectedProducts) ? 'checked' : '' }}>
+                                    {{-- Child group sub-header row --}}
+                                    <tr class="group-child-row child-of-{{ $parent['id'] }}" data-child-id="{{ $child['id'] }}" data-parent-id="{{ $parent['id'] }}" data-target="child-{{ $child['id'] }}">
+                                        <td colspan="7">
+                                            <div class="gc-inner">
+                                                <div class="gc-left">
+                                                    <i class="fa fa-tag" style="color:#3598dc; font-size:11px;"></i>
+                                                    <span>{{ $child['name'] }}</span>
+                                                    <span class="badge-blue">{{ count($child['products'] ?? []) }} Products</span>
+                                                    <span class="badge-selected child-count" data-child-id="{{ $child['id'] }}">{{ $childSel }} Selected</span>
                                                 </div>
-                                                <div class="product-info">
-                                                    <span class="product-name">{{ $product['product_name'] }}</span>
-                                                    <span class="product-desc">({{ $product['description'] ?? '' }})</span>
-                                                </div>
+                                                <i class="fa fa-chevron-down gc-arrow"></i>
                                             </div>
-                                            @endforeach
-                                        </div>{{-- /child-body --}}
+                                        </td>
+                                    </tr>
 
-                                    </div>{{-- /child-section --}}
+                                    @foreach($child['products'] ?? [] as $index => $product)
+                                    @php
+                                        $hasPrice  = !is_null($product['dealer_price'] ?? null);
+                                        $isNA      = !empty($product['not_available']);
+                                        $isChecked = in_array($product['id'], $selectedProducts);
+                                    @endphp
+                                    <tr class="product-row child-of-{{ $child['id'] }} parent-of-{{ $parent['id'] }} {{ $isChecked ? 'selected-row' : '' }}"
+                                        id="row-{{ $product['id'] }}"
+                                        data-product-id="{{ $product['id'] }}"
+                                        data-child-id="{{ $child['id'] }}"
+                                        data-parent-id="{{ $parent['id'] }}"
+                                        data-name="{{ strtolower($product['product_name']) }}"
+                                        data-selected="{{ $isChecked ? 1 : 0 }}"
+                                        data-na="{{ $isNA ? 1 : 0 }}">
+
+                                        <td class="sr-no-cell">{{ $index + 1 }}</td>
+
+                                        <td class="cb-cell">
+                                            <input type="checkbox"
+                                                   class="custom-checkbox product-cb"
+                                                   name="products[]"
+                                                   value="{{ $product['id'] }}"
+                                                   data-child-id="{{ $child['id'] }}"
+                                                   data-parent-id="{{ $parent['id'] }}"
+                                                   {{ $isChecked ? 'checked' : '' }}>
+                                        </td>
+
+                                        <td>
+                                            <span class="prod-name">{{ $product['product_name'] }}</span>
+                                            @if(!empty($product['description']))
+                                                <span class="prod-desc">({{ $product['description'] }})</span>
+                                            @endif
+                                        </td>
+
+                                        <td>
+                                            <span class="info-pill">{{ $product['moq'] ?? '—' }}</span>
+                                        </td>
+
+                                        <td>
+                                            <span class="info-pill">{{ $product['average_dispatch_time'] ?? '—' }}</span>
+                                        </td>
+
+                                        <td class="center-cell">
+                                            @if($isNA)
+                                                <span class="info-pill na-yes"><i class="fa fa-times"></i> Yes</span>
+                                            @else
+                                                <span class="info-pill na-no"><i class="fa fa-check"></i> No</span>
+                                            @endif
+                                        </td>
+
+                                        <td>
+                                            @if($hasPrice)
+                                                <span class="info-pill dp-val">₹ {{ number_format((float)$product['dealer_price'], 2) }}</span>
+                                            @else
+                                                <span class="info-pill dp-none">No Price</span>
+                                            @endif
+                                        </td>
+
+                                    </tr>
+                                    @endforeach
+
                                 @endforeach
+                            @endforeach
 
-                            </div>{{-- /parent-body --}}
-                        </div>{{-- /parent-section --}}
-                    @endforeach
+                            <tr id="empty-row" style="display:none;">
+                                <td colspan="7">
+                                    <i class="fa fa-inbox" style="font-size:22px; display:block; margin-bottom:6px;"></i>
+                                    No products match the current filters.
+                                </td>
+                            </tr>
+
+                            </tbody>
+                        </table>
+                    </div>
 
                     {{-- Floating save bar --}}
                     <div class="floating-save-bar">
@@ -238,8 +414,8 @@
                             <i class="fa fa-check"></i> Save Changes
                         </button>
                     </div>
-
                 </form>
+
             </div>
         </div>
     </div>
@@ -248,116 +424,121 @@
 <script>
 $(document).ready(function () {
 
-    /* ── 1. Parent toggle (full-width blue row) ── */
-    $(document).on('click', '.parent-toggle', function () {
-        var id    = $(this).data('target');
-        var $body = $('#' + id);
-        var open  = $body.is(':visible');
-        $body.toggleClass('collapsed', open);
-        $body.toggle(!open);
-        $(this).toggleClass('collapsed', open);
-    });
-
-    /* ── 2. Child toggle (full-width grey row) ── */
-    $(document).on('click', '.child-toggle', function () {
-        var id    = $(this).data('target');
-        var $body = $('#' + id);
-        var open  = $body.is(':visible');
-        $body.toggleClass('collapsed', open);
-        $body.toggle(!open);
-        $(this).toggleClass('collapsed', open);
-    });
-
-    /* ── 3. Checkbox counter update ── */
-    $(document).on('change', '.product-cb', function () {
-        var childId  = $(this).data('child-id');
+    /* ── 1. Parent group toggle ── */
+    $(document).on('click', '.group-parent-row', function () {
         var parentId = $(this).data('parent-id');
+        var $children = $('.child-of-' + parentId);
+        var isCollapsed = $(this).hasClass('collapsed');
+
+        if (isCollapsed) {
+            $(this).removeClass('collapsed');
+            $children.show();
+        } else {
+            $(this).addClass('collapsed');
+            $children.hide();
+            // also collapse child headers
+            $children.filter('.group-child-row').addClass('collapsed');
+            $children.filter('.group-child-row').each(function () {
+                var cid = $(this).data('child-id');
+                $('.child-of-' + cid).hide();
+            });
+        }
+    });
+
+    /* ── 2. Child group toggle ── */
+    $(document).on('click', '.group-child-row', function (e) {
+        e.stopPropagation();
+        var childId = $(this).data('child-id');
+        var $rows   = $('.product-row.child-of-' + childId);
+        var isCollapsed = $(this).hasClass('collapsed');
+        $(this).toggleClass('collapsed', !isCollapsed);
+        $rows.toggle(isCollapsed);
+    });
+
+    /* ── 3. Checkbox change ── */
+    $(document).on('change', '.product-cb', function () {
+        var $cb       = $(this);
+        var childId   = $cb.data('child-id');
+        var parentId  = $cb.data('parent-id');
+        var $row      = $cb.closest('.product-row');
+        var checked   = $cb.is(':checked');
+
+        $row.data('selected', checked ? 1 : 0);
+        $row.toggleClass('selected-row', checked);
 
         var childChecked  = $('input.product-cb[data-child-id="'  + childId  + '"]:checked').length;
         var parentChecked = $('input.product-cb[data-parent-id="' + parentId + '"]:checked').length;
         var total         = $('.product-cb:checked').length;
 
-        $('.child-count[data-child-id="' + childId + '"]').text(childChecked + ' Selected');
+        $('.child-count[data-child-id="'   + childId  + '"]').text(childChecked  + ' Selected');
         $('.parent-count[data-parent-id="' + parentId + '"]').text(parentChecked + ' selected');
-        $('#top-total-count, #bottom-total-count').text(total);
+        $('#top-total-count, #bottom-total-count, #sum-selected').text(total);
     });
 
-    /* ── 4. Search ── */
-    $('#product-search').on('input', function () {
-        var q = $.trim($(this).val()).toLowerCase();
+    /* ── 4. Filters ── */
+    function applyFilters() {
+        var parentId  = $('#filter-parent').val();
+        var childId   = $('#filter-child').val();
+        var selection = $('#filter-selection').val();
+        var search    = $('#filter-search').val().toLowerCase().trim();
+        var naOnly    = $('#filter-na').is(':checked');
+        var visible   = 0;
 
-        if (q === '') {
-            // show everything, restore all rows
-            $('.product-list-item').removeClass('hidden');
-            $('.parent-section, .child-section').show();
-            // re-open parent/child bodies
-            $('.parent-body, .child-body').show().removeClass('collapsed');
-            $('.parent-toggle, .child-toggle').removeClass('collapsed');
-            $('#search-clear').hide();
-            $('#no-results-msg').hide();
-            renumberAll();
-            return;
-        }
-
-        $('#search-clear').show();
-
-        var anyVisible = false;
-
-        // Walk each child section
-        $('.child-section').each(function () {
-            var $child     = $(this);
-            var childHasAny = false;
-
-            $child.find('.product-list-item').each(function () {
-                var name = $(this).data('name') || '';
-                if (name.indexOf(q) !== -1) {
-                    $(this).removeClass('hidden');
-                    childHasAny = true;
-                    anyVisible  = true;
-                } else {
-                    $(this).addClass('hidden');
-                }
-            });
-
-            // show/hide child and open its body if matched
-            if (childHasAny) {
-                $child.show();
-                var bodyId = $child.find('.child-toggle').data('target');
-                $('#' + bodyId).show().removeClass('collapsed');
-                $child.find('.child-toggle').removeClass('collapsed');
-            } else {
-                $child.hide();
+        // Show/hide product rows
+        $('#link-tbody .product-row').each(function () {
+            var $r = $(this);
+            if (parentId && $r.data('parent-id') + '' !== parentId)     { $r.hide(); return; }
+            if (childId  && $r.data('child-id')  + '' !== childId)      { $r.hide(); return; }
+            if (selection === 'selected'   && $r.data('selected') != 1) { $r.hide(); return; }
+            if (selection === 'unselected' && $r.data('selected') == 1) { $r.hide(); return; }
+            if (naOnly && $r.data('na') != 1)                           { $r.hide(); return; }
+            if (search) {
+                var name = $r.data('name') || '';
+                if (name.indexOf(search) === -1)                        { $r.hide(); return; }
             }
+            $r.show();
+            visible++;
         });
 
-        // Show/hide parent sections based on whether any child matched
-        $('.parent-section').each(function () {
-            var $p = $(this);
-            if ($p.find('.child-section:visible').length > 0) {
-                $p.show();
-                var pbId = $p.find('.parent-toggle').data('target');
-                $('#' + pbId).show().removeClass('collapsed');
-                $p.find('.parent-toggle').removeClass('collapsed');
-            } else {
-                $p.hide();
-            }
+        // Show/hide child group headers
+        $('#link-tbody .group-child-row').each(function () {
+            var cid  = $(this).data('child-id');
+            var hasVisible = $('.product-row.child-of-' + cid + ':visible').length > 0;
+            $(this).toggle(hasVisible);
         });
 
-        $('#no-results-msg').toggle(!anyVisible);
-        renumberAll();
+        // Show/hide parent group headers
+        $('#link-tbody .group-parent-row').each(function () {
+            var pid = $(this).data('parent-id');
+            var hasVisible = $('.group-child-row.child-of-' + pid + ':visible').length > 0;
+            $(this).toggle(hasVisible);
+        });
+
+        $('#visible-count').text(visible);
+        $('#empty-row').toggle(visible === 0);
+        renumber();
+    }
+
+    // Filter child dropdown based on parent selection
+    $('#filter-parent').on('change', function () {
+        var pid = $(this).val();
+        $('#filter-child option').each(function () {
+            var $o = $(this);
+            if (!$o.val()) { $o.show(); return; }
+            $o.toggle(!pid || $o.data('parent') + '' === pid);
+        });
+        $('#filter-child').val('');
+        applyFilters();
     });
 
-    $('#search-clear').on('click', function () {
-        $('#product-search').val('').trigger('input');
-    });
+    $('#filter-child, #filter-selection, #filter-na').on('change', applyFilters);
+    $('#filter-search').on('input', applyFilters);
 
-    /* ── 5. Renumber visible rows per child ── */
-    function renumberAll() {
-        $('.child-section:visible').each(function () {
-            var n = 0;
-            $(this).find('.product-list-item:not(.hidden) .sr-no').each(function () {
-                $(this).text(++n);
-            });
+    /* ── 5. Renumber visible product rows ── */
+    function renumber() {
+        var n = 0;
+        $('#link-tbody .product-row:visible').each(function () {
+            $(this).find('.sr-no-cell').text(++n);
         });
     }
 

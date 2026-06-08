@@ -536,14 +536,19 @@ class UsersController extends Controller
         }
     }
 
+    // ──────────────────────────────────────────────────────────────────────────────
+    // Replace your existing userProducts() method in your UserController with this:
+    // ──────────────────────────────────────────────────────────────────────────────
+
     public function userProducts($id)
     {
         $user = User::findOrFail($id);
 
-        // Your optimized hierarchy function
+        // fullHierarchy() now internally fetches moq, dispatch, not_available,
+        // and the latest dealer_price for each product — no changes needed here.
         $hierarchy = ProductDetail::fullHierarchy();
 
-        // Get already linked product IDs
+        // Get already linked product IDs for this user
         $selectedProducts = $user->products()->pluck('product_id')->toArray();
 
         $title = "Link Products - " . $user->name;
