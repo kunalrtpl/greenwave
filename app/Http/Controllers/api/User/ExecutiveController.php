@@ -556,7 +556,7 @@ class ExecutiveController extends Controller
                 $userId = $resp['user']['id'];
             }
             $customerids = \App\UserCustomerShare::where('user_id',$userId)->pluck('customer_id')->toArray();
-            $customers = Customer::with(['corporate_discount','product_discounts','employees','link_dealer'])->wherein('id',$customerids)->get()->toArray();
+            $customers = Customer::with(['corporate_discount','product_discounts','employees','link_dealer'])->wherein('id',$customerids)->where('status',1)->get()->toArray();
             $result['customers'] = $customers;
             if($mtodShow){
                 $mtod = \App\Discount::orderby('start_date','DESC')->get();
@@ -1812,7 +1812,7 @@ class ExecutiveController extends Controller
             $getSubRegions = \App\UserDepartmentRegion::where('user_id',$resp['user']['id'])->pluck('sub_region_id')->toArray();
             $cities = \App\RegionCity::wherein('region_id',$getSubRegions)->pluck('city')->toArray();
             $customerIds = \App\CustomerCity::wherein('city_name',$cities)->pluck('customer_id')->toArray();
-            $customers =  \App\Customer::wherein('id',$customerIds)->select('*', \DB::raw("'1' as status"))->get()->toArray();
+            $customers =  \App\Customer::wherein('id',$customerIds)->select('*', \DB::raw("'1' as status"))->where('status',1)->get()->toArray();
             $request_customers = \App\CustomerRegisterRequest::with(['linkedExecutive','dealer'])->wherein('cities',$cities)->where('status','!=','Added')->get()->toArray();
 
             $result['registered_customers'] = $customers;
