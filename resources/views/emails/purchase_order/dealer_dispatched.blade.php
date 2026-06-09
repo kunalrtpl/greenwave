@@ -186,12 +186,12 @@
                         <td class="transport-value">{{ \Carbon\Carbon::parse($dispatch_date)->format('d M Y') }}</td>
                     </tr>
                     <tr>
-                        <td class="transport-label">Dispatched By</td>
+                        <td class="transport-label">Updated By</td>
                         <td class="transport-value">{{ $dispatched_by }}</td>
                     </tr>
                     <tr>
-                        <td class="transport-label">Payment Term (Days)</td>
-                        <td class="transport-value">{{ $dealer->payment_term ?? '' }}</td>
+                        <td class="transport-label">Payment Term</td>
+                        <td class="transport-value">{{ $dealer->payment_term ?? '' }} days</td>
                     </tr>
                 </table>
             </td>
@@ -261,8 +261,8 @@
                             {{-- Total Qty + Total Packs — rowspan --}}
                             @if($rIdx == 0)
                             <td rowspan="{{ $rowCount }}" class="prod-total-cell">
-                                <span class="prod-total-val">{{ $product['total_qty'] }}</span><br>
-                                <span class="prod-total-unit">kg</span>
+                                <span class="prod-total-val">{{ $product['total_qty'] }} kg</span><br>
+                                <!-- <span class="prod-total-unit">kg</span> -->
                                 <!-- @if(!empty($product['total_packs']) && $product['total_packs'] > 0)
                                     <div class="prod-total-packs">
                                         {{ number_format($product['total_packs'], 0) }} packs
@@ -282,7 +282,7 @@
                                 <span class="sub-qty-val">{{ $row['qty'] }}</span>
                                 <span class="sub-qty-unit"> kg</span>
                                 @if(!empty($row['batch_no']))
-                                    <div class="sub-batch-no">Batch: {{ $row['batch_no'] }}</div>
+                                    <div class="sub-batch-no">({{ $row['batch_no'] }})</div>
                                 @endif
                             </td>
 
@@ -292,7 +292,7 @@
                                     <span class="packing-detail-val">
                                         {{ number_format($row['packing_size'], 0) }} kg
                                         &times;
-                                        {{ number_format($row['packs'], 0) }} packs
+                                        {{ number_format($row['packs'], 0) }}
                                     </span>
                                 @else
                                     <span style="font-size:11px; color:#81c784;">—</span>

@@ -218,12 +218,9 @@
                         </td>
                     </tr>
                     <tr class="info-row-border">
-                        <td class="info-row-label">Payment Term (days)</td>
+                        <td class="info-row-label">Payment Term</td>
                         <td class="info-row-value">
-                            {{ $po->dealer->payment_term ?? '' }}
-                            @if(!empty($po->dealer->mobile))
-                                <span class="dealer-mobile">{{ $po->dealer->mobile }}</span>
-                            @endif
+                            {{ $po->dealer->payment_term ?? '' }} days
                         </td>
                     </tr>
 

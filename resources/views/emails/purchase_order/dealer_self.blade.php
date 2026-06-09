@@ -136,7 +136,7 @@
                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                     <tr>
                         <td class="ribbon-ref">● &nbsp;PO Reference: <strong>{{ $po->po_ref_no_string }}</strong></td>
-                        <td class="ribbon-ref">Payment Term (Days): <strong>{{ $po->dealer->payment_term ?? '' }}</strong></td>
+                        
                         <td align="right" class="ribbon-status">Status: <strong>{{ ucwords($po->po_status ?? 'Pending') }}</strong></td>
                     </tr>
                 </table>
@@ -212,9 +212,9 @@
                         {{-- Product + Pack Size below --}}
                         <td class="item-product">
                             <div class="item-product-name">{{ $item->product->product_name ?? '—' }}</div>
-                            @if(!empty($item->product->product_code))
+                            <!-- @if(!empty($item->product->product_code))
                                 <div class="prod-code-text">({{ $item->product->product_code ?? '—' }})</div>
-                            @endif
+                            @endif -->
                             @if($packLabel)
                                 <div class="item-pack-size">{{ $packLabel }}</div>
                             @endif
@@ -246,8 +246,8 @@
 
                     {{-- Footer --}}
                     <tr class="items-footer">
-                        <td colspan="2" class="items-footer-left">Total Products: {{ $po->orderitems->count() }}</td>
-                        <td colspan="2" class="items-footer-right">Total Qty: {{ $po->orderitems->sum('qty') }} kg</td>
+                        <td colspan="2" class="items-footer-left">Payment Term: {{ $po->dealer->payment_term ?? '' }} days</td>
+                        <td colspan="2" class="items-footer-right">{{ $po->orderitems->sum('qty') }} kg</td>
                     </tr>
 
                 </table>
@@ -269,21 +269,21 @@
                                 <td valign="top" style="width: 33%; padding-right: 8px;">
                                     <div class="next-card">
                                         <div class="next-card-icon">🔍</div>
-                                        <div class="next-card-title">Under Review</div>
+                                        <div class="next-card-title">Review</div>
                                         <div class="next-card-body">Team verifies quantities</div>
                                     </div>
                                 </td>
                                 <td valign="top" style="width: 33%; padding-right: 8px;">
                                     <div class="next-card">
                                         <div class="next-card-icon">✅</div>
-                                        <div class="next-card-title">Approved</div>
-                                        <div class="next-card-body">PO confirmed & pricing shared</div>
+                                        <div class="next-card-title">Approval</div>
+                                        <div class="next-card-body">Qty & price will be notified</div>
                                     </div>
                                 </td>
                                 <td valign="top" style="width: 33%;">
                                     <div class="next-card">
                                         <div class="next-card-icon">🚚</div>
-                                        <div class="next-card-title">Dispatched</div>
+                                        <div class="next-card-title">Dispatch</div>
                                         <div class="next-card-body">You'll be notified on dispatch</div>
                                     </div>
                                 </td>

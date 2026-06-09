@@ -228,8 +228,8 @@
                         <td class="summary-value">{{ $approvedBy }}</td>
                     </tr>
                     <tr class="summary-row-border">
-                        <td class="summary-label">Payment Term (Days)</td>
-                        <td class="summary-value">{{ $po->dealer->payment_term ?? '' }}</td>
+                        <td class="summary-label">Payment Term</td>
+                        <td class="summary-value">{{ $po->dealer->payment_term ?? '' }} days</td>
                     </tr>
                     @if(!empty($po->remarks))
                     <tr>

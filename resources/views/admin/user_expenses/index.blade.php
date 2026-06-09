@@ -533,7 +533,7 @@ $currentYear  = date('Y');
                             </div>
                             @if($expense->missed_entry && !empty($expense->missed_entry_reason))
                                 <div style="margin-top:3px;">
-                                    <span class="missed-reason-txt" title="{{ $expense->missed_entry_reason }}">{{ \Illuminate\Support\Str::limit($expense->missed_entry_reason, 30) }}</span>
+                                    <span class="missed-reason-txt" title="{{ $expense->missed_entry_reason }}">{{ $expense->missed_entry_reason }}</span>
                                 </div>
                             @endif
                             @if(!empty($expense->remarks))
