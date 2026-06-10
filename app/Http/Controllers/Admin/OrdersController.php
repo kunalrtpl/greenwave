@@ -605,6 +605,11 @@ class OrdersController extends Controller
                 }
             }
 
+            $today = \Carbon\Carbon::today()->toDateString();
+
+            // ── This will store old prices keyed by product_id for email use ──
+            $oldPricesForEmail = [];
+
             // ── Save pass ────────────────────────────────────────────────────
             foreach ($data['item_ids'] as $ikey => $itemid) {
                 $itemDetails = PurchaseOrderItem::find($itemid);
@@ -618,6 +623,25 @@ class OrdersController extends Controller
                 $totalDiscount      = $qtyDisc + $specDisc + $basicDisc;
                 $calculatedNetPrice = $dealerPrice * (1 - $totalDiscount / 100);
 
+                // ── Fetch OLD price BEFORE saving (for email display) ──────────
+                // This runs BEFORE the new price_pricings insert below,
+                // so $latestPricing is truly the previous price
+                $latestPricing = DB::table('product_pricings')
+                    ->where('product_id', $itemDetails->product_id)
+                    ->where('price_date', '<=', $today)
+                    ->orderBy('price_date', 'desc')
+                    ->orderBy('id', 'desc')
+                    ->first();
+
+                $lastKnownPrice = $latestPricing ? (float) $latestPricing->dealer_price : null;
+
+                // Store old price only if it actually changed
+                // If same → no strikethrough needed in email
+                $oldPricesForEmail[$itemDetails->product_id] = ($lastKnownPrice !== null && $lastKnownPrice != $dealerPrice)
+                    ? $lastKnownPrice
+                    : null;
+                // ── End old price fetch ─────────────────────────────────────────
+
                 $itemDetails->product_price           = $dealerPrice;
                 $itemDetails->dealer_qty_discount     = $qtyDisc;
                 $itemDetails->dealer_special_discount = $specDisc;
@@ -630,22 +654,9 @@ class OrdersController extends Controller
 
                 $subtotal += $calculatedNetPrice * $data['actual_qtys'][$ikey];
 
-                // ── ProductPricing entry 
-
-                $today = \Carbon\Carbon::today()->toDateString(); // e.g. 2026-04-27
-
-                // Fetch the latest existing pricing for this product
-                // whose price_date is <= today (ignore future-dated entries)
-                $latestPricing = DB::table('product_pricings')
-                    ->where('product_id', $itemDetails->product_id)
-                    ->where('price_date', '<=', $today)
-                    ->orderBy('price_date', 'desc')
-                    ->orderBy('id', 'desc')
-                    ->first();
-
+                // ── ProductPricing entry ─────────────────────────────────────
                 // Only insert if dealer_price differs from last known price
                 // (avoids duplicate entries if same price was already saved)
-                $lastKnownPrice = $latestPricing ? (float) $latestPricing->dealer_price : null;
                 if ($lastKnownPrice === null || $lastKnownPrice != $dealerPrice) {
                     DB::table('product_pricings')->insert([
                         'product_id'    => $itemDetails->product_id,
@@ -657,7 +668,6 @@ class OrdersController extends Controller
                         'updated_at'    => \Carbon\Carbon::now(),
                     ]);
                 }
-                
                 // ── End ProductPricing ───────────────────────────────────────
 
                 // Dealer pending orders
@@ -690,17 +700,27 @@ class OrdersController extends Controller
             $updatePo->save();
 
             DB::commit();
+
             $approvedBy = auth()->user()->name;
+
             // ── Send Approval Email to Dealer ─────────────────────────────────
-            $poForEmail  = PurchaseOrder::with([
+            $poForEmail = PurchaseOrder::with([
                 'dealer',
                 'orderitems.product',
                 'orderitems.packingsize',
             ])->find($data['purchase_order_id']);
-            
+
+            // ── Attach old prices to each item for email display ──────────────
+            // Use $oldPricesForEmail captured BEFORE the new price was inserted,
+            // so same-price approvals never show a strikethrough
+            foreach ($poForEmail->orderitems as $item) {
+                $item->old_price_for_email = $oldPricesForEmail[$item->product_id] ?? null;
+            }
+            // ── End old price attachment ──────────────────────────────────────
+
             $emails = getDealerTemplateRecipients('po_dealer_approved', $poForEmail->dealer);
-            EmailService::send('po_dealer_approved', ['po' => $poForEmail,'approvedBy'=> $approvedBy], $emails);
-            // ── End Email ─────────────────────────────────
+            EmailService::send('po_dealer_approved', ['po' => $poForEmail, 'approvedBy' => $approvedBy], $emails);
+            // ── End Email ─────────────────────────────────────────────────────
 
             return Redirect::to('/admin/dealer-orders')
                 ->with('flash_message_success', 'Purchase Order has been approved successfully');

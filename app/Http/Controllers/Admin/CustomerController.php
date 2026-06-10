@@ -303,7 +303,7 @@ class CustomerController extends Controller
                     }
                     //echo "<pre>"; print_r($data); die;
                     unset($data['_token']);
-                    DB::beginTransaction();
+                    //DB::beginTransaction();
                     if($type =="add"){
                         $customer = new Customer;
                         $customer->created_by = auth()->user()->id; 
@@ -450,31 +450,6 @@ class CustomerController extends Controller
                             $custDis->save();
                         }
                     }
-
-                    /*DB::table('customer_discounts')->where('customer_id',$customer->id)->delete();
-                    if(isset($data['customer_discounts'])){
-                        foreach($data['customer_discounts'] as $customeDisInfo){
-                            $customeDisInfo = json_decode($customeDisInfo,true);
-                            $custDis = new CustomerDiscount;
-                            $custDis->customer_id = $customer->id; 
-                            $custDis->discount_type = $customeDisInfo['discount_type']; 
-                            //$custDis->company_share = $customeDisInfo['company_share'];  
-                            //$custDis->dealer_share = $customeDisInfo['dealer_share'];  
-                            if(!empty($customeDisInfo['product_id'])){
-                                $custDis->product_id = $customeDisInfo['product_id'];  
-                            }
-                            if(!empty($customeDisInfo['from_qty'])){
-                                $custDis->from_qty = $customeDisInfo['from_qty'];  
-                            }
-                            if(!empty($customeDisInfo['to_qty'])){
-                                $custDis->to_qty = $customeDisInfo['to_qty'];  
-                            }
-                            if(!empty($customeDisInfo['discount'])){
-                                $custDis->discount = $customeDisInfo['discount'];  
-                            }
-                            $custDis->save();
-                        }
-                    }*/
                     DB::table('customer_cities')->where('customer_id',$customer->id)->delete();
                     foreach($data['cities'] as $cityInfo){
                         $custCity = new CustomerCity;
@@ -498,8 +473,6 @@ class CustomerController extends Controller
                             $savecustEmp->mobile = $data['mobiles'][$nkey];
                             $savecustEmp->email = $data['emails'][$nkey];
                             $savecustEmp->designation = $data['designations'][$nkey];
-                            /*$savecustEmp->password    = bcrypt($data['passwords'][$nkey]);
-                            $savecustEmp->decrypt_password = $data['passwords'][$nkey];*/
                             $savecustEmp->save();
                         }
                     }
@@ -519,10 +492,20 @@ class CustomerController extends Controller
                         RegisterRequest::where('id',$data['register_request_id'])->delete();
                     }
 
-                    if(isset($data['customer_register_request_id'])){
-                        CustomerRegisterRequest::where('id',$data['customer_register_request_id'])->update(['status'=>'Added']);
+                    if (isset($data['customer_register_request_id'])) {
+                        $customerId = $customer->id;
+
+                        // 1. Update the customer registration request status
+                        CustomerRegisterRequest::where('id', $data['customer_register_request_id'])->update(['status' => 'Added']);
+
+                        // 2. Link existing contacts to the new customer ID and set the request ID to NULL
+                        \App\CustomerContact::where('customer_register_request_id', $data['customer_register_request_id'])
+                            ->update([
+                                'customer_id'                 => $customerId,
+                                'customer_register_request_id' => null
+                            ]);
                     }
-                    DB::commit();
+                    //DB::commit();
                     $redirectTo = url('/admin/customers?s');
                     return response()->json(['status'=>true,'message'=>'ok','url'=>$redirectTo]);
                 }else{

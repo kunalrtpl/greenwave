@@ -53,7 +53,8 @@ class UserDvrController extends Controller
         $query = UserDvr::with([
             'user:id,name',
             'customer:id,name,activity,category,mobile',
-            'customer_register_request:id,name,activity,category,mobile,status',
+            'customer.firstCity:id,customer_id,city_name',
+            'customer_register_request:id,name,activity,category,mobile,status,cities',
             'customer_contact_info:id,name,designation,mobile_number',
             'customerContacts.customerContact:id,name,designation,department,mobile_number',
             'products.productinfo:id,product_name',
@@ -119,7 +120,7 @@ class UserDvrController extends Controller
         );
 
         $groupedDvrs = $pageDvrs->groupBy('dvr_date_key');
-
+        //echo "<pre>"; print_r(json_decode(json_encode($groupedDvrs),true)); die;
         return view('admin.dvrs.index', compact(
             'groupedDvrs', 'paginator', 'users',
             'summaryStats', 'statusFilters', 'attendanceMap',
@@ -290,6 +291,10 @@ class UserDvrController extends Controller
         $customerName = $dvr->customer
             ? $dvr->customer->name
             : optional($dvr->customer_register_request)->name;
+
+        $customerCity = $dvr->customer->firstCity->city_name 
+            ?? $dvr->customer_register_request->cities 
+            ?? 'No city';
         $customerType = $dvr->customer ? 'customer' : ($dvr->customer_register_request ? 'request' : 'none');
 
         $checkIn  = $dvr->start_time ? Carbon::parse($dvr->start_time)->format('H:i') : null;
@@ -412,6 +417,7 @@ class UserDvrController extends Controller
             'dvr_date_display' => $dateDisp,
             'day_name'         => $dayName,
             'customer_name'    => $customerName ?? 'N/A',
+            'customer_city'    => $customerCity ?? 'N/A',
             'customer_type'    => $customerType,
             'check_in'         => $checkIn,
             'check_out'        => $checkOut,

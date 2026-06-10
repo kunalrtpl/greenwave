@@ -71,11 +71,12 @@
         .next-header        { background: #dcedc8; padding: 13px 20px; border-bottom: 1px solid #c5e1a5; text-align: center; }
         .next-header span   { font-size: 12px; font-weight: 700; color: #33691e; text-transform: uppercase; letter-spacing: 0.8px; }
         .next-body          { padding: 20px 16px; }
-        .next-card          { background: #fff; border: 1px solid #c8e6c9; border-radius: 10px; padding: 18px 10px; text-align: center; }
-        .next-card-icon     { font-size: 28px; margin-bottom: 10px; }
-        .next-card-title    { font-size: 12px; font-weight: 700; color: #2e7d32; margin-bottom: 4px; }
-        .next-card-body     { font-size: 11px; color: #a5d6a7; line-height: 1.5; }
-        .prod-code-text         { font-size: 10px; color: #81c784; margin-top: 2px; }
+        .next-card          { background: #ffffff; border: 1px solid #c8e6c9; border-radius: 10px; padding: 18px 10px; }
+        .next-card-icon     { font-size: 28px; padding-bottom: 8px; line-height: 1; }
+        .next-card-title    { font-size: 12px; font-weight: 700; color: #2e7d32; padding-bottom: 4px; line-height: 1.4; }
+        .next-card-body     { font-size: 11px; color: #81c784; line-height: 1.5; }
+        .prod-code-text     { font-size: 10px; color: #81c784; margin-top: 2px; }
+        
         /* ── Footer ── */
         .footer             { background: linear-gradient(160deg, #1b5e20 0%, #2e7d32 100%); border-radius: 12px; padding: 28px 32px; text-align: center; }
         .footer-logo-wrap   { display: inline-block; background: #ffffff; border-radius: 10px; padding: 8px 20px; box-shadow: 0 3px 12px rgba(0,0,0,0.15); margin-bottom: 18px; }
@@ -94,7 +95,7 @@
     <table cellpadding="0" cellspacing="0" border="0" class="wrapper">
 
         {{-- ══════════════════════════════════ --}}
-        {{-- HEADER                            --}}
+        {{-- HEADER                             --}}
         {{-- ══════════════════════════════════ --}}
         <tr>
             <td class="header">
@@ -129,7 +130,7 @@
         </tr>
 
         {{-- ══════════════════════════════════ --}}
-        {{-- RIBBON                            --}}
+        {{-- RIBBON                             --}}
         {{-- ══════════════════════════════════ --}}
         <tr>
             <td class="ribbon">
@@ -144,7 +145,7 @@
         </tr>
 
         {{-- ══════════════════════════════════ --}}
-        {{-- GREETING                          --}}
+        {{-- GREETING                           --}}
         {{-- ══════════════════════════════════ --}}
         <tr>
             <td class="section">
@@ -160,7 +161,7 @@
         </tr>
 
         {{-- ══════════════════════════════════ --}}
-        {{-- ORDER ITEMS                       --}}
+        {{-- ORDER ITEMS                        --}}
         {{-- ══════════════════════════════════ --}}
         <tr>
             <td class="section">
@@ -212,9 +213,6 @@
                         {{-- Product + Pack Size below --}}
                         <td class="item-product">
                             <div class="item-product-name">{{ $item->product->product_name ?? '—' }}</div>
-                            <!-- @if(!empty($item->product->product_code))
-                                <div class="prod-code-text">({{ $item->product->product_code ?? '—' }})</div>
-                            @endif -->
                             @if($packLabel)
                                 <div class="item-pack-size">{{ $packLabel }}</div>
                             @endif
@@ -244,10 +242,11 @@
                     </tr>
                     @endforeach
 
-                    {{-- Footer --}}
+                    {{-- Footer Row Corrected Alignment --}}
                     <tr class="items-footer">
                         <td colspan="2" class="items-footer-left">Payment Term: {{ $po->dealer->payment_term ?? '' }} days</td>
-                        <td colspan="2" class="items-footer-right">{{ $po->orderitems->sum('qty') }} kg</td>
+                        <td></td>
+                        <td class="items-footer-right">{{ $po->orderitems->sum('qty') }} kg</td>
                     </tr>
 
                 </table>
@@ -266,26 +265,47 @@
                     <div class="next-body">
                         <table width="100%" cellpadding="0" cellspacing="0" border="0">
                             <tr>
+                                {{-- Card 1: Review --}}
                                 <td valign="top" style="width: 33%; padding-right: 8px;">
-                                    <div class="next-card">
-                                        <div class="next-card-icon">🔍</div>
-                                        <div class="next-card-title">Review</div>
-                                        <div class="next-card-body">Team verifies quantities</div>
-                                    </div>
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0" class="next-card">
+                                        <tr>
+                                            <td align="center" class="next-card-icon">🔍</td>
+                                        </tr>
+                                        <tr>
+                                            <td align="center" class="next-card-title">Review</td>
+                                        </tr>
+                                        <tr>
+                                            <td align="center" class="next-card-body">Team verifies quantities</td>
+                                        </tr>
+                                    </table>
                                 </td>
+                                {{-- Card 2: Approval --}}
                                 <td valign="top" style="width: 33%; padding-right: 8px;">
-                                    <div class="next-card">
-                                        <div class="next-card-icon">✅</div>
-                                        <div class="next-card-title">Approval</div>
-                                        <div class="next-card-body">Qty & price will be notified</div>
-                                    </div>
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0" class="next-card">
+                                        <tr>
+                                            <td align="center" class="next-card-icon">✅</td>
+                                        </tr>
+                                        <tr>
+                                            <td align="center" class="next-card-title">Approval</td>
+                                        </tr>
+                                        <tr>
+                                            <td align="center" class="next-card-body">Qty & price will be notified</td>
+                                        </tr>
+                                    </table>
                                 </td>
+                                {{-- Card 3: Dispatch --}}
                                 <td valign="top" style="width: 33%;">
-                                    <div class="next-card">
-                                        <div class="next-card-icon">🚚</div>
-                                        <div class="next-card-title">Dispatch</div>
-                                        <div class="next-card-body">You'll be notified on dispatch</div>
-                                    </div>
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0" class="next-card">
+                                        <tr>
+                                            <td align="center" class="next-card-icon">🚚</td>
+                                        </tr>
+                                        <tr>
+                                            <td align="center" class="next-card-title">Dispatch</td>
+                                        </tr>
+                                        <tr>
+                                            <td align="center" class="next-card-body">You'll be notified on dispatch</td>
+                                        </tr>
+                                    </table>
                                 </td>
                             </tr>
                         </table>
@@ -295,7 +315,7 @@
         </tr>
 
         {{-- ══════════════════════════════════ --}}
-        {{-- FOOTER                            --}}
+        {{-- FOOTER                             --}}
         {{-- ══════════════════════════════════ --}}
         <tr>
             <td class="section" style="padding-bottom: 32px;">

@@ -462,6 +462,7 @@
             {{-- CUSTOMER + PURPOSE --}}
             <td>
                 <div class="cn">{{ $row['customer_name'] }}</div>
+                <small><i>{{ $row['customer_city'] }}</i></small>
                 @if($row['customer_type']==='customer')
                 <div class="ct" style="color:#3b82f6;"><i class="fa fa-building-o"></i> Registered</div>
                 @elseif($row['customer_type']==='request')

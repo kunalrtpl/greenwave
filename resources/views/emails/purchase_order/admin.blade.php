@@ -36,7 +36,7 @@
         .greeting-box     { background: #f1f8e9; border: 1px solid #c5e1a5; border-left: 5px solid #558b2f; border-radius: 10px; padding: 20px 22px; }
         .greeting-name    { font-size: 15px; color: #33691e; font-weight: 700; margin-bottom: 8px; }
         .greeting-body    { font-size: 13px; color: #558b2f; line-height: 1.8; }
-        .prod-code-text         { font-size: 10px; color: #81c784; margin-top: 2px; }
+        .prod-code-text   { font-size: 10px; color: #81c784; margin-top: 2px; }
         /* ── Order Info Table ── */
         .info-table               { width: 100%; border: 1px solid #c8e6c9; border-radius: 10px; overflow: hidden; }
         .info-table-header        { background: linear-gradient(135deg, #2e7d32 0%, #388e3c 100%); }
@@ -128,15 +128,6 @@
                     <img src="https://g2app.in/images/greenwave-logo-1-275-sl.jpg" alt="Greenwave" width="180">
                 </div>
                 <div class="header-divider"></div>
-                <!-- <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 0 auto 18px;">
-                    <tr>
-                        <td align="center">
-                            <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.5); border-radius: 50%; text-align: center; line-height: 64px; font-size: 30px; margin: 0 auto;">
-                                🔔
-                            </div>
-                        </td>
-                    </tr>
-                </table> -->
                 <div class="header-title">{{ $sourceText }}</div>
                 <div class="header-date">{{ \Carbon\Carbon::parse($po->created_at)->format('d F Y, h:i A') }}</div>
             </td>
@@ -159,7 +150,7 @@
         </tr>
 
         {{-- ══════════════════════════════════ --}}
-        {{-- GREETING                          --}}
+        {{-- GREETING                           --}}
         {{-- ══════════════════════════════════ --}}
         <tr>
             <td class="section">
@@ -174,7 +165,7 @@
         </tr>
 
         {{-- ══════════════════════════════════ --}}
-        {{-- ORDER INFO                        --}}
+        {{-- ORDER INFO                         --}}
         {{-- ══════════════════════════════════ --}}
         <tr>
             <td class="section">
@@ -245,7 +236,7 @@
         </tr>
 
         {{-- ══════════════════════════════════ --}}
-        {{-- ORDER ITEMS                       --}}
+        {{-- ORDER ITEMS                        --}}
         {{-- ══════════════════════════════════ --}}
         <tr>
             <td class="section">
@@ -337,7 +328,8 @@
                         <td colspan="2" class="items-footer-left">
                             Total Products: {{ $po->orderitems->count() }}
                         </td>
-                        <td colspan="2" class="items-footer-right">
+                        <td></td>
+                        <td class="items-footer-right">
                             Total Qty: {{ $po->orderitems->sum('qty') }} kg
                         </td>
                     </tr>

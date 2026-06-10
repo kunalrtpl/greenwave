@@ -54,7 +54,7 @@
         /* ── Items Table ── */
         .items-table            { width: 100%; border: 1px solid #6ee7b7; border-radius: 12px; overflow: hidden; font-size: 12px; }
         .items-header { background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%); }
-        .items-header td        { padding: 12px 8px; color: #fff; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+        .items-header td        { padding: 12px 6px; color: #fff; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
         .items-header .center   { text-align: center; }
         .items-header .right    { text-align: right; }
         .item-row-even          { background: #f0fdf4; border-bottom: 1px solid #d1fae5; }
@@ -68,7 +68,7 @@
         .item-comment           { font-size: 10px; color: #9ca3af; margin-top: 3px; font-style: italic; line-height: 1.4; }
 
         /* qty cells */
-        .item-center            { padding: 13px 8px; text-align: center; }
+        .item-center            { padding: 13px 6px; text-align: center; }
         .item-right             { padding: 13px 8px; text-align: right; }
 
         .ord-qty-val            { font-size: 13px; font-weight: 700; color: #9ca3af; text-decoration: line-through; }
@@ -112,14 +112,15 @@
         .qty-note-title         { font-size: 13px; font-weight: 700; color: #92400e; margin-bottom: 5px; }
         .qty-note-body          { font-size: 12px; color: #78350f; line-height: 1.7; }
         .prod-code-text         { font-size: 10px; color: #81c784; margin-top: 2px; }
+        
         /* ── What Happens Next ── */
         .next-box               { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; overflow: hidden; }
         .next-header            { background: #d1fae5; padding: 13px 20px; border-bottom: 1px solid #a7f3d0; text-align: center; }
         .next-header span       { font-size: 12px; font-weight: 700; color: #065f46; text-transform: uppercase; letter-spacing: 0.8px; }
         .next-body              { padding: 20px 16px; }
-        .next-card              { background: #fff; border: 1px solid #bbf7d0; border-radius: 10px; padding: 18px 10px; text-align: center; }
-        .next-card-icon         { font-size: 28px; margin-bottom: 10px; }
-        .next-card-title        { font-size: 12px; font-weight: 700; color: #065f46; margin-bottom: 4px; }
+        .next-card              { background: #fff; border: 1px solid #bbf7d0; border-radius: 10px; padding: 18px 10px; }
+        .next-card-icon         { font-size: 28px; padding-bottom: 10px; line-height: 1; }
+        .next-card-title        { font-size: 12px; font-weight: 700; color: #065f46; padding-bottom: 4px; line-height: 1.4; }
         .next-card-body         { font-size: 11px; color: #6ee7b7; line-height: 1.5; }
 
         /* ── Footer ── */
@@ -133,6 +134,18 @@
 </head>
 <body>
 
+@php
+    // Setup standard Indian System Currency Formatter
+    $indianCurrencyFormatter = numfmt_create('en_IN', NumberFormatter::CURRENCY);
+    numfmt_set_attribute($indianCurrencyFormatter, NumberFormatter::FRACTION_DIGITS, 2);
+    
+    // Helper function to clean out raw ISO currency strings if appended automatically
+    function formatIndianPrice($value, $formatter) {
+        $formatted = numfmt_format_currency($formatter, (float)$value, 'INR');
+        return trim(str_replace(['INR', '₹'], '', $formatted));
+    }
+@endphp
+
 <table width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-page">
 <tr>
 <td align="center" style="padding: 36px 16px;">
@@ -140,7 +153,7 @@
     <table cellpadding="0" cellspacing="0" border="0" class="wrapper">
 
         {{-- ══════════════════════════════════ --}}
-        {{-- HEADER                            --}}
+        {{-- HEADER                             --}}
         {{-- ══════════════════════════════════ --}}
         <tr>
             <td class="header">
@@ -157,15 +170,16 @@
                 <div class="header-divider"></div>
 
                 {{-- Approved Circle --}}
-                {{-- Approved Circle --}}
                 <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 0 auto 18px;">
                     <tr>
                         <td align="center" style="padding: 0;">
-                            <div style="width: 68px; height: 68px; border-radius: 34px; background: #10b981; box-shadow: 0 4px 20px rgba(16,185,129,0.4); display: table; margin: 0 auto;">
-                                <div style="display: table-cell; vertical-align: middle; text-align: center; font-size: 32px; color: #ffffff;">
-                                    ✓
-                                </div>
-                            </div>
+                            <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
+                                <tr>
+                                    <td width="68" height="68" align="center" valign="middle" style="width: 68px; height: 68px; border-radius: 34px; background: #10b981; box-shadow: 0 4px 20px rgba(16,185,129,0.4); font-size: 32px; color: #ffffff;">
+                                        ✓
+                                    </td>
+                                </tr>
+                            </table>
                         </td>
                     </tr>
                 </table>
@@ -177,7 +191,7 @@
         </tr>
 
         {{-- ══════════════════════════════════ --}}
-        {{-- RIBBON                            --}}
+        {{-- RIBBON                             --}}
         {{-- ══════════════════════════════════ --}}
         <tr>
             <td class="ribbon">
@@ -191,7 +205,7 @@
         </tr>
 
         {{-- ══════════════════════════════════ --}}
-        {{-- GREETING                          --}}
+        {{-- GREETING                           --}}
         {{-- ══════════════════════════════════ --}}
         <tr>
             <td class="section">
@@ -229,7 +243,7 @@
                     </tr>
                     <tr class="summary-row-border">
                         <td class="summary-label">Payment Term</td>
-                        <td class="summary-value">{{ $po->dealer->payment_term ?? '' }} days</td>
+                        <td class="summary-value" colspan="3">{{ $po->dealer->payment_term ?? '' }} days</td>
                     </tr>
                     @if(!empty($po->remarks))
                     <tr>
@@ -243,8 +257,6 @@
 
         {{-- ══════════════════════════════════════════════════ --}}
         {{-- APPROVED ITEMS TABLE                              --}}
-        {{-- Columns: # | Product (pack) | Ord.Qty | Appr.Qty  --}}
-        {{--           | Dealer Price | Disc | Net Price | Value --}}
         {{-- ══════════════════════════════════════════════════ --}}
         <tr>
             <td class="section">
@@ -267,16 +279,16 @@
 
                 <table class="items-table" cellpadding="0" cellspacing="0" border="0">
 
-                    {{-- Header --}}
+                    {{-- Header with (Rs.) explicitly stated here --}}
                     <tr class="items-header">
                         <td style="width: 22px; padding: 12px 8px;">#</td>
                         <td style="padding: 12px 8px;">Product</td>
                         <td class="center">Ord. Qty</td>
                         <td class="center">Appr. Qty</td>
-                        <td class="center">Dealer Price</td>
+                        <td class="center">Price (Rs.)</td>
                         <td class="center">Disc</td>
-                        <td class="center">Net Price</td>
-                        <td class="right" style="padding-right: 10px;">Value</td>
+                        <td class="center">Net Price (Rs.)</td>
+                        <td class="right" style="padding-right: 10px;">Value (Rs.)</td>
                     </tr>
 
                     @foreach($po->orderitems as $idx => $item)
@@ -315,7 +327,7 @@
                             @endif
                         </td>
 
-                        {{-- Ordered Qty — strikethrough if reduced --}}
+                        {{-- Ordered Qty --}}
                         <td class="item-center">
                             <span class="{{ $qtyReduced ? 'ord-qty-val' : 'ord-qty-val-same' }}">{{ $item->qty }}</span>
                             <span class="qty-unit"> kg</span>
@@ -332,12 +344,17 @@
                             @endif
                         </td>
 
-                        {{-- Dealer Price --}}
+                        {{-- Dealer Price (Cleaned Indian Layout Format) --}}
                         <td class="item-center">
-                            <span class="dealer-price">Rs. {{ number_format($item->product_price, 2) }}</span>
+                            <span class="dealer-price">{{ formatIndianPrice($item->product_price, $indianCurrencyFormatter) }}</span>
+                            @if(!empty($item->old_price_for_email))
+                                <div style="font-size:10px; color:#c2410c; text-decoration:line-through; font-weight:600; margin-bottom:3px;">
+                                    {{ formatIndianPrice($item->old_price_for_email, $indianCurrencyFormatter) }}
+                                </div>
+                            @endif
                         </td>
 
-                        {{-- Discounts — only show non-zero --}}
+                        {{-- Discounts --}}
                         <td class="item-center">
                             @if($bd > 0 || $sd > 0 || $qd > 0)
                                 <table cellpadding="0" cellspacing="0" border="0" align="center">
@@ -367,23 +384,23 @@
                                     @endif
                                 </table>
                                 @if($isMini && !empty($item->additional_charges) && $item->additional_charges > 0)
-                                    <div class="mini-charge">+Rs.{{ $item->additional_charges }} charges</div>
+                                    <div class="mini-charge">+{{ formatIndianPrice($item->additional_charges, $indianCurrencyFormatter) }} charges</div>
                                 @endif
                             @else
                                 <span style="font-size: 11px; color: #9ca3af;">—</span>
                             @endif
                         </td>
 
-                        {{-- Net Price --}}
+                        {{-- Net Price (Cleaned Indian Layout Format) --}}
                         <td class="item-center">
                             <div class="net-pill">
-                                <span class="net-price-val">Rs. {{ number_format($item->net_price, 2) }}</span>
+                                <span class="net-price-val">{{ formatIndianPrice($item->net_price, $indianCurrencyFormatter) }}</span>
                             </div>
                         </td>
 
-                        {{-- Value --}}
+                        {{-- Value (Cleaned Indian Layout Format) --}}
                         <td class="item-right">
-                            <span class="subtotal-val">Rs. {{ number_format($subTotal, 2) }}</span>
+                            <span class="subtotal-val">{{ formatIndianPrice($subTotal, $indianCurrencyFormatter) }}</span>
                         </td>
 
                     </tr>
@@ -394,29 +411,29 @@
         </tr>
 
         {{-- ══════════════════════════════════ --}}
-        {{-- ORDER TOTALS                      --}}
+        {{-- ORDER TOTALS                       --}}
         {{-- ══════════════════════════════════ --}}
         <tr>
             <td class="section-sm">
                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                     <tr>
-                        <td width="50%">&nbsp;</td>
-                        <td width="50%">
-                            <table class="totals-table" cellpadding="0" cellspacing="0" border="0">
+                        <td width="40%">&nbsp;</td>
+                        <td width="60%">
+                            <table class="totals-table" width="100%" cellpadding="0" cellspacing="0" border="0">
                                 <tr class="totals-row-border">
                                     <td class="totals-label">Subtotal</td>
-                                    <td class="totals-value">Rs. {{ number_format($po->price, 2) }}</td>
+                                    <td class="totals-value">{{ formatIndianPrice($po->price, $indianCurrencyFormatter) }}</td>
                                 </tr>
                                 <tr class="totals-row-border">
                                     <td class="totals-label-warn">GST ({{ $po->gst_per }}%)</td>
-                                    <td class="totals-value-warn">+ Rs. {{ number_format($po->gst, 2) }}</td>
+                                    <td class="totals-value-warn">+ {{ formatIndianPrice($po->gst, $indianCurrencyFormatter) }}</td>
                                 </tr>
                                 <tr>
                                     <td colspan="2" class="totals-grand">
                                         <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                             <tr>
                                                 <td class="totals-grand-label">Grand Total</td>
-                                                <td class="totals-grand-value">Rs. {{ number_format($po->grand_total, 2) }}</td>
+                                                <td class="totals-grand-value">{{ formatIndianPrice($po->grand_total, $indianCurrencyFormatter) }}</td>
                                             </tr>
                                         </table>
                                     </td>
@@ -429,7 +446,7 @@
         </tr>
 
         {{-- ══════════════════════════════════ --}}
-        {{-- QTY REDUCED NOTE                  --}}
+        {{-- QTY REDUCED NOTE                   --}}
         {{-- ══════════════════════════════════ --}}
         @if($po->orderitems->contains(function($i) { return $i->actual_qty < $i->qty; }))
         <tr>
@@ -456,26 +473,47 @@
                     <div class="next-body">
                         <table width="100%" cellpadding="0" cellspacing="0" border="0">
                             <tr>
+                                {{-- Card 1: Approved --}}
                                 <td valign="top" style="width: 33%; padding-right: 8px;">
-                                    <div class="next-card">
-                                        <div class="next-card-icon">✅</div>
-                                        <div class="next-card-title">Approved</div>
-                                        <div class="next-card-body">Order confirmed by our team</div>
-                                    </div>
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0" class="next-card">
+                                        <tr>
+                                            <td align="center" class="next-card-icon">✅</td>
+                                        </tr>
+                                        <tr>
+                                            <td align="center" class="next-card-title">Approved</td>
+                                        </tr>
+                                        <tr>
+                                            <td align="center" class="next-card-body">Order confirmed by our team</td>
+                                        </tr>
+                                    </table>
                                 </td>
+                                {{-- Card 2: Processing --}}
                                 <td valign="top" style="width: 33%; padding-right: 8px;">
-                                    <div class="next-card">
-                                        <div class="next-card-icon">📦</div>
-                                        <div class="next-card-title">Processing</div>
-                                        <div class="next-card-body">Order being prepared for dispatch</div>
-                                    </div>
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0" class="next-card">
+                                        <tr>
+                                            <td align="center" class="next-card-icon">📦</td>
+                                        </tr>
+                                        <tr>
+                                            <td align="center" class="next-card-title">Processing</td>
+                                        </tr>
+                                        <tr>
+                                            <td align="center" class="next-card-body">Order being prepared for dispatch</td>
+                                        </tr>
+                                    </table>
                                 </td>
+                                {{-- Card 3: Dispatched --}}
                                 <td valign="top" style="width: 33%;">
-                                    <div class="next-card">
-                                        <div class="next-card-icon">🚚</div>
-                                        <div class="next-card-title">Dispatched</div>
-                                        <div class="next-card-body">You'll be notified when shipped</div>
-                                    </div>
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0" class="next-card">
+                                        <tr>
+                                            <td align="center" class="next-card-icon">🚚</td>
+                                        </tr>
+                                        <tr>
+                                            <td align="center" class="next-card-title">Dispatched</td>
+                                        </tr>
+                                        <tr>
+                                            <td align="center" class="next-card-body">You'll be notified when shipped</td>
+                                        </tr>
+                                    </table>
                                 </td>
                             </tr>
                         </table>
@@ -485,7 +523,7 @@
         </tr>
 
         {{-- ══════════════════════════════════ --}}
-        {{-- FOOTER                            --}}
+        {{-- FOOTER                             --}}
         {{-- ══════════════════════════════════ --}}
         <tr>
             <td class="section-last" style="padding-bottom: 32px;">

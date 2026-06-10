@@ -66,4 +66,12 @@ class Customer extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+    // app/Models/Customer.php
+
+    public function firstCity()
+    {
+        return $this->hasOne(CustomerCity::class, 'customer_id')
+                    ->orderBy('id', 'asc'); // Grabs the first entry
+    }
 }
