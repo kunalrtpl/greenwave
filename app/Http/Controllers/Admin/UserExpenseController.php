@@ -513,4 +513,97 @@ class UserExpenseController extends Controller
 
         return response()->json(['success' => true, 'visits' => $result]);
     }
+
+
+    /**
+     * Export category-wise summary PDF for one or all employees.
+     * Route: GET /admin/user-expenses/export-category-summary
+     */
+    public function exportCategorySummaryPdf(Request $request)
+    {
+        $query = DB::table('user_expenses as ue')
+            ->join('expense_categories as ec', 'ue.category_id', '=', 'ec.id')
+            ->leftJoin('users as u', 'ue.user_id', '=', 'u.id')
+            ->select(
+                'ue.id',
+                'ue.user_id',
+                'ue.expense_date',
+                'ue.requested_amount',
+                'ue.approved_amount',
+                'ue.travel_km',
+                'ue.is_intercity',
+                'ue.intercity_route',
+                'ue.status',
+                'ec.name as category_name',
+                'ec.is_travel',
+                'u.name as employee_name',
+                'u.mobile as employee_mobile'
+            )
+            ->orderBy('u.name', 'ASC')
+            ->orderBy('ue.expense_date', 'ASC');
+
+        // Optional: filter by single employee
+        if ($request->filled('employee_id')) {
+            $query->where('ue.user_id', $request->employee_id);
+        }
+
+        if ($request->filled('month')) {
+            $query->whereMonth('ue.expense_date', $request->month);
+        }
+        if ($request->filled('year')) {
+            $query->whereYear('ue.expense_date', $request->year);
+        }
+
+        $allExpenses = $query->get();
+
+        // Resolve optional single-employee object (for header display only)
+        $filterEmployee = null;
+        if ($request->filled('employee_id')) {
+            $filterEmployee = DB::table('users')
+                ->select('id', 'name', 'mobile')
+                ->where('id', $request->employee_id)
+                ->first();
+        }
+
+        $html = view('admin.user_expenses.category_summary_pdf', [
+            'allExpenses'    => $allExpenses,
+            'filterEmployee' => $filterEmployee,
+            'filterMonth'    => $request->month ?? null,
+            'filterYear'     => $request->year  ?? null,
+        ])->render();
+
+        $mpdf = new Mpdf([
+            'mode'              => 'utf-8',
+            'format'            => 'A4',
+            'orientation'       => 'P',
+            'margin_top'        => 12,
+            'margin_bottom'     => 14,
+            'margin_left'       => 10,
+            'margin_right'      => 10,
+            'default_font'      => 'dejavusans',
+            'default_font_size' => 9,
+            'tempDir'           => storage_path('app/mpdf-temp'),
+        ]);
+
+        $mpdf->SetTitle('Category Summary Report — Greenwave');
+        $mpdf->SetAuthor('Greenwave');
+        $mpdf->WriteHTML($html);
+
+        // Build filename
+        $filename = 'category-summary';
+        if ($filterEmployee) {
+            $filename .= '-' . \Illuminate\Support\Str::slug($filterEmployee->name);
+        }
+        if ($request->filled('month') && $request->filled('year')) {
+            $filename .= '-' . date('M', mktime(0, 0, 0, $request->month, 1)) . '-' . $request->year;
+        } elseif ($request->filled('year')) {
+            $filename .= '-' . $request->year;
+        }
+        $filename .= '.pdf';
+
+        return response($mpdf->Output($filename, 'S'), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
 }

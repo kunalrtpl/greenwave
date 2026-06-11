@@ -19,9 +19,12 @@
     }
     .sum-card strong { font-size:15px; color:#2d3748; }
     .sum-card .dot   { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-    .dot-total { background:#3598dc; }
-    .dot-notl  { background:#e53e3e; }
-    .dot-nomsds{ background:#ed8936; }
+    .dot-total  { background:#3598dc; }
+    .dot-notl   { background:#e53e3e; }
+    .dot-nomsds { background:#ed8936; }
+    .dot-gots   { background:#38a169; }
+    .dot-zdhc   { background:#805ad5; }
+    .dot-oeko   { background:#2b6cb0; }
 
     /* ── Filter strip ── */
     .filter-strip {
@@ -41,8 +44,26 @@
     }
     .filter-strip select { min-width:190px; }
     .filter-strip input[type="text"] { width:180px; }
-    .filter-result { margin-left:auto; font-size:12px; color:#718096; padding-bottom:4px; white-space:nowrap; }
+    .filter-result { font-size:12px; color:#718096; padding-bottom:4px; white-space:nowrap; }
     .filter-result strong { color:#3598dc; }
+
+    /* ── Clear filters button ── */
+    .btn-clear-filters {
+        height:34px; padding:0 14px; font-size:11px; font-weight:700;
+        border-radius:4px !important; border:1px solid #c8d0dc;
+        background:#fff; color:#718096; cursor:pointer;
+        text-transform:uppercase; letter-spacing:0.4px;
+        display:inline-flex; align-items:center; gap:5px;
+        transition:all 0.15s; white-space:nowrap;
+    }
+    .btn-clear-filters:hover { background:#fed7d7; border-color:#fc8181; color:#c53030; }
+    .btn-clear-filters.hidden { visibility:hidden; pointer-events:none; }
+
+    /* ── Filter bottom row ── */
+    .filter-bottom-row {
+        display:flex; align-items:center; justify-content:space-between;
+        width:100%; margin-top:4px;
+    }
 
     /* ── Table ── */
     .doc-table { width:100%; border-collapse:collapse; font-size:12px; }
@@ -97,7 +118,15 @@
         font-weight:600; cursor:pointer; transition:all 0.15s; line-height:1.4;
     }
     .btn-doc-delete:hover { background:#fed7d7; }
-    .no-doc-badge { display:inline-flex; align-items:center; gap:3px; font-size:10px; color:#a0aec0; font-style:italic; }
+
+    /* ── None chip ── */
+    .no-doc-chip {
+        display:inline-flex; align-items:center; gap:4px;
+        font-size:10px; font-weight:700; color:#c53030;
+        background:#fff5f5; border:1px solid #feb2b2;
+        border-radius:12px; padding:2px 9px;
+    }
+    .no-doc-chip i { font-size:10px; }
 
     /* ── Certification cell ── */
     .cert-cell { display:flex; flex-direction:column; gap:4px; align-items:flex-start; }
@@ -111,10 +140,6 @@
     }
     .yn-group input[type="radio"] { cursor:pointer; accent-color:#3598dc; }
     .yn-group input[type="radio"].changed { accent-color:#f6ad55; }
-
-    /* Badge display */
-    .cert-yes { display:inline-block; font-size:10px; padding:2px 8px; border-radius:10px !important; font-weight:700; background:#e6fffa; color:#276749; border:1px solid #9ae6b4; }
-    .cert-no  { display:inline-block; font-size:10px; padding:2px 8px; border-radius:10px !important; font-weight:700; background:#fff5f5; color:#c53030; border:1px solid #feb2b2; }
 
     /* ZDHC PID input */
     .pid-input {
@@ -140,10 +165,6 @@
 
     /* ── Row upload overlay loader ── */
     .row-uploading td { opacity: 0.4; pointer-events: none; transition: opacity 0.2s; }
-    .row-uploading .row-upload-overlay {
-        display: none; /* overlay div not used - we use the fixed badge instead */
-    }
-    /* Fixed upload badge shown when any row is saving */
     #upload-progress-badge {
         display: none;
         position: fixed;
@@ -210,13 +231,19 @@
 
                 {{-- Summary --}}
                 @php
-                    $noTl   = $products->filter(fn($p) => empty($p->technical_literature))->count();
-                    $noMsds = $products->filter(fn($p) => empty($p->msds))->count();
+                    $noTl      = $products->filter(fn($p) => empty($p->technical_literature))->count();
+                    $noMsds    = $products->filter(fn($p) => empty($p->msds))->count();
+                    $yesGots   = $products->filter(fn($p) => $p->gots_certification === 'Yes')->count();
+                    $yesZdhc   = $products->filter(fn($p) => $p->zdhc_certification === 'Yes')->count();
+                    $yesOeko   = $products->filter(fn($p) => $p->oekotex_certified === 'Yes')->count();
                 @endphp
                 <div class="summary-bar">
                     <div class="sum-card"><span class="dot dot-total"></span>Total Active &nbsp;<strong>{{ $products->count() }}</strong></div>
                     <div class="sum-card"><span class="dot dot-notl"></span>No Tech. Literature &nbsp;<strong style="color:#e53e3e;">{{ $noTl }}</strong></div>
                     <div class="sum-card"><span class="dot dot-nomsds"></span>No MSDS &nbsp;<strong style="color:#ed8936;">{{ $noMsds }}</strong></div>
+                    <div class="sum-card"><span class="dot dot-gots"></span>GOTS Yes &nbsp;<strong style="color:#276749;">{{ $yesGots }}</strong></div>
+                    <div class="sum-card"><span class="dot dot-zdhc"></span>ZDHC Yes &nbsp;<strong style="color:#553c9a;">{{ $yesZdhc }}</strong></div>
+                    <div class="sum-card"><span class="dot dot-oeko"></span>Oekotex Yes &nbsp;<strong style="color:#1a4c7e;">{{ $yesOeko }}</strong></div>
                 </div>
 
                 {{-- Filters --}}
@@ -268,9 +295,16 @@
                             <option value="No">No</option>
                         </select>
                     </div>
-                    <div class="filter-result">
-                        Showing <strong id="visible-count">{{ $products->count() }}</strong>
-                        of {{ $products->count() }} products
+
+                    {{-- Bottom row: result count + clear button --}}
+                    <div class="filter-bottom-row">
+                        <div class="filter-result">
+                            Showing <strong id="visible-count">{{ $products->count() }}</strong>
+                            of {{ $products->count() }} products
+                        </div>
+                        <button type="button" id="btn-clear-filters" class="btn-clear-filters hidden">
+                            <i class="fa fa-times-circle"></i> Clear Filters
+                        </button>
                     </div>
                 </div>
 
@@ -307,7 +341,8 @@
                         data-oeko="{{ $product->oekotex_certified }}"
                         style="position:relative;">
 
-                        <td>{{ $index + 1 }}</td>
+                        {{-- Sr. No — updated dynamically by JS after filter --}}
+                        <td class="row-sr-no">{{ $index + 1 }}</td>
 
                         {{-- Product Name --}}
                         <td>
@@ -332,7 +367,7 @@
                                         <span class="doc-divider">|</span>
                                         <button type="button" class="btn-doc-delete" data-product-id="{{ $product->id }}" data-field="technical_literature"><i class="fa fa-trash"></i> Del</button>
                                     @else
-                                        <span class="no-doc-badge"><i class="fa fa-times-circle" style="color:#fc8181;"></i> None</span>
+                                        <span class="no-doc-chip"><i class="fa fa-times-circle"></i> None</span>
                                     @endif
                                 </div>
                             </div>
@@ -350,7 +385,7 @@
                                         <span class="doc-divider">|</span>
                                         <button type="button" class="btn-doc-delete" data-product-id="{{ $product->id }}" data-field="msds"><i class="fa fa-trash"></i> Del</button>
                                     @else
-                                        <span class="no-doc-badge"><i class="fa fa-times-circle" style="color:#fc8181;"></i> None</span>
+                                        <span class="no-doc-chip"><i class="fa fa-times-circle"></i> None</span>
                                     @endif
                                 </div>
                             </div>
@@ -471,8 +506,6 @@ $(document).ready(function () {
        1. DIRTY TRACKING
     ════════════════════════════════════════════════════════ */
     function checkDirty($row) {
-        var pid = $row.data('product-id');
-
         var hasTlFile   = $row.find('.field-tl').get(0)   && $row.find('.field-tl').get(0).files.length   > 0;
         var hasMsdsFile = $row.find('.field-msds').get(0) && $row.find('.field-msds').get(0).files.length > 0;
 
@@ -508,7 +541,6 @@ $(document).ready(function () {
         var pid  = $(this).data('product-id');
         var $row = $('#row-' + pid);
 
-        // Show/hide PID wrap based on ZDHC value
         if ($(this).hasClass('field-zdhc')) {
             var zdhcVal = $row.find('.field-zdhc:checked').val();
             if (zdhcVal === 'Yes') {
@@ -534,14 +566,11 @@ $(document).ready(function () {
         var pid  = $btn.data('product-id');
         var $row = $('#row-' + pid);
 
-        // Validate: PID mandatory when ZDHC = Yes
-        var zdhcVal = $row.find('.field-zdhc:checked').val();
+        var zdhcVal   = $row.find('.field-zdhc:checked').val();
         var $pidInput = $row.find('.field-pid');
         if (zdhcVal === 'Yes' && $pidInput.val().trim() === '') {
             $pidInput.css({ 'border-color': '#e53e3e', 'background': '#fff5f5' }).focus();
-            setTimeout(function() {
-                $pidInput.css({ 'border-color': '', 'background': '' });
-            }, 3000);
+            setTimeout(function() { $pidInput.css({ 'border-color': '', 'background': '' }); }, 3000);
             alert('ZDHC PID Number is mandatory when ZDHC is Yes.');
             return false;
         }
@@ -560,8 +589,6 @@ $(document).ready(function () {
         if (msdsInput && msdsInput.files.length > 0) formData.append('msds', msdsInput.files[0]);
 
         $btn.addClass('saving').html('<i class="fa fa-save"></i>');
-
-        // Dim the row and show centred upload badge
         $row.addClass('row-uploading');
         $('#upload-progress-backdrop, #upload-progress-badge').fadeIn(150);
 
@@ -574,7 +601,6 @@ $(document).ready(function () {
             success: function (resp) {
                 if (!resp.success) { showToast('danger', resp.message); return; }
 
-                // Update TL links
                 if (resp.files && resp.files.technical_literature) {
                     var f = resp.files.technical_literature;
                     $row.data('has-tl', 1);
@@ -586,7 +612,6 @@ $(document).ready(function () {
                     $row.find('.field-tl').val('');
                 }
 
-                // Update MSDS links
                 if (resp.files && resp.files.msds) {
                     var f = resp.files.msds;
                     $row.data('has-msds', 1);
@@ -598,13 +623,10 @@ $(document).ready(function () {
                     $row.find('.field-msds').val('');
                 }
 
-                // Update stored originals for certs so dirty check resets
                 $row.data('orig-gots', resp.gots_certification || 'No');
                 $row.data('orig-zdhc', resp.zdhc_certification || 'No');
                 $row.data('orig-pid',  resp.zdhc_pid           || '');
                 $row.data('orig-oeko', resp.oekotex_certified  || 'No');
-
-                // Update filter data attrs too
                 $row.data('gots', resp.gots_certification || 'No');
                 $row.data('zdhc', resp.zdhc_certification || 'No');
                 $row.data('oeko', resp.oekotex_certified  || 'No');
@@ -621,7 +643,6 @@ $(document).ready(function () {
                 showToast('danger', '<i class="fa fa-times-circle"></i> &nbsp;' + msg);
             },
             complete: function () {
-                // Remove row dimming and hide upload badge
                 $row.removeClass('row-uploading');
                 $('#upload-progress-backdrop, #upload-progress-badge').fadeOut(150);
                 $btn.removeClass('saving').html('<i class="fa fa-save"></i> Save');
@@ -651,7 +672,8 @@ $(document).ready(function () {
                 if (!resp.success) { showToast('danger', resp.message); return; }
 
                 var linkId = (field === 'technical_literature') ? 'tl-links-' + pid : 'msds-links-' + pid;
-                $('#' + linkId).html('<span class="no-doc-badge"><i class="fa fa-times-circle" style="color:#fc8181;"></i> None</span>');
+                /* Replace with None chip on delete */
+                $('#' + linkId).html('<span class="no-doc-chip"><i class="fa fa-times-circle"></i> None</span>');
 
                 if (field === 'technical_literature') $row.data('has-tl', 0);
                 else                                  $row.data('has-msds', 0);
@@ -664,46 +686,83 @@ $(document).ready(function () {
     });
 
     /* ════════════════════════════════════════════════════════
-       4. FILTERS
+       4. FILTERS + serial renumber + clear button
     ════════════════════════════════════════════════════════ */
+    var totalCount = {{ $products->count() }};
+
+    function isFiltered() {
+        return $('#filter-product').val()     !== '' ||
+               $('#filter-doc-status').val()  !== '' ||
+               $('#filter-search').val().trim() !== '' ||
+               $('#filter-gots').val()        !== '' ||
+               $('#filter-zdhc').val()        !== '' ||
+               $('#filter-oeko').val()        !== '';
+    }
+
     function applyFilters() {
-        var prodId    = $('#filter-product').val();
-        var docStatus = $('#filter-doc-status').val();
-        var search    = $('#filter-search').val().toLowerCase().trim();
+        var prodId     = $('#filter-product').val();
+        var docStatus  = $('#filter-doc-status').val();
+        var search     = $('#filter-search').val().toLowerCase().trim();
         var gotsFilter = $('#filter-gots').val();
         var zdhcFilter = $('#filter-zdhc').val();
         var oekoFilter = $('#filter-oeko').val();
-        var visible   = 0;
+        var visible    = 0;
+        var srNo       = 1;
 
         $('#doc-tbody .product-row').each(function () {
             var $r    = $(this);
             var hasTl = $r.data('has-tl')  == 1;
             var hasMd = $r.data('has-msds') == 1;
 
-            if (prodId    && $r.data('product-id') + '' !== prodId) { $r.hide(); return; }
-            if (docStatus === 'no_tl'    && hasTl)                  { $r.hide(); return; }
-            if (docStatus === 'no_msds'  && hasMd)                  { $r.hide(); return; }
-            if (docStatus === 'no_both'  && (hasTl || hasMd))       { $r.hide(); return; }
-            if (docStatus === 'complete' && (!hasTl || !hasMd))     { $r.hide(); return; }
-            if (gotsFilter && $r.data('gots') !== gotsFilter)       { $r.hide(); return; }
-            if (zdhcFilter && $r.data('zdhc') !== zdhcFilter)       { $r.hide(); return; }
-            if (oekoFilter && $r.data('oeko') !== oekoFilter)       { $r.hide(); return; }
-
-            if (search) {
+            var hide = false;
+            if (prodId    && $r.data('product-id') + '' !== prodId) hide = true;
+            if (!hide && docStatus === 'no_tl'    && hasTl)         hide = true;
+            if (!hide && docStatus === 'no_msds'  && hasMd)         hide = true;
+            if (!hide && docStatus === 'no_both'  && (hasTl || hasMd)) hide = true;
+            if (!hide && docStatus === 'complete' && (!hasTl || !hasMd)) hide = true;
+            if (!hide && gotsFilter && $r.data('gots') !== gotsFilter) hide = true;
+            if (!hide && zdhcFilter && $r.data('zdhc') !== zdhcFilter) hide = true;
+            if (!hide && oekoFilter && $r.data('oeko') !== oekoFilter) hide = true;
+            if (!hide && search) {
                 var name = $r.find('.prod-name').text().toLowerCase();
                 var code = $r.find('.prod-code').text().toLowerCase();
-                if (name.indexOf(search) === -1 && code.indexOf(search) === -1) { $r.hide(); return; }
+                if (name.indexOf(search) === -1 && code.indexOf(search) === -1) hide = true;
             }
 
-            $r.show(); visible++;
+            if (hide) {
+                $r.hide();
+            } else {
+                $r.show();
+                /* Renumber serial from 1 for visible rows */
+                $r.find('.row-sr-no').text(srNo++);
+                visible++;
+            }
         });
 
         $('#visible-count').text(visible);
         $('#empty-row').toggle(visible === 0);
+
+        /* Show/hide Clear Filters button */
+        if (isFiltered()) {
+            $('#btn-clear-filters').removeClass('hidden');
+        } else {
+            $('#btn-clear-filters').addClass('hidden');
+        }
     }
 
     $('#filter-product, #filter-doc-status, #filter-gots, #filter-zdhc, #filter-oeko').on('change', applyFilters);
     $('#filter-search').on('input', applyFilters);
+
+    /* Clear all filters */
+    $('#btn-clear-filters').on('click', function () {
+        $('#filter-product').val('');
+        $('#filter-doc-status').val('');
+        $('#filter-search').val('');
+        $('#filter-gots').val('');
+        $('#filter-zdhc').val('');
+        $('#filter-oeko').val('');
+        applyFilters();
+    });
 
     /* ════════════════════════════════════════════════════════
        5. TOAST

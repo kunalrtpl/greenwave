@@ -95,17 +95,35 @@
 /* ── Table ── */
 .exp-table-wrap { width: 100%; overflow-x: auto; }
 .exp-table {
-    width: 100%; border-collapse: collapse; font-size: 13px;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    table-layout: fixed;
 }
+
+/* ── Sr No column fix ── */
+.exp-table col.col-srno { width: 40px; }
+.exp-table thead tr th.col-srno,
+.exp-table tbody tr td.col-srno {
+    width: 40px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
+    padding: 10px 4px !important;
+    text-align: center !important;
+    overflow: hidden;
+}
+
 .exp-table thead tr th {
     background: #eef1f7; color: #4a5568; font-weight: 700; font-size: 11px;
     text-transform: uppercase; letter-spacing: 0.55px; padding: 10px 12px;
     border: 1px solid #d5dbe8; white-space: nowrap; text-align: left;
+    overflow: hidden;
 }
 .exp-table thead tr th.center { text-align: center; }
 .exp-table tbody td {
     padding: 10px 12px; border: 1px solid #e4e9f2;
     vertical-align: middle; color: #2d3748; background: #fff;
+    overflow: hidden;
 }
 .exp-table tbody tr:hover td { background: #f8faff; }
 .exp-table tbody tr:nth-child(even) td { background: #fafbfd; }
@@ -127,7 +145,19 @@
 .cat-t  { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 20px; margin-top: 5px; background: #edf3fb; color: #2d6faa; border: 1px solid #cde0f4; }
 .miss-t { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; background: #d32f2f; color: #fff; margin-left: 3px; }
 .remarks-txt { font-size: 12px; color: #8a9ab5; font-style: italic; margin-top: 4px; }
-.missed-reason-txt { font-size: 11px; color: #c47d00; background: #fff9ee; border: 1px solid #ffe0a0; border-radius: 5px; padding: 2px 8px; margin-top: 3px; display: inline-block; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.missed-reason-txt {
+    font-size: 11px;
+    color: #c47d00;
+    background: #fff9ee;
+    border: 1px solid #ffe0a0;
+    border-radius: 5px;
+    padding: 3px 8px;
+    margin-top: 3px;
+    display: inline-block;
+    max-width: 180px;
+    white-space: normal;
+    word-wrap: break-word;
+}
 
 .date-main { font-size: 13px; font-weight: 700; color: #1a2333; }
 .date-sub  { font-size: 11px; color: #8a9ab5; margin-top: 1px; }
@@ -135,13 +165,26 @@
 .a-apr  { font-size: 15px; font-weight: 800; color: #1e9e58; }
 .a-nil  { font-size: 16px; color: #dde4ee; }
 
-.tr-km  { font-size: 12px; font-weight: 700; color: #3a7fc1; margin-top: 4px; }
-.tr-rt  { font-size: 11px; color: #8a9ab5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+/* ── Travel row — single line, km + visits inline ── */
+.tr-travel-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed #e0e8f0;
+    overflow: hidden;
+}
+.tr-km  { font-size: 12px; font-weight: 700; color: #3a7fc1; }
+.tr-rt  { font-size: 11px; color: #8a9ab5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
+
 .btn-view-visits {
     display: inline-flex; align-items: center; gap: 5px;
     background: #edf8f0; color: #1a9a50; border: 1px solid #b8e6c8;
     border-radius: 4px; padding: 3px 10px; font-size: 11px; font-weight: 700;
-    cursor: pointer; transition: all .15s; font-family: 'DM Sans', sans-serif; margin-top: 5px;
+    cursor: pointer; transition: all .15s; font-family: 'DM Sans', sans-serif;
+    white-space: nowrap; flex-shrink: 0;
 }
 .btn-view-visits:hover { background: #1a9a50; color: #fff; border-color: #1a9a50; }
 .vc-badge { background: #1a9a50; color: #fff; border-radius: 8px; font-size: 10px; font-weight: 800; padding: 1px 6px; }
@@ -210,6 +253,15 @@
     text-transform: uppercase; letter-spacing: 0.3px;
 }
 .btn-upd:hover { background: #3598dc; color: #fff; border-color: #3598dc; }
+
+/* Unverified placeholder in actions col */
+.upd-locked {
+    font-size: 11px;
+    color: #d0d8e8;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
 
 /* Empty */
 .exp-empty { text-align: center; padding: 50px 20px; color: #b0bcc8; }
@@ -309,9 +361,24 @@
 
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin-ico { animation: spin .8s linear infinite; display: inline-block; }
+.exp-table col.col-srno {
+    width: 28px !important;
+    min-width: 28px !important;
+    max-width: 28px !important;
+}
+.exp-table.table > thead > tr > th.col-srno,
+.exp-table.table > tbody > tr > td.col-srno {
+    width: 28px !important;
+    min-width: 28px !important;
+    max-width: 28px !important;
+    padding: 10px 2px !important;
+    text-align: center !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+}
 </style>
 
-{{-- Inline SVG symbols (reused from original) --}}
+{{-- Inline SVG symbols --}}
 <svg style="display:none" xmlns="http://www.w3.org/2000/svg">
   <symbol id="ico-card"      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></symbol>
   <symbol id="ico-list"      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></symbol>
@@ -370,6 +437,21 @@ $currentYear  = date('Y');
                 {!! svgico('card',14,'style="color:#3598dc"') !!}
                 <span>Expense Management</span>
             </div>
+            <button type="button" id="btnOpenCatSummary" style="
+                display:inline-flex; align-items:center; gap:6px;
+                height:34px; padding:0 14px; font-size:12px; font-weight:700;
+                border-radius:4px; border:1px solid #c8d0dc;
+                background:#fff; color:#334155; cursor:pointer;
+                font-family:'DM Sans',sans-serif; transition:all .15s;
+                text-transform:uppercase; letter-spacing:0.4px;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="9" y1="15" x2="15" y2="15"/>
+                    <line x1="9" y1="11" x2="15" y2="11"/>
+                </svg>
+                Category Summary
+            </button>
         </div>
 
         <div class="exp-portlet-body">
@@ -487,9 +569,20 @@ $currentYear  = date('Y');
             {{-- ══ TABLE ══ --}}
             <div class="exp-table-wrap">
                 <table class="exp-table">
+                    <colgroup>
+                        <col class="col-srno" style="width:28px;min-width:28px;max-width:28px;">
+                        <col style="width:17%;">
+                        <col style="width:16%;">
+                        <col style="width:10%;">
+                        <col style="width:9%;">
+                        <col style="width:9%;">
+                        <col style="width:9%;">
+                        <col style="width:13%;">
+                        <col style="width:10%;">
+                    </colgroup>
                     <thead>
                         <tr>
-                            <th class="center" style="width:46px;">#</th>
+                            <th class="center col-srno" style="width:28px !important; min-width:28px !important; max-width:28px !important; padding:10px 2px !important;">#</th>
                             <th style="width:16%;">{!! svgico('user',11) !!} Employee</th>
                             <th style="width:15%;">{!! svgico('cal',11) !!} Date &amp; Amount</th>
                             <th class="center" style="width:10%;">{!! svgico('check',11) !!} Approved</th>
@@ -513,11 +606,12 @@ $currentYear  = date('Y');
                         $key     = $expense->user_id . '_' . $expense->expense_date;
                         $vCount  = $visitCounts[$key] ?? 0;
                         $expDate = \Carbon\Carbon::parse($expense->expense_date);
+                        $isVerified = !empty($expense->verified_by);
                     @endphp
                     <tr class="s-{{ $sk }}" id="row-{{ $expense->id }}">
 
                         {{-- # --}}
-                        <td class="sr-no-cell">{{ (($expenses->currentPage() - 1) * $expenses->perPage()) + $loop->iteration }}</td>
+                        <td class="sr-no-cell col-srno">{{ (($expenses->currentPage() - 1) * $expenses->perPage()) + $loop->iteration }}</td>
 
                         {{-- Employee --}}
                         <td>
@@ -547,10 +641,10 @@ $currentYear  = date('Y');
                             <div class="date-sub">{{ \Carbon\Carbon::parse($expense->created_at)->format('d M, h:i A') }}</div>
                             <div style="margin-top:5px;"><span class="a-req">Rs. {{ number_format($expense->requested_amount, 2) }}</span></div>
                             @if($expense->is_travel && !empty($expense->travel_km))
-                            <div style="margin-top:6px; padding-top:6px; border-top:1px dashed #e0e8f0;">
-                                <div class="tr-km">{!! svgico('road',11,'style="color:#3598dc"') !!} {{ $expense->travel_km }} km @ Rs. {{ $expense->charge_per_km }}/km</div>
+                            <div class="tr-travel-row">
+                                <span class="tr-km">{!! svgico('road',11,'style="color:#3598dc"') !!} {{ $expense->travel_km }} km</span>
                                 @if($expense->is_intercity && !empty($expense->intercity_route))
-                                    <div class="tr-rt">{!! svgico('map',9,'style="color:#b0bcc8"') !!} {{ $expense->intercity_route }}</div>
+                                    <span class="tr-rt">{!! svgico('map',9,'style="color:#b0bcc8"') !!} {{ $expense->intercity_route }}</span>
                                 @endif
                                 <button class="btn-view-visits {{ $vCount == 0 ? 'visits-zero' : '' }}"
                                     data-user-id="{{ $expense->user_id }}"
@@ -580,7 +674,6 @@ $currentYear  = date('Y');
                         <td style="text-align:center; padding:8px 6px;">
                             @if($receiptPath)
                                 @if($isPdf1)
-                                    {{-- PDF: open in new tab --}}
                                     <a href="{{ $receiptPath }}" target="_blank" title="View Bill (PDF)" class="r-thumb is-pdf" style="text-decoration:none;">
                                         <div class="r-pdf-icon">
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c53030" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="11" x2="15" y2="11"/></svg>
@@ -588,7 +681,6 @@ $currentYear  = date('Y');
                                         </div>
                                     </a>
                                 @else
-                                    {{-- Image: open in lightbox --}}
                                     <div class="r-thumb" onclick="openLb('{{ $receiptPath }}')" title="View Bill">
                                         <img src="{{ $receiptPath }}" alt="Bill" loading="lazy"
                                              onerror="this.style.display='none';this.parentNode.innerHTML='<svg width=\'18\' height=\'18\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'#c5cdd8\' stroke-width=\'2\'><rect x=\'3\' y=\'3\' width=\'18\' height=\'18\' rx=\'2\'/><circle cx=\'8.5\' cy=\'8.5\' r=\'1.5\'/><polyline points=\'21 15 16 10 5 21\'/></svg>'">
@@ -599,7 +691,6 @@ $currentYear  = date('Y');
                             @endif
                             @if($altReceiptPath)
                                 @if($isPdf2)
-                                    {{-- Alt PDF: open in new tab --}}
                                     <a href="{{ $altReceiptPath }}" target="_blank" title="View Alt Bill (PDF)" class="r-thumb is-pdf" style="text-decoration:none;">
                                         <div class="r-pdf-icon">
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c53030" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="11" x2="15" y2="11"/></svg>
@@ -607,7 +698,6 @@ $currentYear  = date('Y');
                                         </div>
                                     </a>
                                 @else
-                                    {{-- Alt Image: open in lightbox --}}
                                     <div class="r-thumb" onclick="openLb('{{ $altReceiptPath }}')" title="View Alt Bill">
                                         <img src="{{ $altReceiptPath }}" alt="Alt Bill" loading="lazy"
                                              onerror="this.style.display='none';this.parentNode.innerHTML='<svg width=\'18\' height=\'18\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'#c5cdd8\' stroke-width=\'2\'><rect x=\'3\' y=\'3\' width=\'18\' height=\'18\' rx=\'2\'/><circle cx=\'8.5\' cy=\'8.5\' r=\'1.5\'/><polyline points=\'21 15 16 10 5 21\'/></svg>'">
@@ -621,9 +711,9 @@ $currentYear  = date('Y');
                         {{-- Verified --}}
                         <td style="text-align:center;">
                             <input type="checkbox" class="v-cb verify-checkbox" data-id="{{ $expense->id }}"
-                                {{ !empty($expense->verified_by) ? 'checked' : '' }}>
-                            <span class="v-lb {{ !empty($expense->verified_by) ? 'on' : 'off' }}" id="vlbl-{{ $expense->id }}">
-                                {{ !empty($expense->verified_by) ? 'YES' : 'NO' }}
+                                {{ $isVerified ? 'checked' : '' }}>
+                            <span class="v-lb {{ $isVerified ? 'on' : 'off' }}" id="vlbl-{{ $expense->id }}">
+                                {{ $isVerified ? 'YES' : 'NO' }}
                             </span>
                             <br>
                             <button class="btn-int-remarks btn-open-int-remarks {{ !empty($expense->internal_remarks) ? 'has-remark' : '' }}"
@@ -662,8 +752,9 @@ $currentYear  = date('Y');
                             @endif
                         </td>
 
-                        {{-- Actions --}}
-                        <td style="text-align:center;">
+                        {{-- Actions: only show Update if verified --}}
+                        <td style="text-align:center;" class="actions-cell" id="act-{{ $expense->id }}">
+                            @if($isVerified)
                             <button class="btn-upd btn-update-status"
                                 data-id="{{ $expense->id }}"
                                 data-status="{{ $expense->status }}"
@@ -672,6 +763,9 @@ $currentYear  = date('Y');
                                 data-admin-remarks="{{ $expense->admin_remarks ?? '' }}">
                                 {!! svgico('pencil',11,'style="color:currentColor"') !!} Update
                             </button>
+                            @else
+                            <span class="upd-locked">{!! svgico('lock',11,'style="color:#d0d8e8"') !!}</span>
+                            @endif
                         </td>
 
                     </tr>
@@ -851,7 +945,89 @@ $currentYear  = date('Y');
         </div>
     </div>
 </div>
+<div class="modal fade" id="catSummaryModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document" style="width:420px;max-width:95vw;margin:80px auto;">
+        <div class="modal-content">
 
+            {{-- Header --}}
+            <div class="modal-header" style="background:linear-gradient(135deg,#1e293b,#334155);padding:16px 20px;border:none;">
+                <button type="button" class="close mod-close" data-dismiss="modal"><span>&times;</span></button>
+                <h4 class="modal-title mod-title" style="color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;gap:7px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                    Export Category Summary PDF
+                </h4>
+            </div>
+
+            {{-- Body --}}
+            <div class="modal-body" style="padding:20px;">
+
+                {{-- Employee --}}
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748b;display:block;margin-bottom:6px;">
+                        Employee &nbsp;<span style="font-weight:400;color:#94a3b8;text-transform:none;">(optional — leave blank for all)</span>
+                    </label>
+                    <select id="csp_employee" style="width:100%;height:34px;border:1px solid #cbd5e1;border-radius:4px;font-size:13px;color:#334155;padding:0 10px;background:#fff;font-family:'DM Sans',sans-serif;">
+                        <option value="">— All Employees —</option>
+                        @foreach($employees as $emp)
+                            <option value="{{ $emp->id }}">{{ $emp->name }}{{ $emp->mobile ? ' ('.$emp->mobile.')' : '' }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Month --}}
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+                    <div>
+                        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748b;display:block;margin-bottom:6px;">Month</label>
+                        <select id="csp_month" style="width:100%;height:34px;border:1px solid #cbd5e1;border-radius:4px;font-size:13px;color:#334155;padding:0 10px;background:#fff;font-family:'DM Sans',sans-serif;">
+                            <option value="">All Months</option>
+                            @foreach(range(1,12) as $m)
+                                <option value="{{ $m }}" {{ $m == date('n') ? 'selected' : '' }}>
+                                    {{ date('F', mktime(0,0,0,$m,1)) }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748b;display:block;margin-bottom:6px;">Year</label>
+                        <select id="csp_year" style="width:100%;height:34px;border:1px solid #cbd5e1;border-radius:4px;font-size:13px;color:#334155;padding:0 10px;background:#fff;font-family:'DM Sans',sans-serif;">
+                            <option value="">All Years</option>
+                            @foreach($years as $yr)
+                                <option value="{{ $yr }}" {{ $yr == date('Y') ? 'selected' : '' }}>{{ $yr }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                {{-- Info note --}}
+                <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:5px;padding:9px 12px;font-size:11px;color:#0369a1;line-height:1.5;">
+                    <strong>What's included:</strong> Organisation-wide totals at top, then each employee's category breakdown sorted alphabetically. Pending amounts highlighted in pink.
+                </div>
+
+            </div>
+
+            {{-- Footer --}}
+            <div class="modal-footer modal-footer-plain">
+                <button type="button" class="btn-mcancel" data-dismiss="modal">Cancel</button>
+                <button type="button" id="btnDownloadCatSummary" style="
+                    display:inline-flex; align-items:center; gap:6px;
+                    background:#1e293b; color:#fff; border:none;
+                    border-radius:5px; padding:9px 20px; font-size:13px; font-weight:700;
+                    cursor:pointer; font-family:'DM Sans',sans-serif; transition:opacity .18s;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    Download PDF
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
 <script>
 /* ── Notify ── */
 function notify(type, msg) {
@@ -905,46 +1081,95 @@ var spinSvg = '<span class="spin-ico"><svg width="18" height="18" style="color:#
 
 $(document).ready(function(){
 
-    /* ── PDF button ── */
-    function updatePdfBtn() {
+    /* ── PDF button: only show after Apply is clicked with employee selected ── */
+    function buildPdfUrl() {
         var empVal   = $('#filterEmployee').val();
         var month    = $('#filterMonth').val();
         var year     = $('#filterYear').val();
         var status   = $('#filterStatus').val();
         var verified = $('#filterVerified').val();
         var $btn     = $('#btnExportPdf');
+
+        /* Only enable PDF when an employee is selected */
         if (empVal && empVal !== '') {
             var p = new URLSearchParams();
             p.set('employee_id', empVal);
-            if (month)    p.set('month',    month);
-            if (year)     p.set('year',     year);
-            if (status)   p.set('status',   status);
-            if (verified) p.set('verified', verified);
+            if (month    && month    !== '') p.set('month',    month);
+            if (year     && year     !== '') p.set('year',     year);
+            if (status   && status   !== '') p.set('status',   status);
+            if (verified && verified !== '') p.set('verified', verified);
             $btn.attr('href', '{{ url("admin/user-expenses/export-pdf") }}?' + p.toString());
             $btn.addClass('visible');
         } else {
             $btn.removeClass('visible');
         }
     }
-    updatePdfBtn();
-    $('#filterEmployee, #filterMonth, #filterYear, #filterStatus, #filterVerified').on('change', updatePdfBtn);
+
+    /* Show PDF only after the Apply button is clicked AND employee is set */
+    $('#filterForm').on('submit', function(){
+        buildPdfUrl();
+    });
+
+    /* On page load: if URL already has employee_id param, show the button */
+    (function(){
+        var urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('employee_id')) {
+            buildPdfUrl();
+        }
+    })();
 
     /* ── Verify checkbox ── */
-    $(document).on('change','.verify-checkbox',function(){
-        var $cb=$(this), id=$cb.data('id'), was=$cb.prop('checked');
-        $cb.prop('disabled',true);
+    $(document).on('change', '.verify-checkbox', function(){
+        var $cb  = $(this);
+        var id   = $cb.data('id');
+        var was  = !$cb.prop('checked'); /* state BEFORE this change */
+        $cb.prop('disabled', true);
+
         $.ajax({
-            url:'/admin/user-expenses/'+id+'/toggle-verified', type:'POST',
-            data:{_token:'{{ csrf_token() }}'},
-            success:function(r){
+            url: '/admin/user-expenses/' + id + '/toggle-verified',
+            type: 'POST',
+            data: { _token: '{{ csrf_token() }}' },
+            success: function(r){
                 if(r.success){
-                    var $l=$('#vlbl-'+id);
-                    if(r.verified){ $cb.prop('checked',true); $l.text('YES').attr('class','v-lb on'); notify('success','Marked as Verified'); }
-                    else { $cb.prop('checked',false); $l.text('NO').attr('class','v-lb off'); notify('info','Verification removed'); }
-                } else { $cb.prop('checked',!was); notify('error','Failed to update.'); }
+                    var $lbl  = $('#vlbl-' + id);
+                    var $cell = $('#act-' + id);
+
+                    if(r.verified){
+                        $cb.prop('checked', true);
+                        $lbl.text('YES').attr('class', 'v-lb on');
+                        notify('success', 'Marked as Verified');
+
+                        /* Show Update button — pull current data from badge/cell */
+                        var currentStatus  = $('#sbadge-' + id).text().trim();
+                        var currentRemarks = '';
+                        $cell.html(
+                            '<button class="btn-upd btn-update-status"' +
+                            ' data-id="' + id + '"' +
+                            ' data-status="' + escHtml(currentStatus) + '"' +
+                            ' data-requested="0"' +
+                            ' data-approved="0"' +
+                            ' data-admin-remarks="">' +
+                            '<svg width="11" height="11"><use href="#ico-pencil"/></svg> Update' +
+                            '</button>'
+                        );
+                    } else {
+                        $cb.prop('checked', false);
+                        $lbl.text('NO').attr('class', 'v-lb off');
+                        notify('info', 'Verification removed');
+
+                        /* Hide Update button — show lock icon */
+                        $cell.html('<span class="upd-locked"><svg width="11" height="11" style="color:#d0d8e8"><use href="#ico-lock"/></svg></span>');
+                    }
+                } else {
+                    $cb.prop('checked', was);
+                    notify('error', 'Failed to update.');
+                }
             },
-            error:function(){ $cb.prop('checked',!was); notify('error','An error occurred.'); },
-            complete:function(){ $cb.prop('disabled',false); }
+            error: function(){
+                $cb.prop('checked', was);
+                notify('error', 'An error occurred.');
+            },
+            complete: function(){ $cb.prop('disabled', false); }
         });
     });
 
@@ -984,7 +1209,7 @@ $(document).ready(function(){
     /* ── Status modal ── */
     $(document).on('click','.btn-update-status',function(){
         var id=$(this).data('id'), st=$(this).data('status'), req=$(this).data('requested'), appr=$(this).data('approved'), rmks=$(this).data('admin-remarks')||'';
-        $('#m_id').val(id); $('#m_req').text('Rs. '+parseFloat(req).toFixed(2));
+        $('#m_id').val(id); $('#m_req').text('Rs. '+parseFloat(req||0).toFixed(2));
         $('#m_status').val(''); $('#m_appr').val(''); $('#m_admin_remarks').val(rmks);
         $('#m_partial').hide(); $('#m_err').hide();
         document.querySelectorAll('.m-sopt').forEach(function(el){ el.classList.remove('sa','sp','sr'); });
@@ -1109,6 +1334,29 @@ $(document).ready(function(){
             }
         });
     });
+});
+</script>
+<script>
+// Category Summary PDF export
+$('#btnOpenCatSummary').on('click', function(){
+    $('#catSummaryModal').modal('show');
+});
+
+$('#btnDownloadCatSummary').on('click', function(){
+    var empId = $('#csp_employee').val();
+    var month = $('#csp_month').val();
+    var year  = $('#csp_year').val();
+
+    var p = new URLSearchParams();
+    if (empId) p.set('employee_id', empId);
+    if (month) p.set('month', month);
+    if (year)  p.set('year', year);
+
+    var url = '{{ url("admin/user-expenses/export-category-summary") }}';
+    if (p.toString()) url += '?' + p.toString();
+
+    window.open(url, '_blank');
+    $('#catSummaryModal').modal('hide');
 });
 </script>
 @endsection

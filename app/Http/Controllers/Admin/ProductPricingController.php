@@ -44,6 +44,7 @@ class ProductPricingController extends Controller
                 'products.moq',
                 'products.average_dispatch_time',
                 'products.not_available',
+                'products.discontinued',
                 'lp.dealer_price',
                 'lp.market_price',
                 'lp.dealer_markup',
@@ -85,6 +86,7 @@ class ProductPricingController extends Controller
                 'moq'                   => $request->input('moq', $product->moq),
                 'average_dispatch_time' => $request->input('average_dispatch_time', $product->average_dispatch_time),
                 'not_available'         => $request->input('not_available', $product->not_available) ? 1 : 0,
+                'discontinued'          => $request->input('discontinued', $product->discontinued) ? 1 : 0,  // <-- NEW
                 'updated_at'            => now(),
             ]);
 
@@ -193,6 +195,7 @@ class ProductPricingController extends Controller
                 'products.moq',
                 'products.average_dispatch_time',
                 'products.not_available',
+                'products.discontinued',   // <-- NEW
                 'lp.dealer_price',
                 'lp.market_price',
                 'lp.dealer_markup',

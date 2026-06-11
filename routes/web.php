@@ -231,6 +231,7 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 		Route::match(['get', 'post'], '/add-more-raw-material', 'ProductsController@addMoreRawMaterial');
 		Route::match(['get', 'post'], '/calculate-rm-cost', 'ProductsController@calculateRMCost');
 		Route::post('/products/toggle-not-available', 'ProductsController@toggleNotAvailable');
+		Route::post('/products/toggle-discontinued', 'ProductsController@toggleDiscontinued');
 		/*Product Routes Ends*/
 
 
@@ -452,6 +453,7 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 	Route::post('user-expenses/{id}/internal-remarks',       'UserExpenseController@saveInternalRemarks');
 
 	Route::get('user-expenses/export-pdf', 'UserExpenseController@exportPdf');
+	Route::get('user-expenses/export-category-summary', 'UserExpenseController@exportCategorySummaryPdf');
 
 
 	/*

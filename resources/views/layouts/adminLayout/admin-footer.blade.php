@@ -84,7 +84,7 @@ jQuery(document).ready(function() {
         }
     });
     
-    $(document).on('change', '[name=product_type], [name=status], [name=business_linking], [name=linked_executive], [name=email_status] , [name=b_card_status], [name=order_type],[name=urgent],[name=item_product_id],[name=not_available]', function(e) {
+    $(document).on('change', '[name=product_type], [name=status], [name=business_linking], [name=linked_executive], [name=email_status] , [name=b_card_status], [name=order_type],[name=urgent],[name=item_product_id],[name=not_available],[name=discontinued]', function(e) {
 	    $('.filter-submit').trigger('click');
 	});
 

@@ -47,6 +47,9 @@ class ProductsController extends Controller
             if(isset($data['not_available']) && $data['not_available'] >= 0){
                 $querys = $querys->where('not_available', $data['not_available']);
             }
+            if(isset($data['discontinued']) && $data['discontinued'] >= 0){
+                $querys = $querys->where('discontinued', $data['discontinued']);
+            }
             if(!empty($data['status'])){
                 if($data['status'] =="Active"){
                     $querys = $querys->where('status',1);
@@ -160,6 +163,16 @@ class ProductsController extends Controller
                            class="not_available_toggle" 
                            data-id="'.$product['id'].'" 
                            '.($product['not_available'] == 1 ? 'checked' : '').'
+                           '.($product['discontinued'] == 1 ? 'disabled' : '').'
+                    >
+                </div>';
+
+                $discontinued_checkbox = '<div style="text-align:center;">
+                    <input type="checkbox" 
+                           class="discontinued_toggle" 
+                           data-id="'.$product['id'].'" 
+                           '.($product['discontinued'] == 1 ? 'checked' : '').'
+                           '.($product['not_available'] == 1 ? 'disabled' : '').'
                     >
                 </div>';
 
@@ -169,6 +182,7 @@ class ProductsController extends Controller
                     $product['product_name']
                     . '<br><small>Order Size id: ' . $product['packing_size_id'] . '</small>',
                     $not_available_checkbox,   // <--- NEW column here
+                     $discontinued_checkbox,   // <--- NEW column
                     (!empty($product['version']) ?  $product['version'] : ''),
                     '<div style="text-align:right;">'.$dealer_price.'</div>',
                     /*'<div style="text-align:right;">'.$market_price.'</div>',*/
@@ -191,6 +205,16 @@ class ProductsController extends Controller
         $product = Product::find($request->product_id);
         if ($product) {
             $product->not_available = $request->not_available;
+            $product->save();
+            return response()->json(['status' => 'success']);
+        }
+        return response()->json(['status' => 'error'], 404);
+    }
+
+    public function toggleDiscontinued(Request $request) {
+        $product = Product::find($request->product_id);
+        if ($product) {
+            $product->discontinued = $request->discontinued;
             $product->save();
             return response()->json(['status' => 'success']);
         }

@@ -40,10 +40,26 @@
     .filter-strip .fg-check input[type="checkbox"] {
         transform: scale(1.2); accent-color: #e53e3e; cursor: pointer;
     }
-    .filter-result { margin-left: auto; font-size: 12px; color: #718096; padding-bottom: 6px; white-space: nowrap; }
+
+    /* ── Filter bottom row ── */
+    .filter-bottom-row {
+        display: flex; align-items: center; justify-content: space-between;
+        width: 100%; margin-top: 4px; flex-wrap: wrap; gap: 8px;
+    }
+    .filter-result { font-size: 12px; color: #718096; white-space: nowrap; }
     .filter-result strong { color: #3598dc; }
 
-    /* PDF export button */
+    .btn-clear-filters {
+        height: 34px; padding: 0 14px; font-size: 11px; font-weight: 700;
+        border-radius: 4px !important; border: 1px solid #c8d0dc;
+        background: #fff; color: #718096; cursor: pointer;
+        text-transform: uppercase; letter-spacing: 0.4px;
+        display: inline-flex; align-items: center; gap: 5px;
+        transition: all 0.15s; white-space: nowrap;
+    }
+    .btn-clear-filters:hover { background: #fed7d7; border-color: #fc8181; color: #c53030; }
+    .btn-clear-filters.hidden { visibility: hidden; pointer-events: none; }
+
     .btn-export-pdf {
         display: inline-flex; align-items: center; gap: 6px;
         padding: 6px 14px; font-size: 12px; font-weight: 600;
@@ -58,13 +74,14 @@
     .pricing-wrap { width: 100%; overflow-x: auto; }
     .pricing-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
     .pricing-table col.c-no       { width: 50px; }
-    .pricing-table col.c-name     { width: 16%; }
-    .pricing-table col.c-moq      { width: 14%; }
-    .pricing-table col.c-dispatch { width: 14%; }
-    .pricing-table col.c-na       { width: 14%; }
-    .pricing-table col.c-dp       { width: 14%; }
-    .pricing-table col.c-date     { width: 14%; }
-    .pricing-table col.c-action   { width: 14%; }
+    .pricing-table col.c-name     { width: 15%; }
+    .pricing-table col.c-moq      { width: 12%; }
+    .pricing-table col.c-dispatch { width: 12%; }
+    .pricing-table col.c-na       { width: 10%; }
+    .pricing-table col.c-disc     { width: 10%; }
+    .pricing-table col.c-dp       { width: 12%; }
+    .pricing-table col.c-date     { width: 12%; }
+    .pricing-table col.c-action   { width: 10%; }
 
     .pricing-table thead tr th {
         background: #eef1f7; color: #4a5568; font-weight: 700; font-size: 11px;
@@ -104,6 +121,9 @@
     .na-toggle { text-align: center; }
     .na-toggle input[type="checkbox"] { transform: scale(1.3); accent-color: #e53e3e; cursor: pointer; }
 
+    .disc-toggle { text-align: center; }
+    .disc-toggle input[type="checkbox"] { transform: scale(1.3); accent-color: #805ad5; cursor: pointer; }
+
     .dp-wrap { display: flex; align-items: center; gap: 4px; width: 100%; }
     .dp-wrap .cur { font-size: 12px; color: #888; flex-shrink: 0; }
     .dp-input { flex-grow: 1; min-width: 0; }
@@ -126,7 +146,6 @@
     .btn-update:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(53,152,220,0.30); }
     .btn-update.saving { opacity: 0.6; pointer-events: none; }
 
-    /* Sr no cell */
     .sr-no-cell { color: #a0aec0; font-size: 11px; text-align: center; }
 
     #empty-row td {
@@ -156,9 +175,10 @@
     }
     .sum-card strong { font-size: 15px; color: #2d3748; }
     .sum-card .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .dot-total  { background: #3598dc; }
-    .dot-noprice { background: #e53e3e; }
-    .dot-na     { background: #ed8936; }
+    .dot-total    { background: #3598dc; }
+    .dot-noprice  { background: #e53e3e; }
+    .dot-na       { background: #ed8936; }
+    .dot-disc     { background: #805ad5; }
 </style>
 
 <div class="page-content-wrapper">
@@ -201,6 +221,13 @@
                             {{ $products->filter(fn($p) => $p->not_available)->count() }}
                         </strong>
                     </div>
+                    <div class="sum-card">
+                        <span class="dot dot-disc"></span>
+                        Discontinued &nbsp;
+                        <strong id="sum-disc" style="color:#805ad5;">
+                            {{ $products->filter(fn($p) => $p->discontinued)->count() }}
+                        </strong>
+                    </div>
                 </div>
 
                 {{-- Filters --}}
@@ -208,7 +235,7 @@
 
                     <div class="fg">
                         <label><i class="fa fa-cube"></i> &nbsp;Product</label>
-                        <select id="filter-product" class="select2">
+                        <select id="filter-product">
                             <option value="">— All Products —</option>
                             @foreach($products->sortBy('product_name') as $p)
                                 <option value="{{ $p->id }}">{{ $p->product_name }}</option>
@@ -239,9 +266,12 @@
                         </div>
                     </div>
 
-                    <div class="filter-result">
-                        Showing <strong id="visible-count">{{ $products->count() }}</strong>
-                        of {{ $products->count() }} products
+                    <div class="fg">
+                        <label>&nbsp;</label>
+                        <div class="fg-check">
+                            <input type="checkbox" id="filter-disc">
+                            <label for="filter-disc">Discontinued only</label>
+                        </div>
                     </div>
 
                     {{-- PDF Export --}}
@@ -250,6 +280,16 @@
                         <a href="#" id="btn-export-pdf" class="btn-export-pdf">
                             <i class="fa fa-file-pdf-o"></i> Export PDF
                         </a>
+                    </div>
+
+                    <div class="filter-bottom-row">
+                        <div class="filter-result">
+                            Showing <strong id="visible-count">{{ $products->count() }}</strong>
+                            of {{ $products->count() }} products
+                        </div>
+                        <button type="button" id="btn-clear-filters" class="btn-clear-filters hidden">
+                            <i class="fa fa-times-circle"></i> Clear Filters
+                        </button>
                     </div>
 
                 </div>
@@ -263,6 +303,7 @@
                             <col class="c-moq">
                             <col class="c-dispatch">
                             <col class="c-na">
+                            <col class="c-disc">
                             <col class="c-dp">
                             <col class="c-date">
                             <col class="c-action">
@@ -274,6 +315,7 @@
                                 <th>MOQ</th>
                                 <th>Dispatch</th>
                                 <th class="center">Not Avail.</th>
+                                <th class="center">Discontinued</th>
                                 <th>DP (₹)</th>
                                 <th class="center">Price Date</th>
                                 <th class="center">Action</th>
@@ -292,6 +334,7 @@
                             data-orig-moq="{{ $product->moq }}"
                             data-orig-dispatch="{{ $product->average_dispatch_time }}"
                             data-orig-na="{{ $product->not_available ? 1 : 0 }}"
+                            data-orig-disc="{{ $product->discontinued ? 1 : 0 }}"
                             data-orig-dp="{{ $hasPrice ? number_format((float)$product->dealer_price,2,'.','') : '' }}"
                             data-pricing-id="{{ $product->pricing_id }}"
                             data-has-price="{{ $hasPrice ? 1 : 0 }}"
@@ -320,7 +363,16 @@
                             <td>
                                 <div class="na-toggle">
                                     <input type="checkbox" class="field-na"
-                                           {{ $product->not_available ? 'checked' : '' }}>
+                                           {{ $product->not_available ? 'checked' : '' }}
+                                           {{ $product->discontinued ? 'disabled' : '' }}>
+                                </div>
+                            </td>
+
+                            <td>
+                                <div class="disc-toggle">
+                                    <input type="checkbox" class="field-disc"
+                                           {{ $product->discontinued ? 'checked' : '' }}
+                                           {{ $product->not_available ? 'disabled' : '' }}>
                                 </div>
                             </td>
 
@@ -354,7 +406,7 @@
                         @endforeach
 
                         <tr id="empty-row" style="display:none;">
-                            <td colspan="8">
+                            <td colspan="9">
                                 <i class="fa fa-inbox" style="font-size:22px; display:block; margin-bottom:6px;"></i>
                                 No products match the current filters.
                             </td>
@@ -388,9 +440,10 @@ $(document).ready(function () {
 
     function checkDirty($row) {
         var dirty = (
-            $row.find('.field-moq').val().trim()     !== ($row.data('orig-moq') + '')      ||
+            $row.find('.field-moq').val().trim()      !== ($row.data('orig-moq') + '')      ||
             $row.find('.field-dispatch').val().trim() !== ($row.data('orig-dispatch') + '') ||
-            ($row.find('.field-na').is(':checked') ? 1 : 0) !== parseInt($row.data('orig-na')) ||
+            ($row.find('.field-na').is(':checked') ? 1 : 0)   !== parseInt($row.data('orig-na'))   ||
+            ($row.find('.field-disc').is(':checked') ? 1 : 0) !== parseInt($row.data('orig-disc'))  ||
             curDpStr($row) !== origDpStr($row)
         );
         $row.toggleClass('is-dirty', dirty);
@@ -406,15 +459,54 @@ $(document).ready(function () {
     $(document).on('input change', '.product-row .inline-input', function () {
         checkDirty($(this).closest('.product-row'));
     });
+
+    /* ══ 2. NOT AVAILABLE — mutual exclusion ══ */
     $(document).on('change', '.product-row .field-na', function () {
-        checkDirty($(this).closest('.product-row'));
+        var $this = $(this);
+        var $row  = $this.closest('.product-row');
+        var $disc = $row.find('.field-disc');
+
+        if ($this.is(':checked') && $disc.is(':checked')) {
+            alert('Cannot mark as Not Available because this product is already marked as Discontinued.');
+            $this.prop('checked', false);
+            return;
+        }
+
+        if ($this.is(':checked')) {
+            $disc.prop('disabled', true);
+        } else {
+            $disc.prop('disabled', false);
+        }
+
+        checkDirty($row);
     });
 
-    /* ══ 2. UPDATE AJAX ══ */
+    /* ══ 3. DISCONTINUED — mutual exclusion ══ */
+    $(document).on('change', '.product-row .field-disc', function () {
+        var $this = $(this);
+        var $row  = $this.closest('.product-row');
+        var $na   = $row.find('.field-na');
+
+        if ($this.is(':checked') && $na.is(':checked')) {
+            alert('Cannot mark as Discontinued because this product is already marked as Not Available.');
+            $this.prop('checked', false);
+            return;
+        }
+
+        if ($this.is(':checked')) {
+            $na.prop('disabled', true);
+        } else {
+            $na.prop('disabled', false);
+        }
+
+        checkDirty($row);
+    });
+
+    /* ══ 4. UPDATE AJAX ══ */
     $(document).on('click', '.btn-update:not(:disabled)', function () {
-        var $btn = $(this);
-        var $row = $btn.closest('.product-row');
-        var pid  = $row.data('product-id');
+        var $btn  = $(this);
+        var $row  = $btn.closest('.product-row');
+        var pid   = $row.data('product-id');
         var curDp = $row.find('.field-dp').val().trim();
         var dpChg = curDpStr($row) !== origDpStr($row);
 
@@ -423,6 +515,7 @@ $(document).ready(function () {
             moq:                   $row.find('.field-moq').val().trim(),
             average_dispatch_time: $row.find('.field-dispatch').val().trim(),
             not_available:         $row.find('.field-na').is(':checked') ? 1 : 0,
+            discontinued:          $row.find('.field-disc').is(':checked') ? 1 : 0,
             dealer_price:          curDp !== '' ? curDp : null,
             dp_changed:            dpChg ? 1 : 0,
             pricing_id:            $row.data('pricing-id') || '',
@@ -440,6 +533,7 @@ $(document).ready(function () {
                 $row.data('orig-moq',      payload.moq);
                 $row.data('orig-dispatch', payload.average_dispatch_time);
                 $row.data('orig-na',       payload.not_available);
+                $row.data('orig-disc',     payload.discontinued);
                 $row.data('orig-dp',       curDp !== '' ? parseFloat(curDp).toFixed(2) : '');
 
                 if (dpChg && resp.pricing_id) {
@@ -467,7 +561,15 @@ $(document).ready(function () {
         });
     });
 
-    /* ══ 3. FILTERS + RENUMBER ══ */
+    /* ══ 5. FILTERS + RENUMBER ══ */
+    function isFiltered() {
+        return $('#filter-product').val()        !== '' ||
+               $('#filter-price-status').val()   !== '' ||
+               $('#filter-search').val().trim()  !== '' ||
+               $('#filter-na').is(':checked')           ||
+               $('#filter-disc').is(':checked');
+    }
+
     function renumberVisible() {
         var n = 0;
         $('#pricing-tbody .product-row:visible').each(function () {
@@ -480,6 +582,7 @@ $(document).ready(function () {
         var priceStatus = $('#filter-price-status').val();
         var search      = $('#filter-search').val().toLowerCase().trim();
         var naOnly      = $('#filter-na').is(':checked');
+        var discOnly    = $('#filter-disc').is(':checked');
         var visible     = 0;
 
         $('#pricing-tbody .product-row').each(function () {
@@ -494,7 +597,8 @@ $(document).ready(function () {
                 var code = $r.data('code') || '';
                 if (name.indexOf(search) === -1 && code.indexOf(search) === -1) { $r.hide(); return; }
             }
-            if (naOnly && !$r.find('.field-na').is(':checked')) { $r.hide(); return; }
+            if (naOnly   && !$r.find('.field-na').is(':checked'))   { $r.hide(); return; }
+            if (discOnly && !$r.find('.field-disc').is(':checked'))  { $r.hide(); return; }
 
             $r.show();
             visible++;
@@ -504,31 +608,49 @@ $(document).ready(function () {
         $('#empty-row').toggle(visible === 0);
         renumberVisible();
         updatePdfLink();
+
+        if (isFiltered()) {
+            $('#btn-clear-filters').removeClass('hidden');
+        } else {
+            $('#btn-clear-filters').addClass('hidden');
+        }
     }
 
     $('#filter-product, #filter-price-status').on('change', applyFilters);
     $('#filter-search').on('input', applyFilters);
-    $('#filter-na').on('change', applyFilters);
+    $('#filter-na, #filter-disc').on('change', applyFilters);
 
-    /* ══ 4. PDF EXPORT LINK ══ */
+    /* ══ Clear all filters ══ */
+    $('#btn-clear-filters').on('click', function () {
+        $('#filter-product').val('');
+        $('#filter-price-status').val('');
+        $('#filter-search').val('');
+        $('#filter-na').prop('checked', false);
+        $('#filter-disc').prop('checked', false);
+        applyFilters();
+    });
+
+    /* ══ 6. PDF EXPORT LINK ══ */
     function updatePdfLink() {
         var params = new URLSearchParams();
         var prodId      = $('#filter-product').val();
         var priceStatus = $('#filter-price-status').val();
         var search      = $('#filter-search').val().trim();
         var naOnly      = $('#filter-na').is(':checked');
+        var discOnly    = $('#filter-disc').is(':checked');
 
-        if (prodId)      params.set('product_id',    prodId);
+        if (prodId)      params.set('product_id',   prodId);
         if (priceStatus) params.set('price_status',  priceStatus);
         if (search)      params.set('search',         search);
         if (naOnly)      params.set('not_available',  1);
+        if (discOnly)    params.set('discontinued',   1);
 
         $('#btn-export-pdf').attr('href', '{{ route("admin.product-pricing.export-pdf") }}?' + params.toString());
     }
 
-    updatePdfLink(); // init
+    updatePdfLink();
 
-    /* ══ 5. TOAST ══ */
+    /* ══ 7. TOAST ══ */
     function showToast(type, html) {
         var $t = $('<div class="toast-item toast-' + type + '"></div>').html(html);
         $('#toast-wrap').append($t);

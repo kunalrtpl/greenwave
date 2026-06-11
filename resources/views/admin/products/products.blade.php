@@ -46,34 +46,15 @@
                             <table class="table table-striped table-bordered table-hover" id="datatable_ajax">
                                 <thead>
                                     <tr role="row" class="heading">
-                                        <th class="text-center" width="4%">
-                                            S.No.
-                                        </th>
-                                        <th >
-                                            Product Type
-                                        </th>
-                                        <th>
-                                            Product Name
-                                        </th>
-                                        <th class="text-center">Not Available</th> 
-                                         <th>
-                                            Version
-                                        </th>
-                                       <!--  <th>
-                                            Dealer Markup (%)
-                                        </th> -->
-                                        <th class="text-right">
-                                            Dealer Price
-                                        </th>
-                                        <!-- <th class="text-right">
-                                            Market Price
-                                        </th> -->
-                                        <th class="text-center">
-                                            Status
-                                        </th>
-                                        <th>
-                                            Actions
-                                        </th>
+                                        <th class="text-center" width="4%">S.No.</th>
+                                        <th>Product Type</th>
+                                        <th>Product Name</th>
+                                        <th class="text-center">Not Available</th>
+                                        <th class="text-center">Discontinued</th> {{-- NEW --}}
+                                        <th>Version</th>
+                                        <th class="text-right">Dealer Price</th>
+                                        <th class="text-center">Status</th>
+                                        <th>Actions</th>
                                     </tr>
                                     <tr role="row" class="filter">
                                         <td></td>
@@ -99,9 +80,17 @@
                                                 </select>
                                             </div>
                                         </td>
+                                        <td> {{-- NEW filter for discontinued --}}
+                                            <div class="form-group">
+                                                <select class="form-control form-filter input-sm" name="discontinued">
+                                                    <option value="-1">All</option>
+                                                    <option value="1">Yes</option>
+                                                    <option value="0">No</option>
+                                                </select>
+                                            </div>
+                                        </td>
                                         <td></td>
                                         <td></td>
-                                        <!-- <td></td> -->
                                         <td>
                                             <div class="form-group">
                                                 <select class="form-control form-filter input-sm" name="status">
@@ -131,8 +120,25 @@
 </div>
 <script type="text/javascript">
     $(document).on('change', '.not_available_toggle', function() {
-        var productId = $(this).data('id');
-        var value = $(this).is(':checked') ? 1 : 0;
+        var $this = $(this);
+        var productId = $this.data('id');
+        var value = $this.is(':checked') ? 1 : 0;
+
+        var $row = $this.closest('tr');
+        var $discontinued = $row.find('.discontinued_toggle');
+
+        if(value == 1 && $discontinued.is(':checked')) {
+            alert('Cannot mark as Not Available because this product is already marked as Discontinued.');
+            $this.prop('checked', false);
+            return;
+        }
+
+        // disable/enable the other checkbox
+        if(value == 1) {
+            $discontinued.prop('disabled', true);
+        } else {
+            $discontinued.prop('disabled', false);
+        }
 
         $.ajax({
             url: '/admin/products/toggle-not-available',
@@ -144,19 +150,59 @@
             },
             success: function(response) {
                 if(response.status == 'success') {
-                    // optional: show a small toast or do nothing
+                    // optional toast
                 }
             },
             error: function() {
                 alert('Failed to update. Please try again.');
+                $this.prop('checked', !$this.is(':checked'));
+                $discontinued.prop('disabled', !$discontinued.is(':disabled'));
             }
         });
     });
+
+    $(document).on('change', '.discontinued_toggle', function() {
+        var $this = $(this);
+        var productId = $this.data('id');
+        var value = $this.is(':checked') ? 1 : 0;
+
+        var $row = $this.closest('tr');
+        var $notAvailable = $row.find('.not_available_toggle');
+
+        if(value == 1 && $notAvailable.is(':checked')) {
+            alert('Cannot mark as Discontinued because this product is already marked as Not Available.');
+            $this.prop('checked', false);
+            return;
+        }
+
+        // disable/enable the other checkbox
+        if(value == 1) {
+            $notAvailable.prop('disabled', true);
+        } else {
+            $notAvailable.prop('disabled', false);
+        }
+
+        $.ajax({
+            url: '/admin/products/toggle-discontinued',
+            type: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}',
+                product_id: productId,
+                discontinued: value
+            },
+            success: function(response) {
+                if(response.status == 'success') {
+                    // optional toast
+                }
+            },
+            error: function() {
+                alert('Failed to update. Please try again.');
+                $this.prop('checked', !$this.is(':checked'));
+                $notAvailable.prop('disabled', !$notAvailable.is(':disabled'));
+            }
+        });
+    });
+
     window.history.pushState("", "", "/admin/products");
 </script>
 @stop
-
-
-
-
-
