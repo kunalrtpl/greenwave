@@ -241,9 +241,9 @@
                     <div class="sum-card"><span class="dot dot-total"></span>Total Active &nbsp;<strong>{{ $products->count() }}</strong></div>
                     <div class="sum-card"><span class="dot dot-notl"></span>No Tech. Literature &nbsp;<strong style="color:#e53e3e;">{{ $noTl }}</strong></div>
                     <div class="sum-card"><span class="dot dot-nomsds"></span>No MSDS &nbsp;<strong style="color:#ed8936;">{{ $noMsds }}</strong></div>
-                    <div class="sum-card"><span class="dot dot-gots"></span>GOTS Yes &nbsp;<strong style="color:#276749;">{{ $yesGots }}</strong></div>
-                    <div class="sum-card"><span class="dot dot-zdhc"></span>ZDHC Yes &nbsp;<strong style="color:#553c9a;">{{ $yesZdhc }}</strong></div>
-                    <div class="sum-card"><span class="dot dot-oeko"></span>Oekotex Yes &nbsp;<strong style="color:#1a4c7e;">{{ $yesOeko }}</strong></div>
+                    <div class="sum-card"><span class="dot dot-gots"></span>GOTS &nbsp;<strong style="color:#276749;">{{ $yesGots }}</strong></div>
+                    <div class="sum-card"><span class="dot dot-zdhc"></span>ZDHC &nbsp;<strong style="color:#553c9a;">{{ $yesZdhc }}</strong></div>
+                    <div class="sum-card"><span class="dot dot-oeko"></span>Oekotex &nbsp;<strong style="color:#1a4c7e;">{{ $yesOeko }}</strong></div>
                 </div>
 
                 {{-- Filters --}}

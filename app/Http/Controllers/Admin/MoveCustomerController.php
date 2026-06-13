@@ -21,7 +21,7 @@ class MoveCustomerController extends Controller
     public function index()
     {
         Session::put('active', 'moveCustomers');
-        $title = 'Move Customers';
+        $title = 'Employee Linked Customers';
 
         // Full employee list with per-model counts for the table
         $employeeStats = EmployeeHelper::getEmployeesWithCustomerStats();

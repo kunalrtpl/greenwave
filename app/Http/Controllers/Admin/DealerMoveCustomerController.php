@@ -18,7 +18,7 @@ class DealerMoveCustomerController extends Controller
     public function index()
     {
         Session::put('active', 'dealerMoveCustomers');
-        $title = 'Move Customers by Dealer / Business Model';
+        $title = 'Dealer Linked Customers';
 
         $dealers = DB::table('dealers')
             ->select('id', 'business_name')

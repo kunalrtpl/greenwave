@@ -247,6 +247,10 @@ class ProductsController extends Controller
     }
 
 
+    // =====================================================
+    // COMPLETE saveProduct() METHOD — Updated
+    // =====================================================
+
     public function saveProduct(Request $request)
     {
         try {
@@ -264,31 +268,32 @@ class ProductsController extends Controller
                 }
 
                 /* =====================================================
-                 | CHECK IF EDITING A VERSIONED PRODUCT
+                 | DETERMINE PRODUCT STATUS TYPE
+                 | sampling   = New Product (Sampling Stage)
+                 | approved   = New Product (Approved)
+                 | generation = New Generation of Existing Product
                  ===================================================== */
-                $editingHasVersion = false;
-                $existingProduct = null;
+                $productStatusType = $data['product_status_type'] ?? 'approved';
 
+                // On update — load existing product
+                $existingProduct = null;
                 if ($type === 'update') {
                     $existingProduct = Product::find($data['productid']);
-                    if ($existingProduct && !empty($existingProduct->version)) {
-                        $editingHasVersion = true;
-                    }
                 }
 
                 /* =====================================================
-                 | VERSION MODE CHECK (ONLY FOR ADD)
+                 | VERSION / GENERATION MODE
+                 | Applies on ADD or when sampling product is upgraded
+                 | to generation type on edit
                  ===================================================== */
-                $isVersion = (
-                    $type === 'add' &&
-                    isset($data['product_creation_type']) &&
-                    $data['product_creation_type'] === 'version' &&
+                $isGeneration = (
+                    $productStatusType === 'generation' &&
                     !empty($data['old_product_id'])
                 );
 
                 $oldProduct = null;
 
-                if ($isVersion) {
+                if ($isGeneration) {
                     $oldProduct = Product::where('id', $data['old_product_id'])
                         ->where('status', 1)
                         ->first();
@@ -300,68 +305,73 @@ class ProductsController extends Controller
                         ]);
                     }
 
-                    // 🔒 FORCE SAME NAME & CODE AS OLD PRODUCT
+                    // Force same name & code as old product
                     $data['product_name'] = $oldProduct->product_name;
                     $data['product_code'] = $oldProduct->product_code;
                 }
 
                 /* =====================================================
-                 | UNIQUE RULES (FIXED FOR VERSIONING & EDIT)
+                 | UNIQUE RULES
                  ===================================================== */
-                if ($type === 'update') {
-
-                    if ($editingHasVersion) {
-                        // Editing a versioned product → allow same name/code
+                if ($isGeneration) {
+                    // Generation always skips unique check — name/code copied from old product
+                    $productcodeUniq = '';
+                    $productNameUniq = '';
+                } elseif ($type === 'update') {
+                    $existingHasVersion = $existingProduct && !empty($existingProduct->version);
+                    if ($existingHasVersion || ($existingProduct && $existingProduct->product_status_type === 'generation')) {
                         $productcodeUniq = '';
                         $productNameUniq = '';
                     } else {
-                        // Normal edit
                         $productcodeUniq = "unique:products,product_code," . $data['productid'];
                         $productNameUniq = "unique:products,product_name," . $data['productid'];
                     }
-
                 } else {
-                    // ADD MODE
-                    if ($isVersion) {
-                        // New version → allow same name/code
-                        $productcodeUniq = '';
-                        $productNameUniq = '';
-                    } else {
-                        // Normal add
-                        $productcodeUniq = "unique:products,product_code";
-                        $productNameUniq = "unique:products,product_name";
-                    }
+                    $productcodeUniq = "unique:products,product_code";
+                    $productNameUniq = "unique:products,product_name";
                 }
 
                 /* =====================================================
-                 | VALIDATION
+                 | VALIDATION — based on product_status_type
                  ===================================================== */
-                if ($data['is_trader_product'] == "0") {
+                if ($productStatusType === 'sampling') {
+
                     $validator = Validator::make($request->all(), [
-                        'is_trader_product' => 'required',
-                        'product_code' => 'required|' . $productcodeUniq,
-                        'product_name' => 'required|' . $productNameUniq,
+                        'product_name'      => 'required|' . $productNameUniq,
+                        'physical_form'     => 'required',
                         'product_detail_id' => 'required',
-                        'lab_recipe_number' => 'required',
                         'short_description' => 'required',
-                        'suggested_dosage' => 'required',
-                        'packing_type_id' => 'required',
-                        'packing_size_id' => 'required',
-                        'standard_fill_size' => 'required|regex:/^\d+(\.\d{1,2})?$/',
-                        'shelf_life' => 'required|integer',
-                        'product_introduced_on' => 'required|date_format:Y-m-d'
                     ]);
-                } else {
+
+                } elseif (($data['is_trader_product'] ?? '0') == "0") {
+
                     $validator = Validator::make($request->all(), [
-                        'is_trader_product' => 'required',
-                        'product_code' => 'required|' . $productcodeUniq,
-                        'product_name' => 'required|' . $productNameUniq,
-                        'product_detail_id' => 'required',
-                        'short_description' => 'required',
-                        'packing_type_id' => 'required',
-                        'packing_size_id' => 'required',
+                        'is_trader_product'      => 'required',
+                        'product_code'           => 'required|' . $productcodeUniq,
+                        'product_name'           => 'required|' . $productNameUniq,
+                        'product_detail_id'      => 'required',
+                        'lab_recipe_number'      => 'required',
+                        'short_description'      => 'required',
+                        'suggested_dosage'       => 'required',
+                        'packing_type_id'        => 'required',
+                        'packing_size_id'        => 'required',
+                        'standard_fill_size' => 'required|numeric|min:1',
+                        'shelf_life'             => 'required|integer',
+                        'product_introduced_on'  => 'required|date_format:Y-m-d'
+                    ]);
+
+                } else {
+
+                    $validator = Validator::make($request->all(), [
+                        'is_trader_product'  => 'required',
+                        'product_code'       => 'required|' . $productcodeUniq,
+                        'product_name'       => 'required|' . $productNameUniq,
+                        'product_detail_id'  => 'required',
+                        'short_description'  => 'required',
+                        'packing_type_id'    => 'required',
+                        'packing_size_id'    => 'required',
                         'standard_fill_size' => 'required|regex:/^\d+(\.\d{1,2})?$/',
-                        'shelf_life' => 'required|integer'
+                        'shelf_life'         => 'required|integer'
                     ]);
                 }
 
@@ -373,24 +383,26 @@ class ProductsController extends Controller
                 }
 
                 /* =====================================================
-                 | RAW MATERIAL VALIDATION
+                 | RAW MATERIAL VALIDATION — Skip for sampling
                  ===================================================== */
-                $totalPercentage = array_sum($data['percentage']);
-                if ($totalPercentage != 100) {
-                    return response()->json([
-                        'status' => false,
-                        'errors' => ['raw_materials' => 'Raw Material Percentage must be 100%']
-                    ]);
-                }
+                if ($productStatusType !== 'sampling') {
+                    $totalPercentage = array_sum($data['percentage'] ?? [0]);
+                    if ($totalPercentage != 100) {
+                        return response()->json([
+                            'status' => false,
+                            'errors' => ['raw_materials' => 'Raw Material Percentage must be 100%']
+                        ]);
+                    }
 
-                if (array_has_dupes($data['raw_material_ids']) > 0) {
-                    return response()->json([
-                        'status' => false,
-                        'errors' => ['raw_materials' => 'Duplicate Raw materials found']
-                    ]);
-                }
+                    if (array_has_dupes($data['raw_material_ids']) > 0) {
+                        return response()->json([
+                            'status' => false,
+                            'errors' => ['raw_materials' => 'Duplicate Raw materials found']
+                        ]);
+                    }
 
-                $data['rm_cost'] = ClacRMcost($data);
+                    $data['rm_cost'] = ClacRMcost($data);
+                }
 
                 /* =====================================================
                  | SAVE PRODUCT
@@ -401,85 +413,117 @@ class ProductsController extends Controller
                     ? new Product
                     : Product::findOrFail($data['productid']);
 
-                $product->lab_recipe_number = $data['lab_recipe_number'];
-                $product->product_name = $data['product_name'];
-                $product->product_code = $data['product_code'];
-                $product->physical_form = $data['physical_form'];
-                $product->product_detail_id = $data['product_detail_id'];
+                // ── Core fields (always saved) ──
+                $product->product_name        = $data['product_name'];
+                $product->physical_form       = $data['physical_form'];
+                $product->product_detail_id   = $data['product_detail_id'];
                 $product->product_detail_info = getProductDetailLevel($data['product_detail_id']);
-                $product->packing_type_id = $data['packing_type_id'];
-                $product->additional_packing_type_id = $data['additional_packing_type_id'] ?? null;
-                $product->standard_fill_size = $data['standard_fill_size'];
-                $product->packing_size_id = $data['packing_size_id'];
-                $product->label_id = $data['label_id'] ?? null;
-                $product->short_description = $data['short_description'];
-                $product->description = $data['description'] ?? null;
-                $product->suggested_dosage = $data['suggested_dosage'];
-                $product->keywords = $data['keywords'] ?? null;
-                $product->remarks = $data['remarks'] ?? null;
-                $product->product_introduced_on = $data['product_introduced_on'] ?? null;
-                $product->inherit_type = $data['inherit_type'];
-                $product->status = $data['status'];
-                $product->rm_cost = $data['rm_cost'];
-                $product->shelf_life = $data['shelf_life'];
-                $product->is_trader_product = $data['is_trader_product'];
-                $product->product_price = $data['product_price'] ?? 0;
+                $product->short_description   = $data['short_description'];
+                $product->status              = $data['status'];
+                $product->is_trader_product   = $data['is_trader_product'] ?? 0;
+                $product->product_status_type = $productStatusType;
 
-                $response = productPackingCost($data);
-                $product->basic_packing_material_cost = $response['basic_packing_material_cost'];
-                $product->additional_packing_material_cost = $response['additional_packing_material_cost'];
-                $product->label_cost = $response['label_cost'];
-                $product->facilitation_cost = $response['facilitation_cost'];
-                $product->packing_cost = $response['packing_cost'];
+                // ── Full fields (only for approved / generation) ──
+                if ($productStatusType !== 'sampling') {
+                    $product->product_code                     = $data['product_code'];
+                    $product->lab_recipe_number                = $data['lab_recipe_number'] ?? null;
+                    $product->packing_type_id                  = $data['packing_type_id'];
+                    $product->additional_packing_type_id       = $data['additional_packing_type_id'] ?? null;
+                    $product->standard_fill_size               = $data['standard_fill_size'];
+                    $product->packing_size_id                  = $data['packing_size_id'];
+                    $product->label_id                         = $data['label_id'] ?? null;
+                    $product->description                      = $data['description'] ?? null;
+                    $product->suggested_dosage                 = $data['suggested_dosage'] ?? null;
+                    $product->keywords                         = $data['keywords'] ?? null;
+                    $product->remarks                          = $data['remarks'] ?? null;
+                    $product->product_introduced_on            = $data['product_introduced_on'] ?? null;
+                    $product->inherit_type                     = $data['inherit_type'] ?? 'Inhouse';
+                    $product->rm_cost                          = $data['rm_cost'] ?? 0;
+                    $product->shelf_life                       = $data['shelf_life'];
+                    $product->product_price                    = $data['product_price'] ?? 0;
+
+                    $response = productPackingCost($data);
+                    $product->basic_packing_material_cost      = $response['basic_packing_material_cost'];
+                    $product->additional_packing_material_cost = $response['additional_packing_material_cost'];
+                    $product->label_cost                       = $response['label_cost'];
+                    $product->facilitation_cost                = $response['facilitation_cost'];
+                    $product->packing_cost                     = $response['packing_cost'];
+                }
 
                 /* =====================================================
                  | VERSIONING
+                 | - sampling  → version = NULL (no version)
+                 | - approved  → version = Gen.01 (first time only)
+                 | - generation → version = Gen.02, Gen.03... (incremental)
                  ===================================================== */
-                if ($isVersion) {
+                if ($isGeneration) {
+                    // Set parent reference
+                    $product->parent_product_id = $oldProduct->id;
+
+                    // Calculate version for NEW product based on old product's version
                     if (empty($oldProduct->version)) {
-                        $oldProduct->version = 'v1';
+                        $oldProduct->version = 'Gen.01';
                     }
-                    $current = (int) str_replace('v', '', $oldProduct->version);
-                    $product->version = 'v' . ($current + 1);
-                } else {
-                    if (empty($product->version)) {
-                        //$product->version = 'v1';
+
+                    if (str_contains($oldProduct->version, 'Gen.')) {
+                        $current = (int) str_replace('Gen.', '', $oldProduct->version);
+                    } elseif (str_contains($oldProduct->version, 'Gen.')) {
+                        $current = (int) str_replace('Gen.', '', $oldProduct->version);
+                    } else {
+                        $current = (int) str_replace('v', '', $oldProduct->version);
                     }
+
+                    $product->version = 'Gen.' . str_pad($current + 1, 2, '0', STR_PAD_LEFT);
+
+                } elseif ($productStatusType === 'sampling') {
+                    // Sampling — no version ever
+                    $product->version = null;
+
+                } elseif ($productStatusType === 'approved') {
+                    if ($type === 'add') {
+                        // Brand new approved product — default Gen.01
+                        $product->version = 'Gen.01';
+                    } elseif ($type === 'update' && $existingProduct && $existingProduct->product_status_type === 'sampling') {
+                        // Upgraded from sampling to approved — assign Gen.01
+                        $product->version = 'Gen.01';
+                    }
+                    // Otherwise on edit — leave version as-is
                 }
 
                 $product->save();
 
                 /* =====================================================
-                 | DEACTIVATE OLD PRODUCT
+                 | DEACTIVATE OLD PRODUCT (generation only)
                  ===================================================== */
-                if ($isVersion) {
-                    $oldProduct->status = 0;
+                if ($isGeneration) {
+                    $oldProduct->discontinued  = 1;
+                    $oldProduct->not_available = 0;
                     $oldProduct->save();
                 }
 
                 /* =====================================================
-                 | RAW MATERIAL SAVE (QUERY BUILDER)
+                 | RAW MATERIAL SAVE — Skip for sampling
                  ===================================================== */
-                DB::table('product_raw_materials')
-                    ->where('product_id', $product->id)
-                    ->delete();
+                if ($productStatusType !== 'sampling') {
 
-                if ($data['inherit_type'] == "Inhouse") {
+                    DB::table('product_raw_materials')
+                        ->where('product_id', $product->id)
+                        ->delete();
 
-                    $insertData = [];
-
-                    foreach ($data['raw_material_ids'] as $k => $rm) {
-                        $insertData[] = [
-                            'product_id' => $product->id,
-                            'raw_material_id' => $rm,
-                            'percentage_included' => $data['percentage'][$k],
-                            'created_at' => now(),
-                            'updated_at' => now()
-                        ];
-                    }
-
-                    if (!empty($insertData)) {
-                        DB::table('product_raw_materials')->insert($insertData);
+                    if (($data['inherit_type'] ?? '') == "Inhouse") {
+                        $insertData = [];
+                        foreach ($data['raw_material_ids'] as $k => $rm) {
+                            $insertData[] = [
+                                'product_id'          => $product->id,
+                                'raw_material_id'      => $rm,
+                                'percentage_included'  => $data['percentage'][$k],
+                                'created_at'           => now(),
+                                'updated_at'           => now()
+                            ];
+                        }
+                        if (!empty($insertData)) {
+                            DB::table('product_raw_materials')->insert($insertData);
+                        }
                     }
                 }
 
@@ -487,7 +531,7 @@ class ProductsController extends Controller
 
                 return response()->json([
                     'status' => true,
-                    'url' => url('/admin/products?s')
+                    'url'    => url('/admin/products?s')
                 ]);
             }
         } catch (\Exception $e) {
@@ -498,200 +542,6 @@ class ProductsController extends Controller
                     'error' => $e->getMessage() . ' Line:' . $e->getLine()
                 ]
             ]);
-        }
-    }
-
-
-    
-    public function saveProduct_OLD(Request $request){
-        try{
-            if($request->ajax()){
-                $data = $request->all();
-                //echo "<pre>"; print_r($data); die;
-                if($data['productid']==""){
-                    $type ="add";
-                    $productcodeUniq = "unique:products,product_code";
-                    $productNameUniq = "unique:products,product_name";
-                }else{ 
-                    $type ="update";
-                    $productcodeUniq = "unique:products,product_code,".$data['productid'];
-                    $productNameUniq = "unique:products,product_name,".$data['productid'];
-                }
-                if($data['is_trader_product'] == "0"){
-                    $validator = Validator::make($request->all(), [
-                            'is_trader_product' => 'bail|required',
-                            'product_code' => 'bail|required|'.$productcodeUniq,
-                            'product_name' => 'bail|required|'.$productNameUniq,
-                            'product_detail_id' => 'bail|required',
-                            'lab_recipe_number' => 'bail|required',
-                            'short_description' => 'bail|required',
-                            'suggested_dosage' => 'bail|required',
-                            'packing_type_id' => 'bail|required',
-                            'packing_size_id' => 'bail|required',
-                            'standard_fill_size' => 'bail|required|regex:/^\d+(\.\d{1,2})?$/',
-                            'shelf_life' => 'bail|required|integer',
-                            'product_introduced_on' => 'bail|required|date_format:Y-m-d'
-                        ]
-                    );
-                }else{
-                    $validator = Validator::make($request->all(), [
-                            'is_trader_product' => 'bail|required',
-                            'product_code' => 'bail|required|'.$productcodeUniq,
-                            'product_name' => 'bail|required|'.$productNameUniq,
-                            'product_detail_id' => 'bail|required',
-                            'short_description' => 'bail|required',
-                            'packing_type_id' => 'bail|required',
-                            'packing_size_id' => 'bail|required',
-                            'standard_fill_size' => 'bail|required|regex:/^\d+(\.\d{1,2})?$/',
-                            'shelf_life' => 'bail|required|integer',
-                        ]
-                    );
-                }
-                if($validator->passes()) {
-                    $data = $request->all();
-                    $totalPercentage  = array_sum($data['percentage']);
-                    if($totalPercentage ==100){
-                        $count = array_has_dupes($data['raw_material_ids']);
-                        if($count > 0){
-                            return response()->json(['status'=>false,'errors'=>array('raw_materials'=>'Duplicate Raw materials found')]);
-                        }
-                        $rmCost = ClacRMcost($data);
-                        $data['rm_cost'] = $rmCost;
-                    }else{
-                        return response()->json(['status'=>false,'errors'=>array('raw_materials'=>'Raw Material Percentage must be 100%')]);
-
-                    }
-                    DB::beginTransaction();
-                    if($type =="add"){
-                        $product = new Product; 
-                    }else{
-                        $product = Product::find($data['productid']); 
-                    }
-                   $product->lab_recipe_number = $data['lab_recipe_number'];
-                    $product->product_name = $data['product_name'];
-                    $product->product_code = $data['product_code'];
-                    $product->physical_form = $data['physical_form'];
-                    /*$product->show_class = $data['physical_form'];
-                    $product->show_weightage = $data['show_weightage'];*/
-                    //$product->old_product_code = $data['old_product_code'];
-                    $product->product_detail_id = $data['product_detail_id'];
-                    $product->product_detail_info = getProductDetailLevel($data['product_detail_id']);
-                    $product->packing_type_id = $data['packing_type_id'];
-                    $product->additional_packing_type_id = $data['additional_packing_type_id'];
-                    $product->standard_fill_size = $data['standard_fill_size'];
-                    $product->packing_size_id = $data['packing_size_id'];
-                    $product->label_id = $data['label_id'];
-                    $product->short_description = $data['short_description'];
-                    $product->description = $data['description'];
-                    $response = productPackingCost($data);
-                    $product->basic_packing_material_cost = $response['basic_packing_material_cost'];
-                    $product->additional_packing_material_cost = $response['additional_packing_material_cost'];
-                    $product->label_cost = $response['label_cost'];
-                    $product->facilitation_cost = $response['facilitation_cost'];
-                    $product->packing_cost = $response['packing_cost'];
-                    //$product->how_to_use = $data['how_to_use'];
-                    $product->suggested_dosage = $data['suggested_dosage'];
-                    //$product->hsn_code = $data['hsn_code'];
-                    
-                    if(isset($data['is_trader_product'])){
-                        $product->is_trader_product = $data['is_trader_product'];
-                    }else{
-                        $product->is_trader_product = 0;
-                    }
-                    if(isset($data['product_price'])){
-                        $product->product_price = $data['product_price'];
-                    }else{
-                        $product->product_price = 0;
-                    }
-                    if(isset($data['outsource_packing_cost'])){
-                        $product->packing_cost = $data['outsource_packing_cost'];
-                    }
-                    $product->keywords = $data['keywords'];
-                    $product->remarks = $data['remarks'];
-                    $product->product_introduced_on = $data['product_introduced_on'];
-                    
-                    $product->inherit_type = $data['inherit_type'];
-                    $product->status = $data['status'];
-                    //echo "<pre>"; print_r($data); die;
-                    if(isset($data['pro_stage'])){
-                        $stages = array_reverse($data['pro_stage']);
-                        $product->stage = $stages[0];
-                    }
-                    if($data['inherit_type'] =="Inhouse"){
-                        //$product->batch_out_duration = $data['batch_out_duration'];
-                        $product->rm_cost = $data['rm_cost'];
-                        /*$product->formulation_cost = $data['formulation_cost'];
-                        $product->packing_cost = $data['packing_cost'];*/
-                    }
-                    /*$product->total_product_cost = $data['product_cost'];
-                    $product->dp_calculation_cost = $data['dp_calculation_cost'];
-                    $product->company_mark_up = $data['company_mark_up'];
-                    $product->dealer_price = $data['dealer_price'];
-                    $product->dealer_markup = $data['dealer_markup'];
-                    $product->market_price = $data['market_price'];
-                    $product->freight = 5;*/
-                    $product->shelf_life = $data['shelf_life'];
-                    
-                    if($request->hasFile('gots_certification')){
-                        if (Input::file('gots_certification')->isValid()) {
-                            $file = Input::file('gots_certification');
-                            $destination = 'images/ProductDocuments/';
-                            $ext= $file->getClientOriginalExtension();
-                            $mainFilename = "gots_certification".uniqid().date('h-i-s').".".$ext;
-                            $file->move($destination, $mainFilename);
-                            $product->gots_certification = $mainFilename;
-                        }
-                    }
-                    if($request->hasFile('zdhc_certification')){
-                        if (Input::file('zdhc_certification')->isValid()) {
-                            $file = Input::file('zdhc_certification');
-                            $destination = 'images/ProductDocuments/';
-                            $ext= $file->getClientOriginalExtension();
-                            $mainFilename = "zdhc_certification".uniqid().date('h-i-s').".".$ext;
-                            $file->move($destination, $mainFilename);
-                            $product->zdhc_certification = $mainFilename;
-                        }
-                    }
-                    /*if(isset($data['opening_stock'])){
-                        $product->opening_stock = $data['opening_stock'];
-                        $product->current_stock = $data['opening_stock'];
-                    }*/
-
-                    $product->save();
-                    ProductRawMaterial::where('product_id',$product->id)->delete();
-                    if($data['inherit_type'] =="Inhouse"){
-                        foreach($data['raw_material_ids'] as $rkey=> $rawMaterial){
-                            $proRawMaterial = new ProductRawMaterial;
-                            $proRawMaterial->product_id = $product->id;
-                            $proRawMaterial->raw_material_id = $rawMaterial;
-                            $proRawMaterial->percentage_included = $data['percentage'][$rkey];
-                            $proRawMaterial->save();
-                        }
-                    }
-                    /*if(isset($data['pro_stage'])){
-                        foreach ($data['pro_stage'] as $stagekey => $prostage) {
-                            $checkStageExists = ProductStage::where('product_id',$product->id)->where('stage',$prostage)->first();
-                            if(!$checkStageExists){
-                                if(!empty($data['pro_stage_date'][$stagekey])){
-                                    $saveProStage = new ProductStage;
-                                    $saveProStage->product_id = $product->id;
-                                    $saveProStage->stage = $prostage;
-                                    $saveProStage->entry_date = $data['pro_stage_date'][$stagekey];
-                                    $saveProStage->save();
-                                }
-                            }
-                        }
-                    }*/
-                    
-                    DB::commit();
-                    $redirectTo = url('/admin/products?s');
-                    return response()->json(['status'=>true,'message'=>'ok','url'=>$redirectTo]);
-                }else{
-                    return response()->json(['status'=>false,'errors'=>$validator->messages()]);
-                }
-            }
-        }catch(\Exception $e){
-            return response()->json(['status'=>false,'message'=>$e->getMessage(),'errors'=>array('name'=>$e->getMessage()."Line No:-".$e->getLine())]);
         }
     }
 

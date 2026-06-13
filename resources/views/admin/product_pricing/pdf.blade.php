@@ -133,7 +133,7 @@ table.data-table tbody td.center { text-align: center; }
 .pd-old   { background: transparent; color: #475569; }
 .pd-none  { background: transparent; color: #94a3b8; font-style: italic; }
 
-.dp-val  { font-weight: bold; color: #0f172a; }
+.dp-val  { font-weight: bold; color: #0f172a;text-align:right; }
 .dp-none { color: #94a3b8; font-style: italic; }
 
 .empty-cell { text-align: center; padding: 28px; color: #64748b; font-style: italic; }
@@ -193,27 +193,27 @@ table.data-table tbody td.center { text-align: center; }
     <tr>
         <td class="s-box s-box-total">
             <span class="s-big">{{ $total }}</span>
-            <span class="s-tag">Total</span>
+            <span class="s-tag"><br>Total</span>
         </td>
         <td class="s-box s-box-price">
             <span class="s-big">{{ $hasPrice }}</span>
-            <span class="s-tag">Has Price</span>
+            <span class="s-tag"><br>Has Price</span>
         </td>
         <td class="s-box s-box-np">
             <span class="s-big">{{ $noPrice }}</span>
-            <span class="s-tag">No Price</span>
+            <span class="s-tag"><br>No Price</span>
         </td>
         <td class="s-box s-box-na">
             <span class="s-big">{{ $naCount }}</span>
-            <span class="s-tag">Not Avail.</span>
+            <span class="s-tag"><br>Not Avail.</span>
         </td>
         <td class="s-box s-box-today">
             <span class="s-big">{{ $todayUpd }}</span>
-            <span class="s-tag">Today</span>
+            <span class="s-tag"><br>Today</span>
         </td>
         <td class="s-box s-box-disc">
             <span class="s-big">{{ $discCount }}</span>
-            <span class="s-tag">Discontinued</span>
+            <span class="s-tag"><br>Discont.</span>
         </td>
         <td class="s-box-spacer"></td>
     </tr>
@@ -232,8 +232,8 @@ table.data-table tbody td.center { text-align: center; }
             <th class="center" style="width:24px;">#</th>
             <th style="width:20%;">Product Name</th>
             <th style="width:8%;">Code</th>
-            <th class="center" style="width:7%;">Not Avail.</th>
-            <th class="center" style="width:7%;">Discont.</th>
+            <th class="center" style="width:7%;">Avail. <br>Status</th>
+            <th class="center" style="width:7%;">Cont. <br>Status</th>
             <th style="width:10%;">MOQ</th>
             <th class="center" style="width:8%;">Dispatch</th>
             <th style="width:13%;">Dealer Price (&#8377;)</th>

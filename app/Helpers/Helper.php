@@ -419,7 +419,7 @@
     }
 
     function productPackingCost($data){
-
+    	//echo "<pre>"; print_r($data); die;
 	    // Get main packing type info
 	    $packing_info = PackingType::where('id',$data['packing_type_id'])->first();
 	    $packing_info = json_decode(json_encode($packing_info), true);

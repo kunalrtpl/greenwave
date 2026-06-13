@@ -466,8 +466,8 @@ body {
             <th width="170">Category &amp; Details</th>
             <th class="r" width="75">Requested</th>
             <th class="r" width="75">Approved</th>
-            <th width="110">Verified &amp; Approved By</th>
-            <th class="c" width="72">Status</th>
+            <th width="110">Verification <br> Status</th>
+            <th class="c" width="72">Approval <br> Status</th>
         </tr>
     </thead>
     <tbody>
