@@ -171,27 +171,26 @@
     align-items: center;
     gap: 6px;
     flex-wrap: nowrap;
-    margin-top: 6px;
-    padding-top: 6px;
-    border-top: 1px dashed #e0e8f0;
+    margin-top: 5px;
     overflow: hidden;
 }
-.tr-km  { font-size: 12px; font-weight: 700; color: #3a7fc1; }
+.tr-km  { font-size: 11px; font-weight: 700; color: #3a7fc1; white-space: nowrap; }
 .tr-rt  { font-size: 11px; color: #8a9ab5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
 
+/* Visits button styled like category tag (blue pill) */
 .btn-view-visits {
-    display: inline-flex; align-items: center; gap: 5px;
-    background: #edf8f0; color: #1a9a50; border: 1px solid #b8e6c8;
-    border-radius: 4px; padding: 3px 10px; font-size: 11px; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #edf3fb; color: #2d6faa; border: 1px solid #cde0f4;
+    border-radius: 20px; padding: 2px 9px; font-size: 11px; font-weight: 700;
     cursor: pointer; transition: all .15s; font-family: 'DM Sans', sans-serif;
     white-space: nowrap; flex-shrink: 0;
 }
-.btn-view-visits:hover { background: #1a9a50; color: #fff; border-color: #1a9a50; }
-.vc-badge { background: #1a9a50; color: #fff; border-radius: 8px; font-size: 10px; font-weight: 800; padding: 1px 6px; }
-.btn-view-visits:hover .vc-badge { background: #fff; color: #1a9a50; }
+.btn-view-visits:hover { background: #2d6faa; color: #fff; border-color: #2d6faa; }
+.vc-badge { background: #2d6faa; color: #fff; border-radius: 8px; font-size: 10px; font-weight: 800; padding: 1px 6px; }
+.btn-view-visits:hover .vc-badge { background: #fff; color: #2d6faa; }
 .btn-view-visits.visits-zero { background: #feeaea; color: #c0392b; border-color: #f5c0c0; }
-.btn-view-visits.visits-zero .vc-badge { background: #e74c3c; }
-.btn-view-visits.visits-zero:hover { background: #c0392b; color: #fff; }
+.btn-view-visits.visits-zero .vc-badge { background: #e74c3c; color: #fff; }
+.btn-view-visits.visits-zero:hover { background: #c0392b; color: #fff; border-color: #c0392b; }
 .btn-view-visits.visits-zero:hover .vc-badge { background: #fff; color: #c0392b; }
 
 /* Receipt thumbs */
@@ -332,7 +331,7 @@
 .q-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #b0bcc8; font-size: 13px; font-weight: 500; gap: 8px; }
 .q-reply { padding: 12px 18px 6px; background: #fff; }
 .q-reply label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #8a9ab5; display: block; margin-bottom: 6px; }
-.q-reply textarea { width: 100%; border: 1.5px solid #e4eaf3; border-radius: 6px; padding: 9px 12px; font-size: 13px; color: #2d3748; font-family: 'DM Sans', sans-serif; resize: none; outline: none; background: #fafbfc; transition: border-color .18s; }
+.q-reply textarea { width: 100%; border: 1.5px solid #e4eaf4; border-radius: 6px; padding: 9px 12px; font-size: 13px; color: #2d3748; font-family: 'DM Sans', sans-serif; resize: none; outline: none; background: #fafbfc; transition: border-color .18s; }
 .q-reply textarea:focus { border-color: #3598dc; background: #fff; box-shadow: 0 0 0 2px rgba(53,152,220,.1); }
 .btn-qsend { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg,#3d5a9a,#253870); color: #fff; border: none; border-radius: 5px; padding: 9px 20px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: opacity .18s; }
 .btn-qsend:hover { opacity: .88; } .btn-qsend:disabled { opacity: .5; cursor: not-allowed; }
@@ -551,12 +550,13 @@ $currentYear  = date('Y');
                 <div class="fg">
                     <label>&nbsp;</label>
                     <div class="filter-actions">
-                        <button type="submit" class="btn-fa">
+                        <button type="submit" class="btn-fa" id="btnApplyFilter">
                             {!! svgico('filter',12,'style="color:#fff"') !!} Apply
                         </button>
                         <a href="{{ url('admin/user-expenses') }}" class="btn-fr">
                             {!! svgico('reset',12) !!} Reset
                         </a>
+                        {{-- PDF button: only visible after Apply is clicked with employee selected --}}
                         <a id="btnExportPdf" href="#" class="btn-pdf" target="_blank" title="Export to PDF">
                             {!! svgico('pdf',12,'style="color:currentColor"') !!} PDF
                         </a>
@@ -607,8 +607,14 @@ $currentYear  = date('Y');
                         $vCount  = $visitCounts[$key] ?? 0;
                         $expDate = \Carbon\Carbon::parse($expense->expense_date);
                         $isVerified = !empty($expense->verified_by);
+                        // Format km: remove trailing zeros (e.g. 234.00 → 234, 234.50 → 234.5)
+                        $kmDisplay = $expense->travel_km ? rtrim(rtrim(number_format((float)$expense->travel_km, 2, '.', ''), '0'), '.') : null;
                     @endphp
-                    <tr class="s-{{ $sk }}" id="row-{{ $expense->id }}">
+                    <tr class="s-{{ $sk }}" id="row-{{ $expense->id }}"
+                        data-status="{{ $expense->status }}"
+                        data-requested="{{ $expense->requested_amount }}"
+                        data-approved="{{ $expense->approved_amount }}"
+                        data-admin-remarks="{{ addslashes($expense->admin_remarks ?? '') }}">
 
                         {{-- # --}}
                         <td class="sr-no-cell col-srno">{{ (($expenses->currentPage() - 1) * $expenses->perPage()) + $loop->iteration }}</td>
@@ -640,18 +646,18 @@ $currentYear  = date('Y');
                             <div class="date-main">{{ $expDate->format('d M Y') }} ({{ $expDate->format('D') }})</div>
                             <div class="date-sub">{{ \Carbon\Carbon::parse($expense->created_at)->format('d M, h:i A') }}</div>
                             <div style="margin-top:5px;"><span class="a-req">Rs. {{ number_format($expense->requested_amount, 2) }}</span></div>
+                            {{-- Travel row: single line, no icons, km without trailing zeros --}}
                             @if($expense->is_travel && !empty($expense->travel_km))
                             <div class="tr-travel-row">
-                                <span class="tr-km">{!! svgico('road',11,'style="color:#3598dc"') !!} {{ $expense->travel_km }} km</span>
+                                <span class="tr-km">{{ $kmDisplay }} km</span>
                                 @if($expense->is_intercity && !empty($expense->intercity_route))
-                                    <span class="tr-rt">{!! svgico('map',9,'style="color:#b0bcc8"') !!} {{ $expense->intercity_route }}</span>
+                                    <span class="tr-rt">{{ $expense->intercity_route }}</span>
                                 @endif
-                                <button class="btn-view-visits {{ $vCount == 0 ? 'visits-zero' : '' }}"
+                                <button type="button" class="btn-view-visits {{ $vCount == 0 ? 'visits-zero' : '' }}"
                                     data-user-id="{{ $expense->user_id }}"
                                     data-date="{{ $expense->expense_date }}"
                                     data-employee="{{ $expense->employee_name ?? 'Employee' }}">
-                                    {!! svgico('map',11,'style="color:currentColor"') !!} Visits
-                                    <span class="vc-badge">{{ $vCount }}</span>
+                                    Visits <span class="vc-badge">{{ $vCount }}</span>
                                 </button>
                             </div>
                             @endif
@@ -945,11 +951,11 @@ $currentYear  = date('Y');
         </div>
     </div>
 </div>
+
+{{-- ══ CATEGORY SUMMARY MODAL ══ --}}
 <div class="modal fade" id="catSummaryModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document" style="width:420px;max-width:95vw;margin:80px auto;">
         <div class="modal-content">
-
-            {{-- Header --}}
             <div class="modal-header" style="background:linear-gradient(135deg,#1e293b,#334155);padding:16px 20px;border:none;">
                 <button type="button" class="close mod-close" data-dismiss="modal"><span>&times;</span></button>
                 <h4 class="modal-title mod-title" style="color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;gap:7px;">
@@ -960,10 +966,7 @@ $currentYear  = date('Y');
                     Export Category Summary PDF
                 </h4>
             </div>
-
-            {{-- Body --}}
             <div class="modal-body" style="padding:20px;">
-
                 {{-- Employee --}}
                 <div style="margin-bottom:14px;">
                     <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748b;display:block;margin-bottom:6px;">
@@ -976,8 +979,7 @@ $currentYear  = date('Y');
                         @endforeach
                     </select>
                 </div>
-
-                {{-- Month --}}
+                {{-- Month / Year --}}
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
                     <div>
                         <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748b;display:block;margin-bottom:6px;">Month</label>
@@ -1000,15 +1002,10 @@ $currentYear  = date('Y');
                         </select>
                     </div>
                 </div>
-
-                {{-- Info note --}}
                 <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:5px;padding:9px 12px;font-size:11px;color:#0369a1;line-height:1.5;">
-                    <strong>What's included:</strong> Organisation-wide totals at top, then each employee's category breakdown sorted alphabetically. Pending amounts highlighted in pink.
+                    <strong>What's included:</strong> Organisation-wide totals at top, then each employee's category breakdown sorted alphabetically. When a single employee is selected, only their data is shown — same layout as the full report.
                 </div>
-
             </div>
-
-            {{-- Footer --}}
             <div class="modal-footer modal-footer-plain">
                 <button type="button" class="btn-mcancel" data-dismiss="modal">Cancel</button>
                 <button type="button" id="btnDownloadCatSummary" style="
@@ -1024,10 +1021,10 @@ $currentYear  = date('Y');
                     Download PDF
                 </button>
             </div>
-
         </div>
     </div>
 </div>
+
 <script>
 /* ── Notify ── */
 function notify(type, msg) {
@@ -1081,16 +1078,22 @@ var spinSvg = '<span class="spin-ico"><svg width="18" height="18" style="color:#
 
 $(document).ready(function(){
 
-    /* ── PDF button: only show after Apply is clicked with employee selected ── */
+    /* ══════════════════════════════════════════════════════════════
+       PDF BUTTON LOGIC
+       - Hidden by default
+       - Only shows after Apply is clicked AND employee is selected
+       - Hides immediately when any filter dropdown changes
+       - Page reload (after form submit) re-evaluates from URL params
+    ══════════════════════════════════════════════════════════════ */
+    var $pdfBtn = $('#btnExportPdf');
+
     function buildPdfUrl() {
         var empVal   = $('#filterEmployee').val();
         var month    = $('#filterMonth').val();
         var year     = $('#filterYear').val();
         var status   = $('#filterStatus').val();
         var verified = $('#filterVerified').val();
-        var $btn     = $('#btnExportPdf');
 
-        /* Only enable PDF when an employee is selected */
         if (empVal && empVal !== '') {
             var p = new URLSearchParams();
             p.set('employee_id', empVal);
@@ -1098,19 +1101,20 @@ $(document).ready(function(){
             if (year     && year     !== '') p.set('year',     year);
             if (status   && status   !== '') p.set('status',   status);
             if (verified && verified !== '') p.set('verified', verified);
-            $btn.attr('href', '{{ url("admin/user-expenses/export-pdf") }}?' + p.toString());
-            $btn.addClass('visible');
+            $pdfBtn.attr('href', '{{ url("admin/user-expenses/export-pdf") }}?' + p.toString());
+            $pdfBtn.addClass('visible');
         } else {
-            $btn.removeClass('visible');
+            $pdfBtn.removeClass('visible').attr('href', '#');
         }
     }
 
-    /* Show PDF only after the Apply button is clicked AND employee is set */
-    $('#filterForm').on('submit', function(){
-        buildPdfUrl();
+    /* Hide PDF button the INSTANT any filter changes — user must re-apply */
+    $('#filterEmployee, #filterMonth, #filterYear, #filterStatus, #filterVerified').on('change', function(){
+        $pdfBtn.removeClass('visible').attr('href', '#');
     });
 
-    /* On page load: if URL already has employee_id param, show the button */
+    /* On page load: if URL already has employee_id (i.e. filters were just applied),
+       show PDF button matching the current URL state */
     (function(){
         var urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('employee_id')) {
@@ -1118,11 +1122,29 @@ $(document).ready(function(){
         }
     })();
 
-    /* ── Verify checkbox ── */
+    /* When Apply is submitted, form reloads page — PDF shows on load above.
+       No extra JS needed for the submit itself. */
+
+    /* ══════════════════════════════════════════════════════════════
+       VERIFY CHECKBOX
+       - Blocks unverify if expense is Approved or Partially Approved
+    ══════════════════════════════════════════════════════════════ */
     $(document).on('change', '.verify-checkbox', function(){
-        var $cb  = $(this);
-        var id   = $cb.data('id');
-        var was  = !$cb.prop('checked'); /* state BEFORE this change */
+        var $cb      = $(this);
+        var id       = $cb.data('id');
+        var isNowChecked = $cb.prop('checked'); /* true = trying to verify, false = trying to unverify */
+
+        /* Block UNVERIFY if already Approved or Partially Approved */
+        if (!isNowChecked) {
+            var currentStatus = $('#sbadge-' + id).text().trim();
+            if (currentStatus === 'Approved' || currentStatus === 'Partially Approved') {
+                $cb.prop('checked', true); /* revert the checkbox */
+                notify('warning', 'Cannot remove verification — expense is already ' + currentStatus + '.');
+                return;
+            }
+        }
+
+        var was = !isNowChecked; /* previous state */
         $cb.prop('disabled', true);
 
         $.ajax({
@@ -1139,16 +1161,19 @@ $(document).ready(function(){
                         $lbl.text('YES').attr('class', 'v-lb on');
                         notify('success', 'Marked as Verified');
 
-                        /* Show Update button — pull current data from badge/cell */
+                        /* Show Update button — read actual amounts from the row's data attributes */
                         var currentStatus  = $('#sbadge-' + id).text().trim();
-                        var currentRemarks = '';
+                        var $row           = $('#row-' + id);
+                        var reqAmt         = $row.data('requested') || 0;
+                        var aprAmt         = $row.data('approved')  || 0;
+                        var adminRmks      = $row.data('admin-remarks') || '';
                         $cell.html(
                             '<button class="btn-upd btn-update-status"' +
                             ' data-id="' + id + '"' +
                             ' data-status="' + escHtml(currentStatus) + '"' +
-                            ' data-requested="0"' +
-                            ' data-approved="0"' +
-                            ' data-admin-remarks="">' +
+                            ' data-requested="' + reqAmt + '"' +
+                            ' data-approved="' + aprAmt + '"' +
+                            ' data-admin-remarks="' + escHtml(adminRmks) + '">' +
                             '<svg width="11" height="11"><use href="#ico-pencil"/></svg> Update' +
                             '</button>'
                         );
@@ -1157,12 +1182,12 @@ $(document).ready(function(){
                         $lbl.text('NO').attr('class', 'v-lb off');
                         notify('info', 'Verification removed');
 
-                        /* Hide Update button — show lock icon */
+                        /* Show lock icon */
                         $cell.html('<span class="upd-locked"><svg width="11" height="11" style="color:#d0d8e8"><use href="#ico-lock"/></svg></span>');
                     }
                 } else {
                     $cb.prop('checked', was);
-                    notify('error', 'Failed to update.');
+                    notify('error', r.message || 'Failed to update.');
                 }
             },
             error: function(){
@@ -1234,6 +1259,9 @@ $(document).ready(function(){
                     var k=st==='Partially Approved'?'Partially':st;
                     $('#sbadge-'+id).attr('class','s-badge sb-'+k).text(st);
                     $('#row-'+id).removeClass('s-Requested s-Approved s-Partially s-Rejected s-PendingApproval').addClass('s-'+k);
+                    /* Update the row's data-* attributes so verify/re-open always has fresh values */
+                    var newApr = st==='Approved' ? parseFloat($('#m_req').text().replace('Rs. ','').replace(/,/g,'')) : (st==='Partially Approved' ? parseFloat(appr) : 0);
+                    $('#row-'+id).attr('data-status', st).attr('data-approved', newApr).attr('data-admin-remarks', rmks);
                     if(st==='Approved'||st==='Partially Approved'){
                         var a=st==='Partially Approved'?parseFloat(appr):parseFloat($('#m_req').text().replace('Rs. ','').replace(/,/g,''));
                         $('#appr-'+id).html('<span class="a-apr">Rs. '+a.toFixed(2)+'</span>');
@@ -1334,29 +1362,37 @@ $(document).ready(function(){
             }
         });
     });
-});
-</script>
-<script>
-// Category Summary PDF export
-$('#btnOpenCatSummary').on('click', function(){
-    $('#catSummaryModal').modal('show');
-});
 
-$('#btnDownloadCatSummary').on('click', function(){
-    var empId = $('#csp_employee').val();
-    var month = $('#csp_month').val();
-    var year  = $('#csp_year').val();
+    /* ── Category Summary PDF ── */
+    $('#btnOpenCatSummary').on('click', function(){
+        $('#catSummaryModal').modal('show');
+    });
 
-    var p = new URLSearchParams();
-    if (empId) p.set('employee_id', empId);
-    if (month) p.set('month', month);
-    if (year)  p.set('year', year);
+    $('#btnDownloadCatSummary').on('click', function(){
+        var empId = $('#csp_employee').val();
+        var month = $('#csp_month').val();
+        var year  = $('#csp_year').val();
 
-    var url = '{{ url("admin/user-expenses/export-category-summary") }}';
-    if (p.toString()) url += '?' + p.toString();
+        var p = new URLSearchParams();
+        if (month) p.set('month', month);
+        if (year)  p.set('year', year);
 
-    window.open(url, '_blank');
-    $('#catSummaryModal').modal('hide');
+        var url;
+        if (empId && empId !== '') {
+            /* Single employee → use the same individual expense report (exportPdf) */
+            p.set('employee_id', empId);
+            url = '{{ url("admin/user-expenses/export-pdf") }}';
+        } else {
+            /* All employees → category summary report */
+            url = '{{ url("admin/user-expenses/export-category-summary") }}';
+        }
+
+        if (p.toString()) url += '?' + p.toString();
+
+        window.open(url, '_blank');
+        $('#catSummaryModal').modal('hide');
+    });
+
 });
 </script>
 @endsection

@@ -136,7 +136,7 @@ table.data-table tbody td.right  { text-align: right; }
 .icon-focus {
     font-size: 12px;
     font-weight: bold;
-    color: #d97706;        /* amber/orange */
+    color: #15803d;        /* dark green */
     line-height: 1.4;
     display: inline-block;
 }

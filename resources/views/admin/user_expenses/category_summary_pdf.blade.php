@@ -80,24 +80,28 @@ body { font-family: DejaVu Sans, sans-serif; font-size: 9px; color: #1e293b; bac
 .apr-cnt  { font-size: 7px; color: #15803d; text-align: right; display: block; margin-top: 1px; }
 
 /* EMPLOYEE SECTION */
-.emp-sec-bar { width: 100%; border-collapse: collapse; margin-top: 20px; margin-bottom: 0; }
+/* mPDF: outer wrapper table keeps the whole employee block on one page */
+.emp-block-table { width: 100%; border-collapse: collapse; page-break-inside: avoid; margin-top: 20px; }
+
+.emp-sec-bar { width: 100%; border-collapse: collapse; margin-top: 0; margin-bottom: 0; }
 .emp-sec-bar-td {
-    background: #e9eff6; padding: 8px 12px;
-    font-size: 8.5px; font-weight: bold; text-transform: uppercase;
-    letter-spacing: 0.7px; color: #334e68; vertical-align: middle;
+    background: #1a3a5c; padding: 9px 14px;
+    font-size: 9.5px; font-weight: bold; text-transform: uppercase;
+    letter-spacing: 0.8px; color: #ffffff; vertical-align: middle;
+    border-left: 4px solid #3b9edd;
 }
-.emp-sec-bar-rt { background: #e9eff6; text-align: right; padding-right: 14px; vertical-align: middle; width: 200px; font-size: 8px; color: #334e68; font-weight: bold; }
+.emp-sec-bar-rt { background: #1a3a5c; text-align: right; padding-right: 14px; vertical-align: middle; width: 200px; font-size: 8.5px; color: #93c5fd; font-weight: bold; }
 
 /* Employee KPI mini */
-.emp-kpi { width: 100%; border-collapse: collapse; background: #ffffff; border: 1px solid #e2e8f0; border-top: none; margin-bottom: 0; }
-.emp-kpi td { padding: 6px 12px; vertical-align: middle; border-right: 1px solid #e2e8f0; font-size: 8px; }
+.emp-kpi { width: 100%; border-collapse: collapse; background: #f0f7ff; border: 1px solid #bcd4ee; border-top: none; margin-bottom: 0; }
+.emp-kpi td { padding: 6px 12px; vertical-align: middle; border-right: 1px solid #d1e5f7; font-size: 8px; }
 .emp-kpi td:last-child { border-right: none; }
-.ek-lbl { font-size: 6.5px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.4px; color: #94a3b8; display: block; margin-bottom: 1px; }
+.ek-lbl { font-size: 6.5px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.4px; color: #5a82a0; display: block; margin-bottom: 1px; }
 .ek-val       { font-size: 10px; font-weight: bold; color: #0f172a; display: block; }
 .ek-val-green { font-size: 10px; font-weight: bold; color: #16a34a; display: block; }
 .ek-val-pink  { font-size: 10px; font-weight: bold; color: #9d174d; display: block; }
 
-/* mPDF-safe: keep table rows together, never on div */
+/* mPDF-safe: keep table rows together */
 .emp-tbl tbody tr { page-break-inside: avoid; }
 .emp-tbl tfoot tr { page-break-inside: avoid; }
 .emp-kpi tr       { page-break-inside: avoid; }
@@ -154,7 +158,9 @@ body { font-family: DejaVu Sans, sans-serif; font-size: 9px; color: #1e293b; bac
     }
     usort($orgCatSummary, fn($a,$b) => strcmp($a['name'], $b['name']));
 
+    // ── PER-EMPLOYEE grouped ──
     // ── PER-EMPLOYEE grouped, sorted alphabetically ──
+    if (!isset($empPageBreak)) { $empPageBreak = []; }
     $byEmployee = $allExpenses->groupBy('employee_name')->sortKeys();
 @endphp
 
@@ -325,8 +331,7 @@ body { font-family: DejaVu Sans, sans-serif; font-size: 9px; color: #1e293b; bac
     $ePendAmt = $empExpenses->whereIn('status',['Pending Approval','Requested'])->sum('requested_amount');
     $eMobile  = $empExpenses->first()->employee_mobile ?? '';
 
-    // Category breakdown for this employee
-    $empCatGroups = $empExpenses->groupBy('category_name');
+    $empCatGroups  = $empExpenses->groupBy('category_name');
     $empCatSummary = [];
     foreach ($empCatGroups as $catName => $catExp) {
         $empCatSummary[] = [
@@ -343,105 +348,123 @@ body { font-family: DejaVu Sans, sans-serif; font-size: 9px; color: #1e293b; bac
     usort($empCatSummary, fn($a,$b) => strcmp($a['name'], $b['name']));
 @endphp
 
-{{-- Employee header bar — page break before every employee except the first --}}
-@if(!$loop->first)
-<table style="width:100%;border-collapse:collapse;page-break-before:always;" cellspacing="0" cellpadding="0"><tr><td style="height:1px;font-size:1px;line-height:1px;">&nbsp;</td></tr></table>
+{{--
+    mPDF PAGE BREAK: only inserted when the controller calculated that this
+    employee block will not fit in the remaining space on the current page.
+--}}
+@if(!empty($empPageBreak[$empName]))
+<pagebreak />
 @endif
-<table class="emp-sec-bar" cellspacing="0" cellpadding="0">
+
+{{-- ─── EMPLOYEE NAME BAR ─── --}}
+<table style="width:100%;border-collapse:collapse;margin-top:8px;margin-bottom:0;" cellspacing="0" cellpadding="0">
     <tr>
-        <td class="emp-sec-bar-td">
+        <td style="background:#1a3a5c;padding:10px 14px;font-size:10px;font-weight:bold;text-transform:uppercase;letter-spacing:0.9px;color:#ffffff;vertical-align:middle;border-left:5px solid #3b9edd;">
             {{ $empName }}
-            @if($eMobile) &nbsp;&bull;&nbsp; <span style="font-weight:normal;font-size:8px;">{{ $eMobile }}</span> @endif
+            @if($eMobile) &nbsp;&bull;&nbsp; <span style="font-weight:normal;font-size:8.5px;color:#93c5fd;letter-spacing:0;">{{ $eMobile }}</span> @endif
         </td>
-        <td class="emp-sec-bar-rt">{{ $eTotal }} claim(s)</td>
+        <td style="background:#1a3a5c;text-align:right;padding-right:14px;vertical-align:middle;width:160px;font-size:8.5px;color:#93c5fd;font-weight:bold;">
+            {{ $eTotal }} claim(s)
+        </td>
     </tr>
 </table>
 
-{{-- Employee mini KPI --}}
-<table class="emp-kpi" cellspacing="0" cellpadding="0">
+{{-- ─── EMPLOYEE KPI STRIP ─── --}}
+<table style="width:100%;border-collapse:collapse;background:#f0f7ff;border:1px solid #bcd4ee;border-top:none;margin-bottom:0;" cellspacing="0" cellpadding="0">
     <tr>
-        <td width="14%"><span class="ek-lbl">Claims</span><span class="ek-val">{{ $eTotal }}</span></td>
-        <td width="20%"><span class="ek-lbl">Requested</span><span class="ek-val">&#8377;{{ number_format($eReq,2) }}</span></td>
-        <td width="20%"><span class="ek-lbl">Approved</span><span class="ek-val-green">&#8377;{{ number_format($eApr,2) }}</span></td>
-        <td width="14%"><span class="ek-lbl">Pending</span><span class="ek-val-pink">{{ $ePendCnt }}</span></td>
-        <td width="20%"><span class="ek-lbl">Pending Amt</span><span class="ek-val-pink">&#8377;{{ number_format($ePendAmt,2) }}</span></td>
-        <td width="12%"><span class="ek-lbl">Categories</span><span class="ek-val">{{ count($empCatSummary) }}</span></td>
+        <td style="padding:8px 12px;vertical-align:middle;border-right:1px solid #d1e5f7;width:14%;">
+            <span style="font-size:6.5px;font-weight:bold;text-transform:uppercase;letter-spacing:0.4px;color:#5a82a0;display:block;margin-bottom:2px;">Claims</span>
+            <span style="font-size:11px;font-weight:bold;color:#0f172a;display:block;">{{ $eTotal }}</span>
+        </td>
+        <td style="padding:8px 12px;vertical-align:middle;border-right:1px solid #d1e5f7;width:20%;">
+            <span style="font-size:6.5px;font-weight:bold;text-transform:uppercase;letter-spacing:0.4px;color:#5a82a0;display:block;margin-bottom:2px;">Requested</span>
+            <span style="font-size:11px;font-weight:bold;color:#0f172a;display:block;">&#8377;{{ number_format($eReq,2) }}</span>
+        </td>
+        <td style="padding:8px 12px;vertical-align:middle;border-right:1px solid #d1e5f7;width:20%;">
+            <span style="font-size:6.5px;font-weight:bold;text-transform:uppercase;letter-spacing:0.4px;color:#5a82a0;display:block;margin-bottom:2px;">Approved</span>
+            <span style="font-size:11px;font-weight:bold;color:#16a34a;display:block;">&#8377;{{ number_format($eApr,2) }}</span>
+        </td>
+        <td style="padding:8px 12px;vertical-align:middle;border-right:1px solid #d1e5f7;width:14%;">
+            <span style="font-size:6.5px;font-weight:bold;text-transform:uppercase;letter-spacing:0.4px;color:#5a82a0;display:block;margin-bottom:2px;">Pending</span>
+            <span style="font-size:11px;font-weight:bold;color:#9d174d;display:block;">{{ $ePendCnt }}</span>
+        </td>
+        <td style="padding:8px 12px;vertical-align:middle;border-right:1px solid #d1e5f7;width:20%;">
+            <span style="font-size:6.5px;font-weight:bold;text-transform:uppercase;letter-spacing:0.4px;color:#5a82a0;display:block;margin-bottom:2px;">Pending Amt</span>
+            <span style="font-size:11px;font-weight:bold;color:#9d174d;display:block;">&#8377;{{ number_format($ePendAmt,2) }}</span>
+        </td>
+        <td style="padding:8px 12px;vertical-align:middle;width:12%;">
+            <span style="font-size:6.5px;font-weight:bold;text-transform:uppercase;letter-spacing:0.4px;color:#5a82a0;display:block;margin-bottom:2px;">Categories</span>
+            <span style="font-size:11px;font-weight:bold;color:#0f172a;display:block;">{{ count($empCatSummary) }}</span>
+        </td>
     </tr>
 </table>
 
-{{-- Employee category table --}}
-<div class="emp-tbl-wrap">
-<table class="emp-tbl" cellspacing="0" cellpadding="0">
+{{-- ─── EMPLOYEE CATEGORY TABLE ─── --}}
+<table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-top:none;" cellspacing="0" cellpadding="0">
     <thead>
-        <tr>
-            <th class="c" width="24">Sr.</th>
-            <th width="160">Category</th>
-            <th class="c" width="44">Claims</th>
-            <th class="r" width="95">Requested</th>
-            <th class="r" width="105">Approved</th>
-            <th class="r" width="105">Pending</th>
+        <tr style="background:#475569;">
+            <th style="padding:8px 9px;font-size:7.5px;font-weight:bold;color:#e2e8f0;text-transform:uppercase;letter-spacing:0.5px;text-align:center;border-right:1px solid rgba(255,255,255,0.08);width:28px;">Sr.</th>
+            <th style="padding:8px 9px;font-size:7.5px;font-weight:bold;color:#e2e8f0;text-transform:uppercase;letter-spacing:0.5px;text-align:left;border-right:1px solid rgba(255,255,255,0.08);">Category</th>
+            <th style="padding:8px 9px;font-size:7.5px;font-weight:bold;color:#e2e8f0;text-transform:uppercase;letter-spacing:0.5px;text-align:center;border-right:1px solid rgba(255,255,255,0.08);width:55px;">Claims</th>
+            <th style="padding:8px 9px;font-size:7.5px;font-weight:bold;color:#e2e8f0;text-transform:uppercase;letter-spacing:0.5px;text-align:right;border-right:1px solid rgba(255,255,255,0.08);width:100px;">Requested</th>
+            <th style="padding:8px 9px;font-size:7.5px;font-weight:bold;color:#e2e8f0;text-transform:uppercase;letter-spacing:0.5px;text-align:right;border-right:1px solid rgba(255,255,255,0.08);width:120px;">Approved</th>
+            <th style="padding:8px 9px;font-size:7.5px;font-weight:bold;color:#e2e8f0;text-transform:uppercase;letter-spacing:0.5px;text-align:right;width:120px;">Pending</th>
         </tr>
     </thead>
     <tbody>
     @foreach($empCatSummary as $ei => $ec)
-    @php $rc2 = ($ei % 2 === 0) ? 'ro' : 're'; @endphp
-    <tr class="{{ $rc2 }}">
-        <td style="text-align:center;color:#94a3b8;font-size:7.5px;font-weight:bold;">{{ $ei+1 }}</td>
-        <td>
-            <div style="font-size:8.5px;font-weight:bold;color:#0f172a;">{{ $ec['name'] }}</div>
+    @php $rc2 = ($ei % 2 === 0) ? '#ffffff' : '#f8fafc'; @endphp
+    <tr style="background:{{ $rc2 }};border-bottom:1px solid #e2e8f0;">
+        <td style="padding:9px 9px;text-align:center;color:#94a3b8;font-size:8px;font-weight:bold;border-right:1px solid #e2e8f0;">{{ $ei+1 }}</td>
+        <td style="padding:9px 9px;border-right:1px solid #e2e8f0;">
+            <div style="font-size:9px;font-weight:bold;color:#0f172a;">{{ $ec['name'] }}</div>
             @if($ec['travel_km'] > 0)
-                <div style="font-size:7px;color:#64748b;margin-top:1px;">&#128663; {{ number_format($ec['travel_km'],0) }} km</div>
+                <div style="font-size:7.5px;color:#64748b;margin-top:2px;">{{ number_format($ec['travel_km'],0) }} km traveled</div>
             @endif
         </td>
-        <td style="text-align:center;"><span class="cat-cnt-badge">{{ $ec['total_cnt'] }}</span></td>
-        <td style="text-align:right;font-size:8.5px;font-weight:bold;color:#334155;">&#8377;{{ number_format($ec['req_amt'],2) }}</td>
-        <td style="text-align:right;">
+        <td style="padding:9px 9px;text-align:center;border-right:1px solid #e2e8f0;">
+            <span style="display:inline-block;background:#f1f5f9;color:#334155;font-size:8px;font-weight:bold;padding:2px 8px;border-radius:2px;">{{ $ec['total_cnt'] }}</span>
+        </td>
+        <td style="padding:9px 9px;text-align:right;font-size:8.5px;font-weight:bold;color:#334155;border-right:1px solid #e2e8f0;">&#8377;{{ number_format($ec['req_amt'],2) }}</td>
+        <td style="padding:9px 9px;text-align:right;border-right:1px solid #e2e8f0;">
             @if($ec['apr_amt'] > 0)
                 <span style="font-size:8.5px;font-weight:bold;color:#16a34a;display:block;">&#8377;{{ number_format($ec['apr_amt'],2) }}</span>
-                @if($ec['apr_cnt'] > 0)<span style="font-size:7px;color:#15803d;display:block;">{{ $ec['apr_cnt'] }} approved</span>@endif
+                @if($ec['apr_cnt'] > 0)<span style="font-size:7px;color:#15803d;display:block;margin-top:1px;">{{ $ec['apr_cnt'] }} approved</span>@endif
             @else
-                <span style="color:#cbd5e1;font-size:9px;">&#8212;</span>
+                <span style="color:#cbd5e1;font-size:11px;">&#8212;</span>
             @endif
         </td>
-        <td style="text-align:right;">
+        <td style="padding:9px 9px;text-align:right;">
             @if($ec['pend_cnt'] > 0)
                 <span style="font-size:8.5px;font-weight:bold;color:#9d174d;display:block;">&#8377;{{ number_format($ec['pend_amt'],2) }}</span>
-                <span style="font-size:7px;color:#be185d;display:block;">{{ $ec['pend_cnt'] }} pending</span>
+                <span style="font-size:7px;color:#be185d;display:block;margin-top:1px;">{{ $ec['pend_cnt'] }} pending</span>
             @else
-                <span style="color:#cbd5e1;font-size:9px;">&#8212;</span>
+                <span style="color:#cbd5e1;font-size:11px;">&#8212;</span>
             @endif
         </td>
     </tr>
     @endforeach
     </tbody>
     <tfoot>
-        <tr>
-            <td colspan="2" style="color:#94a3b8;font-size:7.5px;letter-spacing:0.3px;">{{ $empName }} &mdash; Totals</td>
-            <td style="text-align:center;color:#fff;font-size:9px;font-weight:bold;">{{ $eTotal }}</td>
-            <td style="text-align:right;padding-right:9px;color:#fff;font-size:9px;font-weight:bold;">&#8377;{{ number_format($eReq,2) }}</td>
-            <td style="text-align:right;padding-right:9px;font-size:9px;font-weight:bold;color:#86efac;">&#8377;{{ number_format($eApr,2) }}</td>
-            <td style="text-align:right;padding-right:9px;">
+        <tr style="background:#475569;">
+            <td colspan="2" style="padding:9px 10px;color:#94a3b8;font-size:8px;letter-spacing:0.3px;font-style:italic;">{{ $empName }} &mdash; Totals</td>
+            <td style="padding:9px 10px;text-align:center;color:#ffffff;font-size:9.5px;font-weight:bold;">{{ $eTotal }}</td>
+            <td style="padding:9px 10px;text-align:right;color:#ffffff;font-size:9.5px;font-weight:bold;">&#8377;{{ number_format($eReq,2) }}</td>
+            <td style="padding:9px 10px;text-align:right;font-size:9.5px;font-weight:bold;color:#86efac;">&#8377;{{ number_format($eApr,2) }}</td>
+            <td style="padding:9px 10px;text-align:right;">
                 @if($ePendCnt > 0)
-                    <span style="font-size:9px;font-weight:bold;color:#f9a8d4;">&#8377;{{ number_format($ePendAmt,2) }}</span>
+                    <span style="font-size:9.5px;font-weight:bold;color:#f9a8d4;">&#8377;{{ number_format($ePendAmt,2) }}</span>
                 @else
-                    <span style="font-size:9px;color:rgba(255,255,255,0.25);">&#8212;</span>
+                    <span style="font-size:9.5px;color:rgba(255,255,255,0.3);">&#8212;</span>
                 @endif
             </td>
         </tr>
     </tfoot>
 </table>
-</div>
 
 @endforeach
 
-{{-- ══ FOOTER ══ --}}
-<table class="footer-table" cellspacing="0" cellpadding="0">
-    <tr>
-        <td class="footer-left">Greenwave &bull; Expense Management</td>
-        <td class="footer-mid">Confidential Report &bull; Internal Use Only</td>
-        <td class="footer-right">{{ $empCount }} employees &bull; {{ $orgTotal }} records &bull; &#8377;{{ number_format($orgReq,2) }} requested</td>
-    </tr>
-</table>
+{{-- Footer is rendered by mPDF SetHTMLFooter — appears on every page --}}
 
 </body>
 </html>

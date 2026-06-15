@@ -18,8 +18,6 @@ class UserExpenseController extends Controller
         Session::put('active', 'expenses');
 
         // ── DEFAULT to current month/year when no filter params exist in URL ──
-        // The blade visually defaults to current month/year, so the data must match.
-        // User can select "All" from the dropdown and click Apply to remove the filter.
         $filterMonth = $request->filled('month') ? $request->month : date('n');
         $filterYear  = $request->filled('year')  ? $request->year  : date('Y');
 
@@ -145,7 +143,6 @@ class UserExpenseController extends Controller
 
     /**
      * Export filtered expenses as PDF using mPDF (A4 Portrait).
-     * Matches the design of the Move Customers PDF.
      */
     public function exportPdf(Request $request)
     {
@@ -211,7 +208,6 @@ class UserExpenseController extends Controller
                 ->first();
         }
 
-        // ── Render Blade to HTML ──
         $html = view('admin.user_expenses.expense_report_pdf', [
             'expenses'       => $expenses,
             'employee'       => $employee,
@@ -221,7 +217,6 @@ class UserExpenseController extends Controller
             'filterVerified' => $request->verified ?? null,
         ])->render();
 
-        // ── Generate PDF with mPDF (A4 Portrait — same as Move Customers) ──
         $mpdf = new Mpdf([
             'mode'              => 'utf-8',
             'format'            => 'A4',
@@ -240,7 +235,6 @@ class UserExpenseController extends Controller
         $mpdf->SetAuthor('Greenwave');
         $mpdf->WriteHTML($html);
 
-        // Build filename
         $filename = 'expense-report';
         if ($employee) {
             $filename .= '-' . \Illuminate\Support\Str::slug($employee->name);
@@ -314,12 +308,25 @@ class UserExpenseController extends Controller
 
     /**
      * Toggle verified (YES/NO) via AJAX.
+     *
+     * SERVER-SIDE GUARD: Cannot unverify if expense is Approved or Partially Approved.
      */
     public function toggleVerified(Request $request, $id)
     {
         $expense = DB::table('user_expenses')->where('id', $id)->first();
         if (!$expense) {
             return response()->json(['success' => false, 'message' => 'Expense not found.'], 404);
+        }
+
+        // Block unverify if expense is already approved
+        if ($expense->verified_by) {
+            $blockedStatuses = ['Approved', 'Partially Approved'];
+            if (in_array($expense->status, $blockedStatuses)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot remove verification — expense is already ' . $expense->status . '.',
+                ], 422);
+            }
         }
 
         if ($expense->verified_by) {
@@ -514,9 +521,13 @@ class UserExpenseController extends Controller
         return response()->json(['success' => true, 'visits' => $result]);
     }
 
-
     /**
-     * Export category-wise summary PDF for one or all employees.
+     * Export category-wise summary PDF.
+     *
+     * When employee_id is provided: same report format as all-employees
+     * (org totals at top, then that employee's category breakdown).
+     * Only month + year filters are applied (status/verified ignored here).
+     *
      * Route: GET /admin/user-expenses/export-category-summary
      */
     public function exportCategorySummaryPdf(Request $request)
@@ -542,11 +553,12 @@ class UserExpenseController extends Controller
             ->orderBy('u.name', 'ASC')
             ->orderBy('ue.expense_date', 'ASC');
 
-        // Optional: filter by single employee
+        // Filter by single employee if provided
         if ($request->filled('employee_id')) {
             $query->where('ue.user_id', $request->employee_id);
         }
 
+        // Only month + year (same as what the list page applies for this report)
         if ($request->filled('month')) {
             $query->whereMonth('ue.expense_date', $request->month);
         }
@@ -556,7 +568,7 @@ class UserExpenseController extends Controller
 
         $allExpenses = $query->get();
 
-        // Resolve optional single-employee object (for header display only)
+        // Resolve employee object for header display
         $filterEmployee = null;
         if ($request->filled('employee_id')) {
             $filterEmployee = DB::table('users')
@@ -565,11 +577,57 @@ class UserExpenseController extends Controller
                 ->first();
         }
 
+        // ── Pre-calculate per-employee block heights so the blade can decide
+        //    whether to insert a <pagebreak> before each employee.
+        //
+        //    A4 usable height (mm) = 297 - margin_top(12) - margin_bottom(18) - footer(8) = 259mm
+        //    Heights (empirical, mm at font-size 9px / DejaVu Sans):
+        //      • Page 1 org section consumed: ~130mm (header+kpi strip+filter+divider+kpi+table)
+        //      • Employee name bar:  12mm
+        //      • Employee KPI row:   14mm
+        //      • Table header row:    9mm
+        //      • Each category row:  11mm  (with travel sub-line: 14mm)
+        //      • Table footer row:   10mm
+        //      • Gap / margin:       10mm
+        $pageUsableH   = 259; // mm available per page
+        $orgSectionH   = 92;  // mm consumed by org section on page 1 (calibrated from real PDF output)
+        $empHeaderH    = 12;
+        $empKpiH       = 14;
+        $tblHeaderH    =  9;
+        $tblFooterH    = 10;
+        $rowH          = 11;  // category row height
+        $rowTravelH    = 14;  // category row with travel km sub-line
+        $gapH          = 6;   // spacing between blocks — kept tight so employees pack efficiently
+
+        // Group and sort employees alphabetically
+        $byEmployee = $allExpenses->groupBy('employee_name')->sortKeys();
+
+        // Simple sequential page-break: works perfectly with gap=6mm which
+        // keeps blocks tight enough to pack all employees efficiently.
+        $empPageBreak = [];
+        $usedOnPage   = $orgSectionH;
+        foreach ($byEmployee as $empName => $empExpenses) {
+            $catCount     = $empExpenses->groupBy('category_name')->count();
+            $hasTravelCat = $empExpenses->where('is_travel', 1)->count() > 0;
+            $blockH       = $empHeaderH + $empKpiH + $tblHeaderH + $tblFooterH + $gapH
+                          + ($catCount * $rowH)
+                          + ($hasTravelCat ? ($rowTravelH - $rowH) : 0);
+
+            if (($usedOnPage + $blockH) > $pageUsableH) {
+                $empPageBreak[$empName] = true;
+                $usedOnPage = $blockH;
+            } else {
+                $empPageBreak[$empName] = false;
+                $usedOnPage += $blockH;
+            }
+        }
+
         $html = view('admin.user_expenses.category_summary_pdf', [
             'allExpenses'    => $allExpenses,
             'filterEmployee' => $filterEmployee,
             'filterMonth'    => $request->month ?? null,
             'filterYear'     => $request->year  ?? null,
+            'empPageBreak'   => $empPageBreak,
         ])->render();
 
         $mpdf = new Mpdf([
@@ -577,7 +635,7 @@ class UserExpenseController extends Controller
             'format'            => 'A4',
             'orientation'       => 'P',
             'margin_top'        => 12,
-            'margin_bottom'     => 14,
+            'margin_bottom'     => 18,
             'margin_left'       => 10,
             'margin_right'      => 10,
             'default_font'      => 'dejavusans',
@@ -587,9 +645,18 @@ class UserExpenseController extends Controller
 
         $mpdf->SetTitle('Category Summary Report — Greenwave');
         $mpdf->SetAuthor('Greenwave');
+        // Page numbers footer — appears on every page from page 2 onward
+        $mpdf->SetHTMLFooter('
+            <table width="100%" style="border-top:1px solid #cbd5e1;padding-top:5px;font-family:DejaVu Sans,sans-serif;">
+                <tr>
+                    <td style="font-size:7.5px;color:#64748b;text-align:left;">Greenwave &bull; Category Expense Summary</td>
+                    <td style="font-size:7.5px;color:#94a3b8;text-align:center;">Confidential &bull; Internal Use Only</td>
+                    <td style="font-size:7.5px;color:#64748b;text-align:right;">Page {PAGENO} of {nbpg}</td>
+                </tr>
+            </table>
+        ');
         $mpdf->WriteHTML($html);
 
-        // Build filename
         $filename = 'category-summary';
         if ($filterEmployee) {
             $filename .= '-' . \Illuminate\Support\Str::slug($filterEmployee->name);
