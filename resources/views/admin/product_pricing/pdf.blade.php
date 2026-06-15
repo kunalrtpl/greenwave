@@ -116,31 +116,35 @@ table.data-table tbody td.right  { text-align: right; }
 
 .plain-val { color: #334155; }
 
-/* ── Status icons — bold & clearly visible ── */
+/* ── Status icons ── */
 .icon-cross {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: bold;
-    color: #0f172a;        /* near-black */
-    line-height: 1;
+    color: #dc2626;        /* red */
+    line-height: 1.4;
+    display: inline-block;
 }
 .icon-tick {
     font-size: 10px;
     font-weight: bold;
-    color: #94a3b8;        /* muted grey — not important */
-    line-height: 1;
+    color: #16a34a;        /* green */
+    line-height: 1.4;
+    display: inline-block;
 }
 
 /* Focus star */
 .icon-focus {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: bold;
-    color: #276749;        /* green */
-    line-height: 1;
+    color: #d97706;        /* amber/orange */
+    line-height: 1.4;
+    display: inline-block;
 }
 .icon-focus-no {
-    font-size: 10px;
-    color: #cbd5e1;
-    line-height: 1;
+    font-size: 12px;
+    color: #e2e8f0;
+    line-height: 1.4;
+    display: inline-block;
 }
 
 /* Price date badges */
@@ -291,7 +295,7 @@ table.data-table tbody td.right  { text-align: right; }
         {{-- Not Available --}}
         <td class="center">
             @if($isNA)
-                <span class="icon-cross">&#10007;</span>
+                <span class="icon-cross"><b>X</b></span>
             @else
                 <span class="icon-tick">&#10003;</span>
             @endif
@@ -300,7 +304,7 @@ table.data-table tbody td.right  { text-align: right; }
         {{-- Discontinued --}}
         <td class="center">
             @if($isDisc)
-                <span class="icon-cross">&#10007;</span>
+                <span class="icon-cross"><b>X</b></span>
             @else
                 <span class="icon-tick">&#10003;</span>
             @endif
