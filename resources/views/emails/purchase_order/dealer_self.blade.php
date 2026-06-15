@@ -68,14 +68,15 @@
 
         /* ── What Happens Next ── */
         .next-box           { background: #f9fbe7; border: 1px solid #c8e6c9; border-radius: 12px; overflow: hidden; }
-        .next-header        { background: #dcedc8; padding: 13px 20px; border-bottom: 1px solid #c5e1a5; text-align: center; }
+        .next-header        { background: #dcedc8; padding: 16px 20px; border-bottom: 1px solid #c5e1a5; text-align: center; }
         .next-header span   { font-size: 12px; font-weight: 700; color: #33691e; text-transform: uppercase; letter-spacing: 0.8px; }
-        .next-body          { padding: 20px 16px; }
-        .next-card          { background: #ffffff; border: 1px solid #c8e6c9; border-radius: 10px; padding: 18px 10px; }
-        .next-card-icon     { font-size: 28px; padding-bottom: 8px; line-height: 1; }
-        .next-card-title    { font-size: 12px; font-weight: 700; color: #2e7d32; padding-bottom: 4px; line-height: 1.4; }
-        .next-card-body     { font-size: 11px; color: #81c784; line-height: 1.5; }
-        .prod-code-text     { font-size: 10px; color: #81c784; margin-top: 2px; }
+        .next-body          { padding: 20px 16px 24px 16px; }
+        
+        /* Fixed explicit table-based structure classes */
+        .next-card-table    { background: #ffffff; border: 1px solid #c8e6c9; border-radius: 10px; border-collapse: separate !important; }
+        .next-card-icon     { font-size: 28px; line-height: 1 !important; padding: 24px 10px 8px 10px; }
+        .next-card-title    { font-size: 13px; font-weight: 700; color: #2e7d32; padding: 0 10px 6px 10px; line-height: 1.4; }
+        .next-card-body     { font-size: 11px; color: #81c784; padding: 0 10px 24px 10px; line-height: 1.5; }
         
         /* ── Footer ── */
         .footer             { background: linear-gradient(160deg, #1b5e20 0%, #2e7d32 100%); border-radius: 12px; padding: 28px 32px; text-align: center; }
@@ -112,7 +113,7 @@
                 {{-- Divider --}}
                 <div class="header-divider"></div>
 
-                {{-- Check Circle — using display:table for reliable centering --}}
+                {{-- Check Circle --}}
                <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto 20px;">
                     <tr>
                         <td width="68" height="68" style="width:68px; height:68px; padding:0;">
@@ -182,7 +183,7 @@
                     </tr>
                 </table>
 
-                {{-- Items Table — 4 columns, pack size below product name --}}
+                {{-- Items Table --}}
                 <table class="items-table" cellpadding="0" cellspacing="0" border="0">
 
                     <tr class="items-header">
@@ -210,7 +211,7 @@
                         {{-- # --}}
                         <td class="item-num">{{ $idx + 1 }}</td>
 
-                        {{-- Product + Pack Size below --}}
+                        {{-- Product + Pack Size --}}
                         <td class="item-product">
                             <div class="item-product-name">{{ $item->product->product_name ?? '—' }}</div>
                             @if($packLabel)
@@ -242,7 +243,7 @@
                     </tr>
                     @endforeach
 
-                    {{-- Footer Row Corrected Alignment --}}
+                    {{-- Footer Row --}}
                     <tr class="items-footer">
                         <td colspan="2" class="items-footer-left">Payment Term: {{ $po->dealer->payment_term ?? '' }} days</td>
                         <td></td>
@@ -254,7 +255,7 @@
         </tr>
 
         {{-- ══════════════════════════════════ --}}
-        {{-- WHAT HAPPENS NEXT                 --}}
+        {{-- WHAT HAPPENS NEXT                  --}}
         {{-- ══════════════════════════════════ --}}
         <tr>
             <td class="section">
@@ -263,47 +264,50 @@
                         <span>📋 &nbsp;What Happens Next?</span>
                     </div>
                     <div class="next-body">
-                        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                        <!-- Strict Table Layout -->
+                        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="table-layout: fixed; width: 100%;">
                             <tr>
-                                {{-- Card 1: Review --}}
-                                <td valign="top" style="width: 33%; padding-right: 8px;">
-                                    <table width="100%" cellpadding="0" cellspacing="0" border="0" class="next-card">
+                                <!-- CARD 1: REVIEW -->
+                                <td valign="top" style="width: 33.33%; padding-right: 6px;">
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0" class="next-card-table">
                                         <tr>
-                                            <td align="center" class="next-card-icon">🔍</td>
+                                            <td class="next-card-icon" align="center" style="text-align: center;">🔍</td>
                                         </tr>
                                         <tr>
-                                            <td align="center" class="next-card-title">Review</td>
+                                            <td class="next-card-title" align="center" style="text-align: center;">Review</td>
                                         </tr>
                                         <tr>
-                                            <td align="center" class="next-card-body">Team verifies quantities</td>
-                                        </tr>
-                                    </table>
-                                </td>
-                                {{-- Card 2: Approval --}}
-                                <td valign="top" style="width: 33%; padding-right: 8px;">
-                                    <table width="100%" cellpadding="0" cellspacing="0" border="0" class="next-card">
-                                        <tr>
-                                            <td align="center" class="next-card-icon">✅</td>
-                                        </tr>
-                                        <tr>
-                                            <td align="center" class="next-card-title">Approval</td>
-                                        </tr>
-                                        <tr>
-                                            <td align="center" class="next-card-body">Qty & price will be notified</td>
+                                            <td class="next-card-body" align="center" style="text-align: center;">Team verifies quantities</td>
                                         </tr>
                                     </table>
                                 </td>
-                                {{-- Card 3: Dispatch --}}
-                                <td valign="top" style="width: 33%;">
-                                    <table width="100%" cellpadding="0" cellspacing="0" border="0" class="next-card">
+                                
+                                <!-- CARD 2: APPROVAL -->
+                                <td valign="top" style="width: 33.33%; padding-left: 3px; padding-right: 3px;">
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0" class="next-card-table">
                                         <tr>
-                                            <td align="center" class="next-card-icon">🚚</td>
+                                            <td class="next-card-icon" align="center" style="text-align: center;">✅</td>
                                         </tr>
                                         <tr>
-                                            <td align="center" class="next-card-title">Dispatch</td>
+                                            <td class="next-card-title" align="center" style="text-align: center;">Approval</td>
                                         </tr>
                                         <tr>
-                                            <td align="center" class="next-card-body">You'll be notified on dispatch</td>
+                                            <td class="next-card-body" align="center" style="text-align: center;">Qty & price will be notified</td>
+                                        </tr>
+                                    </table>
+                                </td>
+                                
+                                <!-- CARD 3: DISPATCH -->
+                                <td valign="top" style="width: 33.33%; padding-left: 6px;">
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0" class="next-card-table">
+                                        <tr>
+                                            <td class="next-card-icon" align="center" style="text-align: center;">🚚</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="next-card-title" align="center" style="text-align: center;">Dispatch</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="next-card-body" align="center" style="text-align: center;">You'll be notified on dispatch</td>
                                         </tr>
                                     </table>
                                 </td>

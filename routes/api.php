@@ -392,8 +392,12 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			});
 
 
-
-
+			// ── Dealer Evaluation ─────────────────────────────────────────────────
+	        Route::get('/dealer-evaluations','NewDealerEvaluationController@index');            // List
+	        Route::post('/dealer-evaluations','NewDealerEvaluationController@store');            // Create
+	        Route::get('/dealer-evaluations/{id}',                              'NewDealerEvaluationController@show');             // Detail (by evaluation id)
+	        Route::post('/dealer-evaluations/dealer/{dealerId}',                'NewDealerEvaluationController@update');           // Edit (by dealer id)
+	        Route::post('/dealer-evaluations/attachment/{attachmentId}/delete', 'NewDealerEvaluationController@deleteAttachment'); // Delete Attachment
 		});
 	});
 });

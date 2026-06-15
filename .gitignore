@@ -28,6 +28,7 @@
 /public/ExpenseReceipts
 /public/DealerReports
 /public/images/UserSecurityFaces/
+/public/dealer_evaluations/
 /public/work_notes
 public/app_manuals
 .env

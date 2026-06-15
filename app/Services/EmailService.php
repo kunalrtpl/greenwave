@@ -13,21 +13,20 @@ class EmailService
      * Send an email by event key.
      *
      * @param string            $eventKey
-     * @param array             $mailData   Data passed to the blade view & placeholder parser
+     * @param array             $mailData   Data passed to the blade view & placeholder parser.
+     *                                      Pass '_attachments' => ['/abs/path/file.pdf'] inside
+     *                                      mailData to attach files — no signature change needed.
      * @param string|array|null $to         Override recipients; null = use to_emails from DB
      */
     public static function send(string $eventKey, array $mailData = [], $to = null): void
     {
         try {
             $template = EmailTemplate::getActive($eventKey);
-
             if (!$template) {
                 Log::warning("EmailService: No active template for [{$eventKey}]. Skipping.");
                 return;
             }
-
             self::sendTemplate($template, $mailData, $to);
-
         } catch (\Exception $e) {
             Log::error("EmailService: Failed [{$eventKey}] — " . $e->getMessage());
         }
@@ -35,9 +34,6 @@ class EmailService
 
     /**
      * Send an email using an already-resolved EmailTemplate model.
-     *
-     * Useful when you have the template object directly (e.g. when iterating
-     * child-dealer notification templates) and don't need another DB lookup.
      *
      * @param EmailTemplate     $template
      * @param array             $mailData
@@ -47,7 +43,6 @@ class EmailService
     {
         try {
             $recipients = self::resolveRecipients($template, $to);
-
             if (empty($recipients)) {
                 Log::warning("EmailService: No recipients for template [{$template->event_key}] (id={$template->id}). Skipping.");
                 return;
@@ -58,7 +53,6 @@ class EmailService
             Log::info("EmailService: Sent template [{$template->event_key}] (id={$template->id})", [
                 'recipients' => $recipients,
             ]);
-
         } catch (\Exception $e) {
             Log::error(
                 "EmailService: Failed template [{$template->event_key}] (id={$template->id}) — " . $e->getMessage()
@@ -75,7 +69,6 @@ class EmailService
         if (!empty($to)) {
             return array_values(array_filter((array) $to));
         }
-
         return array_values(array_filter((array) ($template->to_emails ?? [])));
     }
 }

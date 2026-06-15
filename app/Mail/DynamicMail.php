@@ -26,6 +26,22 @@ class DynamicMail extends Mailable
                      ->view($this->template->blade_view)
                      ->with($this->mailData);
 
+        // ── Attachments — read from mailData['_attachments'] ──────────────────
+        // Pass file paths inside mailData as '_attachments' => ['/abs/path/file.pdf']
+        // Underscore prefix so it never conflicts with any blade variable.
+        // No signature change — fully backward compatible.
+        if (!empty($this->mailData['_attachments']) && is_array($this->mailData['_attachments'])) {
+            foreach ($this->mailData['_attachments'] as $path) {
+                if (!empty($path) && file_exists($path)) {
+                    $mail->attach($path, [
+                        'as'   => basename($path),
+                        'mime' => mime_content_type($path),
+                    ]);
+                }
+            }
+        }
+
+        // ── CC / BCC ───────────────────────────────────────────────────────────
         $cc = array_values(array_filter((array) ($this->template->cc_emails ?? [])));
         if (!empty($cc)) {
             $mail->cc($cc);
@@ -44,68 +60,43 @@ class DynamicMail extends Mailable
         return preg_replace_callback('/\{([\w.]+)\}/', function ($matches) {
             $key = $matches[1];
 
-            // ── Special computed placeholders ──────────────────────────
             $special = $this->resolveSpecialPlaceholder($key);
             if ($special !== null) {
                 return $special;
             }
 
-            // ── Generic dot notation fallback ──────────────────────────
             $value = $this->resolveDotNotation($key, $this->mailData);
             return $value !== null ? $value : $matches[0];
         }, $subject);
     }
 
-    /**
-     * Handle special placeholder keys with custom logic.
-     * Returns null if not a special key (falls through to dot notation).
-     */
     protected function resolveSpecialPlaceholder($key)
     {
-        // ── dealer.business_name ───────────────────────────────────────
-        // Priority: short_name → first word of business_name
         if ($key === 'dealer.business_name') {
             $dealer = isset($this->mailData['po'])
                 ? $this->mailData['po']->dealer
                 : (isset($this->mailData['dealer']) ? $this->mailData['dealer'] : null);
 
-            if (!$dealer) {
-                return null;
-            }
+            if (!$dealer) return null;
 
-            // 1. short_name exists and is not empty — use it
-            if (!empty($dealer->short_name)) {
-                return trim($dealer->short_name);
-            }
-
-            // 2. First word of business_name
-            if (!empty($dealer->business_name)) {
-                return explode(' ', trim($dealer->business_name))[0];
-            }
-
-            // 3. Fallback to name if business_name also missing
-            if (!empty($dealer->name)) {
-                return explode(' ', trim($dealer->name))[0];
-            }
+            if (!empty($dealer->short_name))    return trim($dealer->short_name);
+            if (!empty($dealer->business_name)) return explode(' ', trim($dealer->business_name))[0];
+            if (!empty($dealer->name))          return explode(' ', trim($dealer->name))[0];
 
             return null;
         }
 
-        // ── dealer.city ────────────────────────────────────────────────
-        // First 3 letters uppercase — e.g. Ludhiana → LUD
         if ($key === 'dealer.city') {
             $dealer = isset($this->mailData['po'])
                 ? $this->mailData['po']->dealer
                 : (isset($this->mailData['dealer']) ? $this->mailData['dealer'] : null);
 
-            if (!$dealer || empty($dealer->city)) {
-                return null;
-            }
+            if (!$dealer || empty($dealer->city)) return null;
 
             return strtoupper(substr(trim($dealer->city), 0, 3));
         }
 
-        return null; // not a special key
+        return null;
     }
 
     protected function resolveDotNotation($key, $data)
