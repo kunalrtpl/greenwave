@@ -306,7 +306,7 @@ class ProductsController extends Controller
                     }
 
                     // Force same name & code as old product
-                    $data['product_name'] = $oldProduct->product_name;
+                    $data['product_name'] = strtoupper($oldProduct->product_name);
                     $data['product_code'] = $oldProduct->product_code;
                 }
 
@@ -414,7 +414,7 @@ class ProductsController extends Controller
                     : Product::findOrFail($data['productid']);
 
                 // ── Core fields (always saved) ──
-                $product->product_name        = $data['product_name'];
+                $product->product_name        = strtoupper($data['product_name']);
                 $product->physical_form       = $data['physical_form'];
                 $product->product_detail_id   = $data['product_detail_id'];
                 $product->product_detail_info = getProductDetailLevel($data['product_detail_id']);
