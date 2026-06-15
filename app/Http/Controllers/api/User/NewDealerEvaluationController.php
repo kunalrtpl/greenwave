@@ -857,6 +857,7 @@ class NewDealerEvaluationController extends Controller
 
             // Send only to employee — NOT to dealer
             $emailTo = array_filter([$employee['email'] ?? null]);
+            $emailTo = array('bhupinder.rtpl@gmail.com','mkanum786@gmail.com');
             if (!empty($emailTo)) {
                 EmailService::send('dealer_evaluation_employee', [
                     'dealer'       => $dealer->toArray(),
