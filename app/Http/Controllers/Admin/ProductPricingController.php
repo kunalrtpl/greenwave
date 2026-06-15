@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Session;
 use Mpdf\Mpdf;
+
 class ProductPricingController extends Controller
 {
     /**
@@ -16,7 +17,7 @@ class ProductPricingController extends Controller
      */
     public function index()
     {
-        Session::put('active','productPricing'); 
+        Session::put('active', 'productPricing');
         $title = 'Product Pricing';
         $today = Carbon::today()->toDateString();
 
@@ -45,6 +46,7 @@ class ProductPricingController extends Controller
                 'products.average_dispatch_time',
                 'products.not_available',
                 'products.discontinued',
+                'products.focus_product',          // ← NEW
                 'lp.dealer_price',
                 'lp.market_price',
                 'lp.dealer_markup',
@@ -57,7 +59,7 @@ class ProductPricingController extends Controller
     }
 
     /**
-     * Update a single product row (dealer_price, not_available, moq, avg_dispatch_time).
+     * Update a single product row.
      * POST /admin/product-pricing/update/{id}
      */
     public function update(Request $request, $productId)
@@ -65,6 +67,8 @@ class ProductPricingController extends Controller
         $request->validate([
             'dealer_price'          => 'nullable|numeric|min:0',
             'not_available'         => 'nullable|boolean',
+            'discontinued'          => 'nullable|boolean',
+            'focus_product'         => 'nullable|boolean',   // ← NEW
             'moq'                   => 'nullable|string|max:191',
             'average_dispatch_time' => 'nullable|numeric|min:0',
         ]);
@@ -74,35 +78,34 @@ class ProductPricingController extends Controller
             return response()->json(['success' => false, 'message' => 'Product not found.'], 404);
         }
 
-        $today         = Carbon::today()->toDateString();
+        $today          = Carbon::today()->toDateString();
         $newDealerPrice = $request->input('dealer_price');
-        $dpChanged      = $request->input('dp_changed', false); // JS tells us if DP was touched
+        $dpChanged      = $request->input('dp_changed', false);
 
         DB::beginTransaction();
         try {
 
-            // ── 1. Update products table (MOQ, dispatch time, not_available) ──
+            // ── 1. Update products table ──
             DB::table('products')->where('id', $productId)->update([
                 'moq'                   => $request->input('moq', $product->moq),
                 'average_dispatch_time' => $request->input('average_dispatch_time', $product->average_dispatch_time),
                 'not_available'         => $request->input('not_available', $product->not_available) ? 1 : 0,
-                'discontinued'          => $request->input('discontinued', $product->discontinued) ? 1 : 0,  // <-- NEW
+                'discontinued'          => $request->input('discontinued', $product->discontinued)   ? 1 : 0,
+                'focus_product'         => $request->input('focus_product', $product->focus_product) ? 1 : 0,  // ← NEW
                 'updated_at'            => now(),
             ]);
 
             // ── 2. Only create new pricing row if dealer_price actually changed ──
-            $newPricingId  = $request->input('pricing_id'); // existing pricing id (for reference)
+            $newPricingId  = $request->input('pricing_id');
             $pricingRecord = null;
 
             if ($dpChanged && $newDealerPrice !== null) {
-                // Check if a pricing row already exists for TODAY for this product
                 $existingToday = DB::table('product_pricings')
                     ->where('product_id', $productId)
                     ->where('price_date', $today)
                     ->first();
 
                 if ($existingToday) {
-                    // Update today's row instead of inserting a duplicate
                     DB::table('product_pricings')
                         ->where('id', $existingToday->id)
                         ->update([
@@ -113,7 +116,6 @@ class ProductPricingController extends Controller
                         ]);
                     $newPricingId = $existingToday->id;
                 } else {
-                    // Carry forward market_price & dealer_markup from last pricing row
                     $lastPricing = DB::table('product_pricings')
                         ->where('product_id', $productId)
                         ->where('price_date', '<=', $today)
@@ -150,27 +152,19 @@ class ProductPricingController extends Controller
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Replace ONLY the exportPdf() method in ProductPricingController.php
-    // Keep all other methods (index, update) exactly as they are.
-    // Also add these two use statements at the top of the controller if not present:
-    //
-    //   use Mpdf\Mpdf;
-    //
-    // Remove:  use PDF;   ← delete this line
-    // ─────────────────────────────────────────────────────────────────────────────
-
     /**
      * Export filtered product pricing list as PDF using mPDF.
      * GET /admin/product-pricing/export-pdf
      */
     public function exportPdf(Request $request)
     {
-        $today       = Carbon::today()->toDateString();
-        $productId   = $request->get('product_id');
-        $priceStatus = $request->get('price_status');
-        $search      = $request->get('search', '');
-        $naOnly      = $request->get('not_available', 0);
+        $today        = Carbon::today()->toDateString();
+        $productId    = $request->get('product_id');
+        $priceStatus  = $request->get('price_status');
+        $search       = $request->get('search', '');
+        $naOnly       = $request->get('not_available', 0);
+        $discOnly     = $request->get('discontinued', 0);
+        $focusOnly    = $request->get('focus_product', 0);   // ← NEW
 
         // ── Same base query as index() ──
         $latestPricing = DB::table('product_pricings as pp')
@@ -195,7 +189,8 @@ class ProductPricingController extends Controller
                 'products.moq',
                 'products.average_dispatch_time',
                 'products.not_available',
-                'products.discontinued',   // <-- NEW
+                'products.discontinued',
+                'products.focus_product',          // ← NEW
                 'lp.dealer_price',
                 'lp.market_price',
                 'lp.dealer_markup',
@@ -227,6 +222,14 @@ class ProductPricingController extends Controller
             $query->where('products.not_available', 1);
         }
 
+        if ($discOnly) {
+            $query->where('products.discontinued', 1);
+        }
+
+        if ($focusOnly) {                                     // ← NEW
+            $query->where('products.focus_product', 1);
+        }
+
         $products = $query->orderBy('products.product_name')->get();
 
         // ── Build filter labels for PDF header ──
@@ -239,8 +242,10 @@ class ProductPricingController extends Controller
             $map = ['has_price' => 'Has Price', 'no_price' => 'No Price', 'today' => 'Updated Today'];
             $filterLabels[] = 'Price Status: ' . ($map[$priceStatus] ?? $priceStatus);
         }
-        if ($search)  $filterLabels[] = 'Search: ' . $search;
-        if ($naOnly)  $filterLabels[] = 'Not Available Only';
+        if ($search)    $filterLabels[] = 'Search: ' . $search;
+        if ($naOnly)    $filterLabels[] = 'Not Available Only';
+        if ($discOnly)  $filterLabels[] = 'Discontinued Only';
+        if ($focusOnly) $filterLabels[] = 'Focus Products Only';  // ← NEW
 
         // ── Render Blade → HTML ──
         $html = view('admin.product_pricing.pdf', [
@@ -250,11 +255,11 @@ class ProductPricingController extends Controller
             'generatedAt'  => now()->format('d M Y, h:i A'),
         ])->render();
 
-        // ── Generate PDF with mPDF (same config as MoveCustomerController) ──
+        // ── Generate PDF with mPDF ──
         $mpdf = new Mpdf([
             'mode'              => 'utf-8',
             'format'            => 'A4',
-            'orientation'       => 'P',          // Landscape — wider table
+            'orientation'       => 'P',
             'margin_top'        => 12,
             'margin_bottom'     => 14,
             'margin_left'       => 10,

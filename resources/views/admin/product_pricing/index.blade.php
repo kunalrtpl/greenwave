@@ -10,78 +10,103 @@
         border: 1px solid #dde3ec;
     }
 
-    /* ── Filter strip ── */
+    /* ── Filter strip — single row, labels above controls ── */
     .filter-strip {
-        display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap;
+        display: flex; align-items: flex-end; gap: 10px; flex-wrap: nowrap;
         background: #f4f6fa; border: 1px solid #dde3ec;
-        border-radius: 6px; padding: 14px 18px; margin-bottom: 18px;
+        border-radius: 6px; padding: 10px 14px; margin-bottom: 14px;
+        overflow-x: auto;
     }
-    .filter-strip .fg { display: flex; flex-direction: column; gap: 4px; }
-    .filter-strip label {
-        font-size: 11px; font-weight: 700; color: #5a6a85;
-        text-transform: uppercase; letter-spacing: 0.5px; margin: 0;
+
+    /* labelled group: small label on top, control below */
+    .filter-strip .fg {
+        display: flex; flex-direction: column; gap: 3px; flex-shrink: 0;
     }
+    .filter-strip .fg > label {
+        font-size: 10px; font-weight: 700; color: #5a6a85;
+        text-transform: uppercase; letter-spacing: 0.5px;
+        margin: 0; white-space: nowrap;
+    }
+
     .filter-strip select,
     .filter-strip input[type="text"] {
-        height: 34px; border: 1px solid #c8d0dc; border-radius: 4px !important;
-        font-size: 13px; color: #2d3748; background: #fff; padding: 0 10px;
+        height: 30px; border: 1px solid #c8d0dc; border-radius: 4px !important;
+        font-size: 12px; color: #2d3748; background: #fff; padding: 0 8px;
     }
     .filter-strip select:focus, .filter-strip input:focus {
         outline: none; border-color: #3598dc;
         box-shadow: 0 0 0 2px rgba(53,152,220,0.15);
     }
-    .filter-strip select { min-width: 220px; }
-    .filter-strip input[type="text"] { width: 200px; }
-    .filter-strip .fg-check { display: flex; align-items: center; gap: 6px; padding-bottom: 6px; }
-    .filter-strip .fg-check label {
-        font-size: 12px; font-weight: 600; color: #5a6a85;
-        text-transform: none; letter-spacing: 0; cursor: pointer;
-    }
-    .filter-strip .fg-check input[type="checkbox"] {
-        transform: scale(1.2); accent-color: #e53e3e; cursor: pointer;
+    #filter-product      { width: 155px; }
+    #filter-price-status { width: 125px; }
+    #filter-search       { width: 140px; }
+
+    /* vertical divider */
+    .f-sep {
+        width: 1px; height: 30px; background: #d5dbe8;
+        flex-shrink: 0; margin: 0 2px;
     }
 
-    /* ── Filter bottom row ── */
-    .filter-bottom-row {
-        display: flex; align-items: center; justify-content: space-between;
-        width: 100%; margin-top: 4px; flex-wrap: wrap; gap: 8px;
+    /* checkbox group: label on top, checkbox+text below */
+    .fg-check-wrap {
+        display: flex; flex-direction: column; gap: 3px; flex-shrink: 0;
     }
-    .filter-result { font-size: 12px; color: #718096; white-space: nowrap; }
+    .fg-check-wrap > .fg-lbl {
+        font-size: 10px; font-weight: 700; color: #5a6a85;
+        text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;
+    }
+    .fg-check {
+        display: inline-flex; align-items: center; gap: 5px;
+        white-space: nowrap; height: 30px; cursor: pointer;
+    }
+    .fg-check input[type="checkbox"] { transform: scale(1.15); cursor: pointer; flex-shrink: 0; }
+    .fg-check span { font-size: 11px; font-weight: 600; color: #5a6a85; white-space: nowrap; }
+    .fg-check input[type="checkbox"].chk-na    { accent-color: #e53e3e; }
+    .fg-check input[type="checkbox"].chk-disc  { accent-color: #805ad5; }
+    .fg-check input[type="checkbox"].chk-focus { accent-color: #38a169; }
+
+    /* "Showing X of Y" pushed to far right, aligned to bottom */
+    .filter-result {
+        font-size: 11px; color: #718096; white-space: nowrap;
+        margin-left: auto; flex-shrink: 0; padding-left: 8px;
+        padding-bottom: 5px;
+    }
     .filter-result strong { color: #3598dc; }
 
     .btn-clear-filters {
-        height: 34px; padding: 0 14px; font-size: 11px; font-weight: 700;
+        height: 30px; padding: 0 10px; font-size: 11px; font-weight: 700;
         border-radius: 4px !important; border: 1px solid #c8d0dc;
         background: #fff; color: #718096; cursor: pointer;
         text-transform: uppercase; letter-spacing: 0.4px;
-        display: inline-flex; align-items: center; gap: 5px;
-        transition: all 0.15s; white-space: nowrap;
+        display: inline-flex; align-items: center; gap: 4px;
+        transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
     }
     .btn-clear-filters:hover { background: #fed7d7; border-color: #fc8181; color: #c53030; }
-    .btn-clear-filters.hidden { visibility: hidden; pointer-events: none; }
+    .btn-clear-filters.hidden { display: none; }
 
     .btn-export-pdf {
-        display: inline-flex; align-items: center; gap: 6px;
-        padding: 6px 14px; font-size: 12px; font-weight: 600;
+        display: inline-flex; align-items: center; gap: 5px;
+        height: 30px; padding: 0 12px; font-size: 11px; font-weight: 600;
         border-radius: 4px !important; border: 1px solid #e53e3e;
         background: #fff5f5; color: #c53030; cursor: pointer;
         text-decoration: none; white-space: nowrap; transition: all 0.15s;
-        height: 34px;
+        flex-shrink: 0;
     }
     .btn-export-pdf:hover { background: #e53e3e; color: #fff; text-decoration: none; }
 
     /* ── Table ── */
     .pricing-wrap { width: 100%; overflow-x: auto; }
     .pricing-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
-    .pricing-table col.c-no       { width: 50px; }
-    .pricing-table col.c-name     { width: 15%; }
-    .pricing-table col.c-moq      { width: 12%; }
-    .pricing-table col.c-dispatch { width: 12%; }
-    .pricing-table col.c-na       { width: 10%; }
-    .pricing-table col.c-disc     { width: 10%; }
-    .pricing-table col.c-dp       { width: 12%; }
-    .pricing-table col.c-date     { width: 12%; }
-    .pricing-table col.c-action   { width: 10%; }
+    .pricing-table col.c-no       { width: 44px; }
+    .pricing-table col.c-name     { width: 14%; }
+    .pricing-table col.c-moq      { width: 10%; }
+    .pricing-table col.c-dispatch { width: 10%; }
+    .pricing-table col.c-na       { width: 8%; }
+    .pricing-table col.c-disc     { width: 9%; }
+    .pricing-table col.c-focus    { width: 8%; }
+    .pricing-table col.c-dp       { width: 11%; }
+    .pricing-table col.c-date     { width: 11%; }
+    .pricing-table col.c-action   { width: 9%; }
 
     .pricing-table thead tr th {
         background: #eef1f7; color: #4a5568; font-weight: 700; font-size: 11px;
@@ -118,11 +143,13 @@
     .inline-input:focus { outline: none; border-color: #3598dc; box-shadow: 0 0 0 2px rgba(53,152,220,0.12); }
     .inline-input.changed { border-color: #f6ad55 !important; background: #fffdf5; }
 
-    .na-toggle { text-align: center; }
-    .na-toggle input[type="checkbox"] { transform: scale(1.3); accent-color: #e53e3e; cursor: pointer; }
-
+    .na-toggle   { text-align: center; }
     .disc-toggle { text-align: center; }
-    .disc-toggle input[type="checkbox"] { transform: scale(1.3); accent-color: #805ad5; cursor: pointer; }
+    .focus-toggle { text-align: center; }
+
+    .na-toggle    input[type="checkbox"] { transform: scale(1.3); accent-color: #e53e3e;  cursor: pointer; }
+    .disc-toggle  input[type="checkbox"] { transform: scale(1.3); accent-color: #805ad5;  cursor: pointer; }
+    .focus-toggle input[type="checkbox"] { transform: scale(1.3); accent-color: #38a169;  cursor: pointer; }
 
     .dp-wrap { display: flex; align-items: center; gap: 4px; width: 100%; }
     .dp-wrap .cur { font-size: 12px; color: #888; flex-shrink: 0; }
@@ -179,6 +206,7 @@
     .dot-noprice  { background: #e53e3e; }
     .dot-na       { background: #ed8936; }
     .dot-disc     { background: #805ad5; }
+    .dot-focus    { background: #38a169; }
 </style>
 
 <div class="page-content-wrapper">
@@ -228,13 +256,20 @@
                             {{ $products->filter(fn($p) => $p->discontinued)->count() }}
                         </strong>
                     </div>
+                    <div class="sum-card">
+                        <span class="dot dot-focus"></span>
+                        Focus Products &nbsp;
+                        <strong id="sum-focus" style="color:#38a169;">
+                            {{ $products->filter(fn($p) => $p->focus_product)->count() }}
+                        </strong>
+                    </div>
                 </div>
 
-                {{-- Filters --}}
+                {{-- Filters — single row with labels --}}
                 <div class="filter-strip">
 
                     <div class="fg">
-                        <label><i class="fa fa-cube"></i> &nbsp;Product</label>
+                        <label><i class="fa fa-cube"></i> Product</label>
                         <select id="filter-product">
                             <option value="">— All Products —</option>
                             @foreach($products->sortBy('product_name') as $p)
@@ -244,7 +279,7 @@
                     </div>
 
                     <div class="fg">
-                        <label><i class="fa fa-inr"></i> &nbsp;Price Status</label>
+                        <label><i class="fa fa-inr"></i> Price Status</label>
                         <select id="filter-price-status">
                             <option value="">— All —</option>
                             <option value="has_price">Has Price</option>
@@ -254,27 +289,32 @@
                     </div>
 
                     <div class="fg">
-                        <label><i class="fa fa-search"></i> &nbsp;Search</label>
+                        <label><i class="fa fa-search"></i> Search</label>
                         <input type="text" id="filter-search" placeholder="Name or code...">
                     </div>
 
-                    <div class="fg">
-                        <label>&nbsp;</label>
-                        <div class="fg-check">
-                            <input type="checkbox" id="filter-na">
-                            <label for="filter-na">Not Available only</label>
+                    <span class="f-sep"></span>
+
+                    <div class="fg-check-wrap">
+                        <span class="fg-lbl">Flags</span>
+                        <div style="display:flex;gap:12px;align-items:center;height:30px;">
+                            <label class="fg-check">
+                                <input type="checkbox" id="filter-na" class="chk-na">
+                                <span>Not Available</span>
+                            </label>
+                            <label class="fg-check">
+                                <input type="checkbox" id="filter-disc" class="chk-disc">
+                                <span>Discontinued</span>
+                            </label>
+                            <label class="fg-check">
+                                <input type="checkbox" id="filter-focus" class="chk-focus">
+                                <span>Focus Only</span>
+                            </label>
                         </div>
                     </div>
 
-                    <div class="fg">
-                        <label>&nbsp;</label>
-                        <div class="fg-check">
-                            <input type="checkbox" id="filter-disc">
-                            <label for="filter-disc">Discontinued only</label>
-                        </div>
-                    </div>
+                    <span class="f-sep"></span>
 
-                    {{-- PDF Export --}}
                     <div class="fg">
                         <label>&nbsp;</label>
                         <a href="#" id="btn-export-pdf" class="btn-export-pdf">
@@ -282,15 +322,16 @@
                         </a>
                     </div>
 
-                    <div class="filter-bottom-row">
-                        <div class="filter-result">
-                            Showing <strong id="visible-count">{{ $products->count() }}</strong>
-                            of {{ $products->count() }} products
-                        </div>
+                    <div class="fg">
+                        <label>&nbsp;</label>
                         <button type="button" id="btn-clear-filters" class="btn-clear-filters hidden">
-                            <i class="fa fa-times-circle"></i> Clear Filters
+                            <i class="fa fa-times"></i> Clear
                         </button>
                     </div>
+
+                    <span class="filter-result">
+                        Showing <strong id="visible-count">{{ $products->count() }}</strong> of {{ $products->count() }}
+                    </span>
 
                 </div>
 
@@ -304,6 +345,7 @@
                             <col class="c-dispatch">
                             <col class="c-na">
                             <col class="c-disc">
+                            <col class="c-focus">
                             <col class="c-dp">
                             <col class="c-date">
                             <col class="c-action">
@@ -313,9 +355,10 @@
                                 <th class="center">#</th>
                                 <th>Product Name</th>
                                 <th>MOQ</th>
-                                <th>Dispatch</th>
+                                <th>Dispatch <br> (Days)</th>
                                 <th class="center">Not Avail.</th>
                                 <th class="center">Discontinued</th>
+                                <th class="center" style="color:#276749;">Focus</th>
                                 <th>DP (₹)</th>
                                 <th class="center">Price Date</th>
                                 <th class="center">Action</th>
@@ -335,12 +378,14 @@
                             data-orig-dispatch="{{ $product->average_dispatch_time }}"
                             data-orig-na="{{ $product->not_available ? 1 : 0 }}"
                             data-orig-disc="{{ $product->discontinued ? 1 : 0 }}"
+                            data-orig-focus="{{ $product->focus_product ? 1 : 0 }}"
                             data-orig-dp="{{ $hasPrice ? number_format((float)$product->dealer_price,2,'.','') : '' }}"
                             data-pricing-id="{{ $product->pricing_id }}"
                             data-has-price="{{ $hasPrice ? 1 : 0 }}"
                             data-is-today="{{ $isToday ? 1 : 0 }}"
                             data-name="{{ strtolower($product->product_name) }}"
-                            data-code="{{ strtolower($product->product_code) }}">
+                            data-code="{{ strtolower($product->product_code) }}"
+                            data-focus="{{ $product->focus_product ? 1 : 0 }}">
 
                             <td class="sr-no-cell">{{ $index + 1 }}</td>
 
@@ -376,6 +421,14 @@
                                 </div>
                             </td>
 
+                            {{-- ── FOCUS PRODUCT (independent) ── --}}
+                            <td>
+                                <div class="focus-toggle">
+                                    <input type="checkbox" class="field-focus"
+                                           {{ $product->focus_product ? 'checked' : '' }}>
+                                </div>
+                            </td>
+
                             <td>
                                 <div class="dp-wrap">
                                     <span class="cur">₹</span>
@@ -406,7 +459,7 @@
                         @endforeach
 
                         <tr id="empty-row" style="display:none;">
-                            <td colspan="9">
+                            <td colspan="10">
                                 <i class="fa fa-inbox" style="font-size:22px; display:block; margin-bottom:6px;"></i>
                                 No products match the current filters.
                             </td>
@@ -442,8 +495,9 @@ $(document).ready(function () {
         var dirty = (
             $row.find('.field-moq').val().trim()      !== ($row.data('orig-moq') + '')      ||
             $row.find('.field-dispatch').val().trim() !== ($row.data('orig-dispatch') + '') ||
-            ($row.find('.field-na').is(':checked') ? 1 : 0)   !== parseInt($row.data('orig-na'))   ||
-            ($row.find('.field-disc').is(':checked') ? 1 : 0) !== parseInt($row.data('orig-disc'))  ||
+            ($row.find('.field-na').is(':checked')    ? 1 : 0) !== parseInt($row.data('orig-na'))    ||
+            ($row.find('.field-disc').is(':checked')  ? 1 : 0) !== parseInt($row.data('orig-disc'))  ||
+            ($row.find('.field-focus').is(':checked') ? 1 : 0) !== parseInt($row.data('orig-focus')) ||
             curDpStr($row) !== origDpStr($row)
         );
         $row.toggleClass('is-dirty', dirty);
@@ -502,7 +556,12 @@ $(document).ready(function () {
         checkDirty($row);
     });
 
-    /* ══ 4. UPDATE AJAX ══ */
+    /* ══ 4. FOCUS PRODUCT — fully independent, just track dirty ══ */
+    $(document).on('change', '.product-row .field-focus', function () {
+        checkDirty($(this).closest('.product-row'));
+    });
+
+    /* ══ 5. UPDATE AJAX ══ */
     $(document).on('click', '.btn-update:not(:disabled)', function () {
         var $btn  = $(this);
         var $row  = $btn.closest('.product-row');
@@ -514,8 +573,9 @@ $(document).ready(function () {
             _token:                '{{ csrf_token() }}',
             moq:                   $row.find('.field-moq').val().trim(),
             average_dispatch_time: $row.find('.field-dispatch').val().trim(),
-            not_available:         $row.find('.field-na').is(':checked') ? 1 : 0,
-            discontinued:          $row.find('.field-disc').is(':checked') ? 1 : 0,
+            not_available:         $row.find('.field-na').is(':checked')    ? 1 : 0,
+            discontinued:          $row.find('.field-disc').is(':checked')  ? 1 : 0,
+            focus_product:         $row.find('.field-focus').is(':checked') ? 1 : 0,
             dealer_price:          curDp !== '' ? curDp : null,
             dp_changed:            dpChg ? 1 : 0,
             pricing_id:            $row.data('pricing-id') || '',
@@ -534,7 +594,9 @@ $(document).ready(function () {
                 $row.data('orig-dispatch', payload.average_dispatch_time);
                 $row.data('orig-na',       payload.not_available);
                 $row.data('orig-disc',     payload.discontinued);
+                $row.data('orig-focus',    payload.focus_product);
                 $row.data('orig-dp',       curDp !== '' ? parseFloat(curDp).toFixed(2) : '');
+                $row.data('focus',         payload.focus_product);
 
                 if (dpChg && resp.pricing_id) {
                     $row.data('pricing-id', resp.pricing_id);
@@ -561,13 +623,14 @@ $(document).ready(function () {
         });
     });
 
-    /* ══ 5. FILTERS + RENUMBER ══ */
+    /* ══ 6. FILTERS + RENUMBER ══ */
     function isFiltered() {
         return $('#filter-product').val()        !== '' ||
                $('#filter-price-status').val()   !== '' ||
                $('#filter-search').val().trim()  !== '' ||
                $('#filter-na').is(':checked')           ||
-               $('#filter-disc').is(':checked');
+               $('#filter-disc').is(':checked')         ||
+               $('#filter-focus').is(':checked');
     }
 
     function renumberVisible() {
@@ -583,6 +646,7 @@ $(document).ready(function () {
         var search      = $('#filter-search').val().toLowerCase().trim();
         var naOnly      = $('#filter-na').is(':checked');
         var discOnly    = $('#filter-disc').is(':checked');
+        var focusOnly   = $('#filter-focus').is(':checked');
         var visible     = 0;
 
         $('#pricing-tbody .product-row').each(function () {
@@ -597,8 +661,9 @@ $(document).ready(function () {
                 var code = $r.data('code') || '';
                 if (name.indexOf(search) === -1 && code.indexOf(search) === -1) { $r.hide(); return; }
             }
-            if (naOnly   && !$r.find('.field-na').is(':checked'))   { $r.hide(); return; }
+            if (naOnly   && !$r.find('.field-na').is(':checked'))    { $r.hide(); return; }
             if (discOnly && !$r.find('.field-disc').is(':checked'))  { $r.hide(); return; }
+            if (focusOnly && !$r.find('.field-focus').is(':checked')) { $r.hide(); return; }
 
             $r.show();
             visible++;
@@ -618,7 +683,7 @@ $(document).ready(function () {
 
     $('#filter-product, #filter-price-status').on('change', applyFilters);
     $('#filter-search').on('input', applyFilters);
-    $('#filter-na, #filter-disc').on('change', applyFilters);
+    $('#filter-na, #filter-disc, #filter-focus').on('change', applyFilters);
 
     /* ══ Clear all filters ══ */
     $('#btn-clear-filters').on('click', function () {
@@ -627,10 +692,11 @@ $(document).ready(function () {
         $('#filter-search').val('');
         $('#filter-na').prop('checked', false);
         $('#filter-disc').prop('checked', false);
+        $('#filter-focus').prop('checked', false);
         applyFilters();
     });
 
-    /* ══ 6. PDF EXPORT LINK ══ */
+    /* ══ 7. PDF EXPORT LINK ══ */
     function updatePdfLink() {
         var params = new URLSearchParams();
         var prodId      = $('#filter-product').val();
@@ -638,19 +704,21 @@ $(document).ready(function () {
         var search      = $('#filter-search').val().trim();
         var naOnly      = $('#filter-na').is(':checked');
         var discOnly    = $('#filter-disc').is(':checked');
+        var focusOnly   = $('#filter-focus').is(':checked');
 
-        if (prodId)      params.set('product_id',   prodId);
+        if (prodId)      params.set('product_id',    prodId);
         if (priceStatus) params.set('price_status',  priceStatus);
-        if (search)      params.set('search',         search);
-        if (naOnly)      params.set('not_available',  1);
-        if (discOnly)    params.set('discontinued',   1);
+        if (search)      params.set('search',        search);
+        if (naOnly)      params.set('not_available', 1);
+        if (discOnly)    params.set('discontinued',  1);
+        if (focusOnly)   params.set('focus_product', 1);
 
         $('#btn-export-pdf').attr('href', '{{ route("admin.product-pricing.export-pdf") }}?' + params.toString());
     }
 
     updatePdfLink();
 
-    /* ══ 7. TOAST ══ */
+    /* ══ 8. TOAST ══ */
     function showToast(type, html) {
         var $t = $('<div class="toast-item toast-' + type + '"></div>').html(html);
         $('#toast-wrap').append($t);

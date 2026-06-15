@@ -26,10 +26,6 @@ body {
 
 .logo-img { width: 150px; height: auto; margin-bottom: 10px; }
 
-.hdr-title-label {
-    font-size: 7.5px; color: #64748b;
-    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px;
-}
 .hdr-doc-type {
     font-size: 13px; font-weight: bold; color: #334155;
     text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px;
@@ -62,13 +58,14 @@ body {
 }
 .s-box + .s-box { border-left: none; }
 
-.s-box-total  { border-top: 3px solid #1e293b; width: 12%; }
-.s-box-price  { border-top: 3px solid #475569; width: 12%; }
-.s-box-np     { border-top: 3px solid #94a3b8; width: 12%; }
-.s-box-na     { border-top: 3px solid #cbd5e1; width: 12%; }
-.s-box-today  { border-top: 3px solid #64748b; width: 12%; }
-.s-box-disc   { border-top: 3px solid #805ad5; width: 12%; }
-.s-box-spacer { width: 28%; border: none; background: transparent; }
+.s-box-total  { border-top: 3px solid #1e293b; width: 11%; }
+.s-box-price  { border-top: 3px solid #475569; width: 11%; }
+.s-box-np     { border-top: 3px solid #94a3b8; width: 11%; }
+.s-box-na     { border-top: 3px solid #cbd5e1; width: 11%; }
+.s-box-today  { border-top: 3px solid #64748b; width: 11%; }
+.s-box-disc   { border-top: 3px solid #805ad5; width: 11%; }
+.s-box-focus  { border-top: 3px solid #38a169; width: 11%; }
+.s-box-spacer { width: 23%; border: none; background: transparent; }
 
 .s-big { font-size: 18px; font-weight: bold; display: block; line-height: 1; margin-bottom: 2px; color: #0f172a; }
 .s-tag { font-size: 7px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.8px; display: block; color: #475569; }
@@ -99,6 +96,7 @@ table.data-table thead th {
     white-space: nowrap;
 }
 table.data-table thead th.center { text-align: center; }
+table.data-table thead th.right  { text-align: right; }
 
 table.data-table tbody td {
     padding: 6px 8px;
@@ -109,6 +107,7 @@ table.data-table tbody td {
 }
 table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
 table.data-table tbody td.center { text-align: center; }
+table.data-table tbody td.right  { text-align: right; }
 
 .prod-name { font-size: 9px; font-weight: bold; color: #0f172a; display: block; }
 .prod-code { font-size: 7.5px; color: #64748b; display: block; margin-top: 1px; }
@@ -117,7 +116,34 @@ table.data-table tbody td.center { text-align: center; }
 
 .plain-val { color: #334155; }
 
-/* Badges */
+/* ── Status icons — bold & clearly visible ── */
+.icon-cross {
+    font-size: 11px;
+    font-weight: bold;
+    color: #0f172a;        /* near-black */
+    line-height: 1;
+}
+.icon-tick {
+    font-size: 10px;
+    font-weight: bold;
+    color: #94a3b8;        /* muted grey — not important */
+    line-height: 1;
+}
+
+/* Focus star */
+.icon-focus {
+    font-size: 11px;
+    font-weight: bold;
+    color: #276749;        /* green */
+    line-height: 1;
+}
+.icon-focus-no {
+    font-size: 10px;
+    color: #cbd5e1;
+    line-height: 1;
+}
+
+/* Price date badges */
 .badge {
     display: inline-block;
     padding: 2px 5px;
@@ -125,15 +151,12 @@ table.data-table tbody td.center { text-align: center; }
     font-weight: bold;
     white-space: nowrap;
 }
-.na-yes   { background: #f1f5f9; color: #0f172a; border-radius: 3px; }
-.na-no    { background: transparent; color: #64748b; }
-.disc-yes { background: #ede9fe; color: #5b21b6; border-radius: 3px; }
-.disc-no  { background: transparent; color: #64748b; }
 .pd-today { background: #1e293b; color: #ffffff; border-radius: 3px; padding: 2px 6px; }
 .pd-old   { background: transparent; color: #475569; }
 .pd-none  { background: transparent; color: #94a3b8; font-style: italic; }
 
-.dp-val  { font-weight: bold; color: #0f172a;text-align:right; }
+/* Dealer price */
+.dp-val  { font-weight: bold; color: #0f172a; }
 .dp-none { color: #94a3b8; font-style: italic; }
 
 .empty-cell { text-align: center; padding: 28px; color: #64748b; font-style: italic; }
@@ -157,12 +180,13 @@ table.data-table tbody td.center { text-align: center; }
 <body>
 
 @php
-    $total     = count($products);
-    $hasPrice  = $products->filter(fn($p) => !is_null($p->dealer_price))->count();
-    $noPrice   = $total - $hasPrice;
-    $naCount   = $products->filter(fn($p) => $p->not_available)->count();
-    $discCount = $products->filter(fn($p) => $p->discontinued)->count();
-    $todayUpd  = $products->filter(fn($p) => !is_null($p->dealer_price) && $p->price_date === $today)->count();
+    $total      = count($products);
+    $hasPrice   = $products->filter(fn($p) => !is_null($p->dealer_price))->count();
+    $noPrice    = $total - $hasPrice;
+    $naCount    = $products->filter(fn($p) => $p->not_available)->count();
+    $discCount  = $products->filter(fn($p) => $p->discontinued)->count();
+    $focusCount = $products->filter(fn($p) => $p->focus_product)->count();
+    $todayUpd   = $products->filter(fn($p) => !is_null($p->dealer_price) && $p->price_date === $today)->count();
 @endphp
 
 {{-- ── HEADER ── --}}
@@ -215,6 +239,10 @@ table.data-table tbody td.center { text-align: center; }
             <span class="s-big">{{ $discCount }}</span>
             <span class="s-tag"><br>Discont.</span>
         </td>
+        <td class="s-box s-box-focus">
+            <span class="s-big" style="color:#276749;">{{ $focusCount }}</span>
+            <span class="s-tag"><br>Focus</span>
+        </td>
         <td class="s-box-spacer"></td>
     </tr>
 </table>
@@ -229,15 +257,16 @@ table.data-table tbody td.center { text-align: center; }
 <table class="data-table">
     <thead>
         <tr>
-            <th class="center" style="width:24px;">#</th>
-            <th style="width:20%;">Product Name</th>
-            <th style="width:8%;">Code</th>
-            <th class="center" style="width:7%;">Avail. <br>Status</th>
-            <th class="center" style="width:7%;">Cont. <br>Status</th>
-            <th style="width:10%;">MOQ</th>
-            <th class="center" style="width:8%;">Dispatch</th>
-            <th style="width:13%;">Dealer Price (&#8377;)</th>
-            <th class="center" style="width:13%;">Price Date</th>
+            <th class="center" style="width:22px;">#</th>
+            <th style="width:19%;">Product Name</th>
+            <th style="width:7%;">Code</th>
+            <th class="center" style="width:6%;">Not<br>Avail.</th>
+            <th class="center" style="width:6%;">Discont.</th>
+            <th class="center" style="width:6%;">Focus</th>
+            <th style="width:9%;">MOQ</th>
+            <th class="center" style="width:7%;">Dispatch</th>
+            <th class="right"  style="width:12%;">Dealer Price (&#8377;)</th>
+            <th class="center" style="width:11%;">Price Date</th>
         </tr>
     </thead>
     <tbody>
@@ -247,29 +276,42 @@ table.data-table tbody td.center { text-align: center; }
         $isToday = $hp && $p->price_date === $today;
         $isNA    = (bool)$p->not_available;
         $isDisc  = (bool)$p->discontinued;
+        $isFocus = (bool)$p->focus_product;
     @endphp
     <tr>
         <td class="sr-cell">{{ $i + 1 }}</td>
 
         <td>
             <span class="prod-name">{{ $p->product_name }}</span>
+            <span class="prod-code">{{ $p->product_code }}</span>
         </td>
 
         <td><span class="prod-code">{{ $p->product_code }}</span></td>
 
+        {{-- Not Available --}}
         <td class="center">
             @if($isNA)
-                <span class="badge na-yes">&#10007;</span>
+                <span class="icon-cross">&#10007;</span>
             @else
-                <span class="badge na-no">&#10003;</span>
+                <span class="icon-tick">&#10003;</span>
             @endif
         </td>
 
+        {{-- Discontinued --}}
         <td class="center">
             @if($isDisc)
-                <span class="badge disc-yes">&#10007;</span>
+                <span class="icon-cross">&#10007;</span>
             @else
-                <span class="badge disc-no">&#10003;</span>
+                <span class="icon-tick">&#10003;</span>
+            @endif
+        </td>
+
+        {{-- Focus Product --}}
+        <td class="center">
+            @if($isFocus)
+                <span class="icon-focus">&#9733;</span>
+            @else
+                <span class="icon-focus-no">&#9733;</span>
             @endif
         </td>
 
@@ -277,7 +319,8 @@ table.data-table tbody td.center { text-align: center; }
 
         <td class="center plain-val">{{ $p->average_dispatch_time ?? '—' }}</td>
 
-        <td>
+        {{-- Dealer Price — right aligned --}}
+        <td class="right">
             @if($hp)
                 <span class="dp-val">&#8377; {{ number_format((float)$p->dealer_price, 2) }}</span>
             @else
@@ -291,7 +334,7 @@ table.data-table tbody td.center { text-align: center; }
                     {{ $isToday ? 'Today' : \Carbon\Carbon::parse($p->price_date)->format('d/m/Y') }}
                 </span>
             @else
-                <span class="badge pd-none">No Price</span>
+                <span class="badge pd-none">—</span>
             @endif
         </td>
     </tr>
