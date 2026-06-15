@@ -360,7 +360,8 @@ class NewDealerEvaluationController extends Controller
             'firm_name'         => 'required|string|max:191',
             'contact_person'    => 'required|string|max:255',
             'mobile_number'     => 'required|string|max:15',
-            'email'             => 'nullable|email|max:191',
+            'email'             => 'required|email|max:191',
+            'designation'       => 'nullable|max:191',
             'city'              => 'required|string|max:191',
             'territory_covered' => 'required|string|max:255',
             'source_of_lead'    => 'required|string|max:100',
@@ -435,6 +436,7 @@ class NewDealerEvaluationController extends Controller
             $dealer->owner_name                = $request->input('contact_person');
             $dealer->owner_mobile              = $request->input('mobile_number');
             $dealer->email                     = $request->input('email', '');
+            $dealer->designation               = $request->input('designation', '');
             $dealer->city                      = $request->input('city');
             $dealer->source_of_lead            = $request->input('source_of_lead');
             $dealer->created_by                = $employeeId;
@@ -572,6 +574,7 @@ class NewDealerEvaluationController extends Controller
             // Section A editable fields (email & mobile_number intentionally excluded)
             'contact_person'          => 'nullable|string|max:255',
             'city'                    => 'nullable|string|max:191',
+            'designation'                    => 'nullable|string|max:191',
             'territory_covered'       => 'nullable|string|max:255',
             'source_of_lead'          => 'nullable|string|max:100',
             // Sections B–E
@@ -632,6 +635,9 @@ class NewDealerEvaluationController extends Controller
             }
             if ($request->filled('city')) {
                 $dealerUpdates['city'] = $request->input('city');
+            }
+            if ($request->filled('designation')) {
+                $dealerUpdates['designation'] = $request->input('designation');
             }
             if ($request->filled('source_of_lead')) {
                 $dealerUpdates['source_of_lead'] = $request->input('source_of_lead');

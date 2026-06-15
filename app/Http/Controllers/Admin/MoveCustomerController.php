@@ -80,6 +80,7 @@ class MoveCustomerController extends Controller
                 'dealers.business_name as dealer_business_name',
                 'customer_cities.city_name'
             )
+            ->where('customers.status',1)
             ->orderBy('user_customer_shares.user_id')
             ->orderBy('customers.name')
             ->get();
