@@ -324,9 +324,10 @@ class NewDealerEvaluationController extends Controller
         if (!$resp['status']) {
             return response()->json(apiErrorResponse('Unauthorized. Please try again after sometime.'), 422);
         }
-
+        $employeeId = $resp['user']['id'];
         $dealers = Dealer::with(['evaluations.answers', 'evaluations.attachments'])
             ->where('is_authenticated', 0)
+            ->where('created_by',$employeeId)
             ->where('is_delete', 0)
             ->orderBy('created_at', 'DESC')
             ->get();
