@@ -1662,7 +1662,7 @@ class OrdersController extends Controller
             }
         }
 
-        $dispatchedDealer->email = "mkanum786@gmail.com";
+        //$dispatchedDealer->email = "mkanum786@gmail.com";
 
         // ── Send dispatch email — dealer orders only ─────────────────────
         if ($isDealerOrder && $dispatchedDealer && !empty($dispatchedDealer->email)) {

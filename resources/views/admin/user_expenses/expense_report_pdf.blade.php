@@ -548,8 +548,7 @@ body {
 
             @if(!empty($expense->internal_remarks))
                 <div class="int-note">
-                    <div class="int-note-lbl">&#9998; Internal Note</div>
-                    <div class="int-note-txt">{{ $expense->internal_remarks }}</div>
+                    <div class="int-note-lbl">&#9998;{{ $expense->internal_remarks }}</div>
                 </div>
             @endif
         </td>

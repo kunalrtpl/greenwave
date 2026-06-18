@@ -13,9 +13,6 @@ body {
     line-height: 1.5;
 }
 
-/* ═══════════════════════════════════════
-   HEADER
-═══════════════════════════════════════ */
 .hdr-table {
     width: 100%;
     border-collapse: collapse;
@@ -32,7 +29,6 @@ body {
 }
 .hdr-date  { font-size: 8px; color: #64748b; }
 
-/* Filter Tags */
 .filter-row { margin-bottom: 14px; }
 .ftag {
     display: inline-block; background: #f1f5f9; color: #334155;
@@ -41,9 +37,6 @@ body {
     margin-right: 4px; text-transform: uppercase; letter-spacing: 0.3px;
 }
 
-/* ═══════════════════════════════════════
-   KPI SUMMARY STRIP
-═══════════════════════════════════════ */
 .summary-strip {
     width: 100%;
     border-collapse: separate;
@@ -70,9 +63,6 @@ body {
 .s-big { font-size: 18px; font-weight: bold; display: block; line-height: 1; margin-bottom: 2px; color: #0f172a; }
 .s-tag { font-size: 7px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.8px; display: block; color: #475569; }
 
-/* ═══════════════════════════════════════
-   TABLE
-═══════════════════════════════════════ */
 .wrap { width: 100%; }
 
 table.data-table {
@@ -93,7 +83,7 @@ table.data-table thead th {
     letter-spacing: 0.5px;
     border: 1px solid #cbd5e1;
     text-align: left;
-    white-space: nowrap;
+    white-space: nowrap;  /* FIX: prevent header text wrapping */
 }
 table.data-table thead th.center { text-align: center; }
 table.data-table thead th.right  { text-align: right; }
@@ -109,34 +99,44 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
 table.data-table tbody td.center { text-align: center; }
 table.data-table tbody td.right  { text-align: right; }
 
-.prod-name { font-size: 9px; font-weight: bold; color: #0f172a; display: block; }
-.prod-code { font-size: 7.5px; color: #64748b; display: block; margin-top: 1px; }
+.prod-name { font-size: 9px; font-weight: bold; color: #0f172a; display: inline; }
+.prod-code { font-size: 7.5px; color: #64748b; display: inline; margin-left: 3px; }
+.prod-line { display: block; }
+
+/* Focus star inline after product name/code */
+.prod-focus-inline {
+    font-size: 11px;
+    color: #f59e0b;  /* bright golden */
+    margin-left: 4px;
+    display: inline;
+    line-height: 1;
+}
 
 .sr-cell { color: #64748b; font-size: 8px; font-weight: bold; text-align: center; }
 
 .plain-val { color: #334155; }
 
-/* ── Status icons ── */
+/* FIX: bold tick mark */
 .icon-cross {
     font-size: 10px;
     font-weight: bold;
-    color: #dc2626;        /* red */
+    color: #dc2626;
     line-height: 1.4;
     display: inline-block;
 }
 .icon-tick {
     font-size: 10px;
-    font-weight: bold;
-    color: #16a34a;        /* green */
+    font-weight: bold;   /* FIX: bold tick */
+    color: #16a34a;
     line-height: 1.4;
     display: inline-block;
 }
 
-/* Focus star */
+/* FIX: bright golden star in Focus column */
 .icon-focus {
     font-size: 12px;
     font-weight: bold;
-    color: #15803d;        /* dark green */
+    color: #f59e0b;      /* bright golden */
     line-height: 1.4;
     display: inline-block;
 }
@@ -147,7 +147,6 @@ table.data-table tbody td.right  { text-align: right; }
     display: inline-block;
 }
 
-/* Price date badges */
 .badge {
     display: inline-block;
     padding: 2px 5px;
@@ -159,15 +158,11 @@ table.data-table tbody td.right  { text-align: right; }
 .pd-old   { background: transparent; color: #475569; }
 .pd-none  { background: transparent; color: #94a3b8; font-style: italic; }
 
-/* Dealer price */
 .dp-val  { font-weight: bold; color: #0f172a; }
 .dp-none { color: #94a3b8; font-style: italic; }
 
 .empty-cell { text-align: center; padding: 28px; color: #64748b; font-style: italic; }
 
-/* ═══════════════════════════════════════
-   FOOTER
-═══════════════════════════════════════ */
 .footer-table {
     width: 100%;
     border-collapse: collapse;
@@ -263,14 +258,14 @@ table.data-table tbody td.right  { text-align: right; }
         <tr>
             <th class="center" style="width:22px;">#</th>
             <th style="width:19%;">Product Name</th>
-            <th style="width:7%;">Code</th>
-            <th class="center" style="width:6%;">Not<br>Avail.</th>
+            <th style="width:7%;">Gen.</th>
+            <th class="center" style="width:6%;">Not Avail.</th>
             <th class="center" style="width:6%;">Discont.</th>
             <th class="center" style="width:6%;">Focus</th>
-            <th style="width:9%;">MOQ</th>
-            <th class="center" style="width:7%;">Dispatch</th>
-            <th class="right"  style="width:12%;">Dealer Price (&#8377;)</th>
-            <th class="center" style="width:11%;">Price Date</th>
+            <th class="center" style="width:9%;">MOQ</th>
+            <th class="center" style="width:9%;">Dispatch Days</th>
+            <th class="right"  style="width:12%;">Std. DP. (&#8377;)</th>
+            <th class="center" style="width:11%;">Date</th>
         </tr>
     </thead>
     <tbody>
@@ -286,11 +281,16 @@ table.data-table tbody td.right  { text-align: right; }
         <td class="sr-cell">{{ $i + 1 }}</td>
 
         <td>
-            <span class="prod-name">{{ $p->product_name }}</span>
-            <span class="prod-code">{{ $p->product_code }}</span>
+            <span class="prod-line">
+                <span class="prod-name">{{ $p->product_name }}</span>
+                <span class="prod-code">{{ $p->product_code }}</span>
+                @if($isFocus)
+                    <span class="prod-focus-inline">&#9733;</span>
+                @endif
+            </span>
         </td>
 
-        <td><span class="prod-code">{{ $p->product_code }}</span></td>
+        <td><span class="prod-code">{{ $p->version }}</span></td>
 
         {{-- Not Available --}}
         <td class="center">
@@ -319,14 +319,15 @@ table.data-table tbody td.right  { text-align: right; }
             @endif
         </td>
 
-        <td class="plain-val">{{ $p->moq ?? '—' }}</td>
+        {{-- FIX: MOQ center aligned --}}
+        <td class="center plain-val">{{ $p->moq ?? '—' }} kg</td>
 
         <td class="center plain-val">{{ $p->average_dispatch_time ?? '—' }}</td>
 
-        {{-- Dealer Price — right aligned --}}
+        {{-- FIX: no decimal places --}}
         <td class="right">
             @if($hp)
-                <span class="dp-val">&#8377; {{ number_format((float)$p->dealer_price, 2) }}</span>
+                <span class="dp-val">&#8377; {{ number_format((float)$p->dealer_price, 0) }}</span>
             @else
                 <span class="dp-none">No Price</span>
             @endif

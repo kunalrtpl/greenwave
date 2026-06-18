@@ -43,7 +43,7 @@
     {{-- ── HEADER ── --}}
     @if($is_new ?? true)
       <div class="hdr-new">
-        <h1>Greenwave &mdash; Channel Partner Evaluation</h1>
+        <h1>Prospective Channel Partner Evaluation</h1>
         <p>New Prospective Dealer Form Submitted</p>
       </div>
     @else
@@ -62,10 +62,10 @@
         <h2 class="h2-update">Evaluation Updated</h2>
       @endif
 
-      <p>Hello <strong>{{ $employee['name'] ?? 'Team' }}</strong>,</p>
+      <p>Dear <strong>{{ $employee['name'] ?? 'Team' }}</strong>,</p>
 
       @if($is_new ?? true)
-        <p>A <strong>new</strong> Prospective Channel Partner Evaluation has been submitted by <strong>{{ $submittedBy['name'] ?? 'an executive' }}</strong>. Details below &mdash; full form attached as PDF.</p>
+        <p>A <strong>new</strong> Prospective Channel Partner Evaluation has been received. Details below &mdash; full form attached as PDF.</p>
       @else
         <p>An <strong>existing</strong> Channel Partner Evaluation has been <strong>updated</strong> by <strong>{{ $submittedBy['name'] ?? 'an executive' }}</strong>. The revised details are below &mdash; updated form attached as PDF for your review.</p>
       @endif

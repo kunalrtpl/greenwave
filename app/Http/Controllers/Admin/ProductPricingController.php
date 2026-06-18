@@ -186,6 +186,7 @@ class ProductPricingController extends Controller
                 'products.id',
                 'products.product_name',
                 'products.product_code',
+                'products.version',
                 'products.moq',
                 'products.average_dispatch_time',
                 'products.not_available',
