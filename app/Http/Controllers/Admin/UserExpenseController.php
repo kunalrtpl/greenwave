@@ -530,6 +530,12 @@ class UserExpenseController extends Controller
      *
      * Route: GET /admin/user-expenses/export-category-summary
      */
+    /**
+     * Export category-wise summary PDF.
+     * Only month + year filters are applied (status/verified ignored here).
+     *
+     * Route: GET /admin/user-expenses/export-category-summary
+     */
     public function exportCategorySummaryPdf(Request $request)
     {
         $query = DB::table('user_expenses as ue')
@@ -558,7 +564,7 @@ class UserExpenseController extends Controller
             $query->where('ue.user_id', $request->employee_id);
         }
 
-        // Only month + year (same as what the list page applies for this report)
+        // Only month + year
         if ($request->filled('month')) {
             $query->whereMonth('ue.expense_date', $request->month);
         }
@@ -577,57 +583,11 @@ class UserExpenseController extends Controller
                 ->first();
         }
 
-        // ── Pre-calculate per-employee block heights so the blade can decide
-        //    whether to insert a <pagebreak> before each employee.
-        //
-        //    A4 usable height (mm) = 297 - margin_top(12) - margin_bottom(18) - footer(8) = 259mm
-        //    Heights (empirical, mm at font-size 9px / DejaVu Sans):
-        //      • Page 1 org section consumed: ~130mm (header+kpi strip+filter+divider+kpi+table)
-        //      • Employee name bar:  12mm
-        //      • Employee KPI row:   14mm
-        //      • Table header row:    9mm
-        //      • Each category row:  11mm  (with travel sub-line: 14mm)
-        //      • Table footer row:   10mm
-        //      • Gap / margin:       10mm
-        $pageUsableH   = 259; // mm available per page
-        $orgSectionH   = 92;  // mm consumed by org section on page 1 (calibrated from real PDF output)
-        $empHeaderH    = 12;
-        $empKpiH       = 14;
-        $tblHeaderH    =  9;
-        $tblFooterH    = 10;
-        $rowH          = 11;  // category row height
-        $rowTravelH    = 14;  // category row with travel km sub-line
-        $gapH          = 6;   // spacing between blocks — kept tight so employees pack efficiently
-
-        // Group and sort employees alphabetically
-        $byEmployee = $allExpenses->groupBy('employee_name')->sortKeys();
-
-        // Simple sequential page-break: works perfectly with gap=6mm which
-        // keeps blocks tight enough to pack all employees efficiently.
-        $empPageBreak = [];
-        $usedOnPage   = $orgSectionH;
-        foreach ($byEmployee as $empName => $empExpenses) {
-            $catCount     = $empExpenses->groupBy('category_name')->count();
-            $hasTravelCat = $empExpenses->where('is_travel', 1)->count() > 0;
-            $blockH       = $empHeaderH + $empKpiH + $tblHeaderH + $tblFooterH + $gapH
-                          + ($catCount * $rowH)
-                          + ($hasTravelCat ? ($rowTravelH - $rowH) : 0);
-
-            if (($usedOnPage + $blockH) > $pageUsableH) {
-                $empPageBreak[$empName] = true;
-                $usedOnPage = $blockH;
-            } else {
-                $empPageBreak[$empName] = false;
-                $usedOnPage += $blockH;
-            }
-        }
-
         $html = view('admin.user_expenses.category_summary_pdf', [
             'allExpenses'    => $allExpenses,
             'filterEmployee' => $filterEmployee,
             'filterMonth'    => $request->month ?? null,
             'filterYear'     => $request->year  ?? null,
-            'empPageBreak'   => $empPageBreak,
         ])->render();
 
         $mpdf = new Mpdf([
@@ -645,6 +605,7 @@ class UserExpenseController extends Controller
 
         $mpdf->SetTitle('Category Summary Report — Greenwave');
         $mpdf->SetAuthor('Greenwave');
+        
         // Page numbers footer — appears on every page from page 2 onward
         $mpdf->SetHTMLFooter('
             <table width="100%" style="border-top:1px solid #cbd5e1;padding-top:5px;font-family:DejaVu Sans,sans-serif;">
@@ -655,6 +616,7 @@ class UserExpenseController extends Controller
                 </tr>
             </table>
         ');
+        
         $mpdf->WriteHTML($html);
 
         $filename = 'category-summary';
