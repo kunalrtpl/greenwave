@@ -177,6 +177,12 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 	Route::prefix('executive')->namespace('User')->group(function(){
 		Route::match(['get', 'post'], '/login','ExecutiveController@login'); 
 		Route::match(['get', 'post'], '/login-by-otp','ExecutiveController@loginByOtp'); 
+
+		// ── OTP — no auth required ─────────────────────────────────────────────
+	    Route::post('/dealer-otp/send',   'DealerOtpController@send');
+	    Route::post('/dealer-otp/verify', 'DealerOtpController@verify');
+
+
 		Route::middleware('CustomerAuth')->group(function () {
 			Route::match(['get', 'post'], '/logout','ExecutiveController@logout'); 
 			Route::match(['get', 'post'], '/logout-all-devices','ExecutiveController@logoutAllDevices'); 

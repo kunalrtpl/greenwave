@@ -852,7 +852,7 @@ class NewDealerEvaluationController extends Controller
         protected function sendEvaluationEmail($dealer, $evaluation, $employee, $isNew = true)
     {
         try {
-            $pdfHtml    = $this->buildEvaluationPdfHtml($dealer, $evaluation);
+            $pdfHtml    = $this->buildEvaluationPdfHtml($dealer, $evaluation, $employee);
             $mpdf       = new Mpdf(['margin_top' => 15, 'margin_bottom' => 15, 'margin_left' => 15, 'margin_right' => 15]);
             $mpdf->WriteHTML($pdfHtml);
             $pdfContent = $mpdf->Output('', 'S');
@@ -864,7 +864,7 @@ class NewDealerEvaluationController extends Controller
 
             // Send only to employee — NOT to dealer
             $emailTo = array_filter([$employee['email'] ?? null]);
-            $emailTo = array('bhupinder.rtpl@gmail.com','mkanum786@gmail.com');
+            $emailTo = array('mkanum786@gmail.com');
             if (!empty($emailTo)) {
                 EmailService::send('dealer_evaluation_employee', [
                     'dealer'       => $dealer->toArray(),
@@ -884,191 +884,24 @@ class NewDealerEvaluationController extends Controller
         }
     }
 
-        protected function buildEvaluationPdfHtml($dealer, $evaluation)
+    protected function buildEvaluationPdfHtml($dealer, $evaluation, $employee = [])
     {
-        $submittedAt = Carbon::now()->format('d M Y, h:i A');
+        // ── Fetch territory covered ───────────────────────────────────────────
+        $territoryRow = DB::table('dealer_operating_cities')
+            ->where('dealer_id', $dealer->id)
+            ->orderBy('id', 'ASC')
+            ->first();
 
-        // ── Sections B–E grouped ───────────────────────────────────────────────
-        $grouped = $evaluation->answers->groupBy('section_key');
+        $territory = $territoryRow ? $territoryRow->city : null;
 
-        // ── Build section rows HTML ───────────────────────────────────────────
-        $sectionsHtml = '';
-        foreach ($grouped as $sectionKey => $answers) {
-            $sectionName = $answers->first()->section_name;
-
-            $sectionsHtml .= '
-            <tr>
-                <td colspan="2" style="
-                    background:#1a7f3c;
-                    color:#ffffff;
-                    font-size:10px;
-                    font-weight:bold;
-                    padding:8px 14px;
-                    letter-spacing:0.5px;
-                    text-transform:uppercase;
-                ">Section ' . $sectionKey . ' &ndash; ' . htmlspecialchars($sectionName) . '</td>
-            </tr>';
-
-            foreach ($answers as $ans) {
-                $selected  = $ans->selected_options ?? [];
-                $valueHtml = '';
-
-                if (!empty($selected)) {
-                    foreach ($selected as $opt) {
-                        $valueHtml .= '<span style="
-                            display:inline-block;
-                            background:#e8f5e9;
-                            color:#1a7f3c;
-                            border:1px solid #a5d6a7;
-                            border-radius:10px;
-                            padding:2px 9px;
-                            margin:2px 2px 2px 0;
-                            font-size:9px;
-                            font-weight:bold;
-                        ">' . htmlspecialchars($opt) . '</span>';
-                    }
-                } elseif (!empty($ans->custom_answer)) {
-                    $valueHtml = '<span style="color:#1e293b;">' . htmlspecialchars($ans->custom_answer) . '</span>';
-                } else {
-                    $valueHtml = '<span style="color:#94a3b8;font-style:italic;">Not provided</span>';
-                }
-
-                // Strip * from question text for clean display
-                $questionLabel = rtrim(trim($ans->question_text), '*');
-
-                $sectionsHtml .= '
-                <tr>
-                    <td style="
-                        width:42%;
-                        padding:9px 14px;
-                        border-bottom:1px solid #e2e8f0;
-                        color:#475569;
-                        font-weight:bold;
-                        font-size:9px;
-                        vertical-align:top;
-                        background:#f8fafc;
-                    ">' . htmlspecialchars($questionLabel) . '</td>
-                    <td style="
-                        padding:9px 14px;
-                        border-bottom:1px solid #e2e8f0;
-                        color:#1e293b;
-                        font-size:9px;
-                        vertical-align:top;
-                        background:#ffffff;
-                    ">' . $valueHtml . '</td>
-                </tr>';
-            }
-        }
-
-        $html = '<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8"/>
-<style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-      font-family: DejaVu Sans, Arial, sans-serif;
-      font-size: 9px;
-      color: #1e293b;
-      background: #ffffff;
-      line-height: 1.5;
-  }
-</style>
-</head>
-<body>
-
-  <!-- ═══ HEADER ═══ -->
-  <table width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:20px;">
-    <tr>
-      <td style="background:#1a7f3c;padding:18px 20px;border-radius:0;">
-        <table width="100%" cellspacing="0" cellpadding="0">
-          <tr>
-            <td style="vertical-align:middle;">
-              <div style="font-size:15px;font-weight:bold;color:#ffffff;letter-spacing:0.5px;">
-                Greenwave
-              </div>
-              <div style="font-size:9px;color:#c8e6c9;margin-top:2px;">
-                Bio &amp; Silicone Division
-              </div>
-            </td>
-            <td style="vertical-align:middle;text-align:right;">
-              <div style="font-size:12px;font-weight:bold;color:#ffffff;text-transform:uppercase;letter-spacing:1px;">
-                Channel Partner Evaluation
-              </div>
-              <div style="font-size:8px;color:#c8e6c9;margin-top:3px;">
-                Submitted: ' . $submittedAt . '
-              </div>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-
-  <!-- ═══ SECTION A — BASIC INFO ═══ -->
-  <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin-bottom:16px;">
-
-    <!-- Section header -->
-    <tr>
-      <td colspan="2" style="
-          background:#1a7f3c;
-          color:#ffffff;
-          font-size:10px;
-          font-weight:bold;
-          padding:8px 14px;
-          letter-spacing:0.5px;
-          text-transform:uppercase;
-      ">Section A &ndash; Basic Information</td>
-    </tr>
-
-    <!-- Rows -->
-    <tr>
-      <td style="width:42%;padding:9px 14px;border-bottom:1px solid #e2e8f0;color:#475569;font-weight:bold;font-size:9px;background:#f8fafc;">Firm Name</td>
-      <td style="padding:9px 14px;border-bottom:1px solid #e2e8f0;color:#1e293b;font-size:9px;font-weight:bold;background:#ffffff;">' . htmlspecialchars($dealer->business_name) . '</td>
-    </tr>
-    <tr>
-      <td style="width:42%;padding:9px 14px;border-bottom:1px solid #e2e8f0;color:#475569;font-weight:bold;font-size:9px;background:#f8fafc;">Contact Person</td>
-      <td style="padding:9px 14px;border-bottom:1px solid #e2e8f0;color:#1e293b;font-size:9px;background:#ffffff;">' . htmlspecialchars($dealer->name ?? '') . '</td>
-    </tr>
-    <tr>
-      <td style="width:42%;padding:9px 14px;border-bottom:1px solid #e2e8f0;color:#475569;font-weight:bold;font-size:9px;background:#f8fafc;">Mobile Number</td>
-      <td style="padding:9px 14px;border-bottom:1px solid #e2e8f0;color:#1e293b;font-size:9px;background:#ffffff;">' . htmlspecialchars($dealer->owner_mobile) . '</td>
-    </tr>
-    <tr>
-      <td style="width:42%;padding:9px 14px;border-bottom:1px solid #e2e8f0;color:#475569;font-weight:bold;font-size:9px;background:#f8fafc;">Email</td>
-      <td style="padding:9px 14px;border-bottom:1px solid #e2e8f0;color:#1e293b;font-size:9px;background:#ffffff;">' . htmlspecialchars($dealer->email ?: '—') . '</td>
-    </tr>
-    <tr>
-      <td style="width:42%;padding:9px 14px;border-bottom:1px solid #e2e8f0;color:#475569;font-weight:bold;font-size:9px;background:#f8fafc;">City</td>
-      <td style="padding:9px 14px;border-bottom:1px solid #e2e8f0;color:#1e293b;font-size:9px;background:#ffffff;">' . htmlspecialchars($dealer->city) . '</td>
-    </tr>
-    <tr>
-      <td style="width:42%;padding:9px 14px;border-bottom:1px solid #e2e8f0;color:#475569;font-weight:bold;font-size:9px;background:#f8fafc;">Source of Lead</td>
-      <td style="padding:9px 14px;border-bottom:1px solid #e2e8f0;color:#1e293b;font-size:9px;background:#ffffff;">
-        <span style="display:inline-block;background:#e8f5e9;color:#1a7f3c;padding:2px 10px;border-radius:10px;font-size:8px;font-weight:bold;">
-          ' . htmlspecialchars($dealer->source_of_lead ?: '—') . '
-        </span>
-      </td>
-    </tr>
-
-  </table>
-
-  <!-- ═══ SECTIONS B–E ═══ -->
-  <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin-bottom:16px;">
-    ' . $sectionsHtml . '
-  </table>
-
-  <!-- ═══ FOOTER ═══ -->
-  <table width="100%" cellspacing="0" cellpadding="0" style="margin-top:20px;border-top:1px solid #e2e8f0;padding-top:10px;">
-    <tr>
-      <td style="font-size:7.5px;color:#475569;font-weight:bold;">Greenwave &bull; Channel Partner Evaluation</td>
-      <td style="font-size:7px;color:#94a3b8;text-align:center;">Confidential &mdash; Internal Use Only</td>
-      <td style="font-size:7px;color:#94a3b8;text-align:right;">' . $submittedAt . '</td>
-    </tr>
-  </table>
-
-</body>
-</html>';
+        // ── Render blade view to HTML string ──────────────────────────────────
+        $html = view('emails.dealer_evaluation.pdf', [
+            'dealer'      => $dealer,
+            'answers'     => $evaluation->answers,
+            'territory'   => $territory,
+            'submittedBy' => $employee['name'] ?? '—',
+            'submittedAt' => Carbon::now()->format('d M Y, h:i A'),
+        ])->render();
 
         return $html;
     }
