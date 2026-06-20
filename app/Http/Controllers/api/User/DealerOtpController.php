@@ -85,7 +85,6 @@ class DealerOtpController extends Controller
             'identifier'      => $identifier,
             'identifier_type' => $identifierType,
             'otp'             => $otp,
-            'is_used'         => 0,
             'expires_at'      => $expiresAt->toDateTimeString(),
             'created_at'      => $now,
             'updated_at'      => $now,
