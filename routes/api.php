@@ -399,6 +399,7 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 
 
 			// ── Dealer Evaluation ─────────────────────────────────────────────────
+	        Route::get('/dealer-evaluation-questions','NewDealerEvaluationController@formQuestions');            // List
 	        Route::get('/dealer-evaluations','NewDealerEvaluationController@index');            // List
 	        Route::post('/dealer-evaluations','NewDealerEvaluationController@store');            // Create
 	        Route::get('/dealer-evaluations/{id}',                              'NewDealerEvaluationController@show');             // Detail (by evaluation id)

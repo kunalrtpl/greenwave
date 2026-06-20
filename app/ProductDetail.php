@@ -58,7 +58,9 @@ class ProductDetail extends Model
                 'product_detail_id',
                 'moq',
                 'average_dispatch_time',
-                'not_available'
+                'not_available',
+                'discontinued',
+                'focus_product',
             )
             ->get();
 
@@ -159,6 +161,8 @@ class ProductDetail extends Model
                                 'not_available'         => $product->not_available,
                                 'dealer_price'          => $product->dealer_price,
                                 'price_date'            => $product->price_date,
+                                'discontinued'            => $product->discontinued,
+                                'focus_product'            => $product->focus_product,
                             ];
                         }
                     }

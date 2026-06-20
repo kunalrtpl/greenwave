@@ -22,6 +22,8 @@
     .dot-total    { background: #3598dc; }
     .dot-selected { background: #36c6d3; }
     .dot-na       { background: #ed8936; }
+    .dot-disc     { background: #805ad5; }
+    .dot-focus    { background: #f59e0b; }
 
     /* ── Filter strip ── */
     .filter-strip {
@@ -43,16 +45,20 @@
         outline: none; border-color: #3598dc;
         box-shadow: 0 0 0 2px rgba(53,152,220,0.15);
     }
-    .filter-strip select { min-width: 220px; }
-    .filter-strip input[type="text"] { width: 200px; }
+    .filter-strip select { min-width: 190px; }
+    .filter-strip input[type="text"] { width: 180px; }
     .filter-strip .fg-check { display: flex; align-items: center; gap: 6px; padding-bottom: 6px; }
     .filter-strip .fg-check label {
         font-size: 12px; font-weight: 600; color: #5a6a85;
         text-transform: none; letter-spacing: 0; cursor: pointer;
     }
     .filter-strip .fg-check input[type="checkbox"] {
-        transform: scale(1.2); accent-color: #e53e3e; cursor: pointer;
+        transform: scale(1.2); cursor: pointer;
     }
+    .filter-strip .fg-check input[type="checkbox"]#filter-na    { accent-color: #e53e3e; }
+    .filter-strip .fg-check input[type="checkbox"]#filter-disc  { accent-color: #805ad5; }
+    .filter-strip .fg-check input[type="checkbox"]#filter-focus { accent-color: #f59e0b; }
+
     .filter-result { margin-left: auto; font-size: 12px; color: #718096; padding-bottom: 6px; white-space: nowrap; }
     .filter-result strong { color: #3598dc; }
 
@@ -116,9 +122,8 @@
     .link-table tr.product-row.hidden { display: none; }
     .link-table tr.product-row.selected-row td { background: #eaf7fb !important; }
 
-    .sr-no-cell { color: #a0aec0; font-size: 11px; text-align: center; width: 46px; }
-
-    .cb-cell { text-align: center; width: 46px; }
+    .sr-no-cell { color: #a0aec0; font-size: 11px; text-align: center; width: 40px; }
+    .cb-cell { text-align: center; width: 40px; }
     .custom-checkbox { transform: scale(1.25); cursor: pointer; accent-color: #3598dc; }
 
     .prod-name { font-weight: 600; color: #2d3748; font-size: 13px; display: block; line-height: 1.3; }
@@ -137,6 +142,20 @@
     .info-pill.na-no {
         background: #f0fff4; border-color: #9ae6b4; color: #276749;
         padding: 3px 8px;
+    }
+    .info-pill.disc-yes {
+        background: #faf5ff; border-color: #d6bcfa; color: #6b21a8; font-weight: 700;
+        padding: 3px 8px;
+    }
+    .info-pill.disc-no {
+        background: #f0fff4; border-color: #9ae6b4; color: #276749;
+        padding: 3px 8px;
+    }
+    .focus-star-yes {
+        font-size: 18px; color: #f59e0b; line-height: 1; display: inline-block;
+    }
+    .focus-star-no {
+        font-size: 18px; color: #e2e8f0; line-height: 1; display: inline-block;
     }
     .pd-badge {
         display: inline-block; font-size: 10px; padding: 2px 8px;
@@ -202,14 +221,22 @@
 
             <div class="portlet-body">
 
-                {{-- Summary Cards --}}
+                {{-- ── Summary Cards ── --}}
+                @php
+                    $totalProducts = 0; $naCount = 0; $discCount = 0; $focusCount = 0;
+                    foreach($hierarchy as $p)
+                        foreach($p['children'] ?? [] as $c)
+                            foreach($c['products'] ?? [] as $pr) {
+                                $totalProducts++;
+                                if(!empty($pr['not_available']))  $naCount++;
+                                if(!empty($pr['discontinued']))   $discCount++;
+                                if(!empty($pr['focus_product']))  $focusCount++;
+                            }
+                @endphp
                 <div class="summary-bar">
                     <div class="sum-card">
                         <span class="dot dot-total"></span>
-                        Total Products &nbsp;<strong id="sum-total">
-                            @php $totalProducts = 0; foreach($hierarchy as $p) foreach($p['children'] ?? [] as $c) $totalProducts += count($c['products'] ?? []); @endphp
-                            {{ $totalProducts }}
-                        </strong>
+                        Total Products &nbsp;<strong id="sum-total">{{ $totalProducts }}</strong>
                     </div>
                     <div class="sum-card">
                         <span class="dot dot-selected"></span>
@@ -217,17 +244,19 @@
                     </div>
                     <div class="sum-card">
                         <span class="dot dot-na"></span>
-                        Not Available &nbsp;<strong id="sum-na" style="color:#ed8936;">
-                            @php
-                                $naCount = 0;
-                                foreach($hierarchy as $p) foreach($p['children'] ?? [] as $c) foreach($c['products'] ?? [] as $pr) if(!empty($pr['not_available'])) $naCount++;
-                            @endphp
-                            {{ $naCount }}
-                        </strong>
+                        Not Available &nbsp;<strong id="sum-na" style="color:#ed8936;">{{ $naCount }}</strong>
+                    </div>
+                    <div class="sum-card">
+                        <span class="dot dot-disc"></span>
+                        Discontinued &nbsp;<strong id="sum-disc" style="color:#805ad5;">{{ $discCount }}</strong>
+                    </div>
+                    <div class="sum-card">
+                        <span class="dot dot-focus"></span>
+                        Focus Products &nbsp;<strong id="sum-focus" style="color:#f59e0b;">{{ $focusCount }}</strong>
                     </div>
                 </div>
 
-                {{-- Filter strip --}}
+                {{-- ── Filter strip ── --}}
                 <div class="filter-strip">
                     <div class="fg">
                         <label><i class="fa fa-folder"></i> &nbsp;Category</label>
@@ -269,7 +298,23 @@
                         <label>&nbsp;</label>
                         <div class="fg-check">
                             <input type="checkbox" id="filter-na">
-                            <label for="filter-na">Not Available only</label>
+                            <label for="filter-na" style="color:#c53030;">Not Available only</label>
+                        </div>
+                    </div>
+
+                    <div class="fg">
+                        <label>&nbsp;</label>
+                        <div class="fg-check">
+                            <input type="checkbox" id="filter-disc">
+                            <label for="filter-disc" style="color:#6b21a8;">Discontinued only</label>
+                        </div>
+                    </div>
+
+                    <div class="fg">
+                        <label>&nbsp;</label>
+                        <div class="fg-check">
+                            <input type="checkbox" id="filter-focus">
+                            <label for="filter-focus" style="color:#b45309;">&#9733; Focus only</label>
                         </div>
                     </div>
 
@@ -279,7 +324,7 @@
                     </div>
                 </div>
 
-                {{-- Table --}}
+                {{-- ── Table ── --}}
                 <form method="POST" action="{{ route('admin.users.products.save', $user->id) }}">
                     @csrf
                     <div class="link-wrap">
@@ -290,6 +335,8 @@
                                     <th class="center"><i class="fa fa-check"></i></th>
                                     <th>Product Name</th>
                                     <th class="center">Not Avail.</th>
+                                    <th class="center">Discont.</th>
+                                    <th class="center">Focus</th>
                                     <th>MOQ</th>
                                     <th>Dispatch (days)</th>
                                     <th>DP (₹)</th>
@@ -307,7 +354,7 @@
 
                                 {{-- Parent group header row --}}
                                 <tr class="group-parent-row" data-parent-id="{{ $parent['id'] }}" data-target="parent-{{ $parent['id'] }}">
-                                    <td colspan="8">
+                                    <td colspan="10">
                                         <div class="gp-inner">
                                             <div class="gp-left">
                                                 <i class="fa fa-folder-open" style="color:rgba(255,255,255,0.8);"></i>
@@ -327,7 +374,7 @@
 
                                     {{-- Child group sub-header row --}}
                                     <tr class="group-child-row child-of-{{ $parent['id'] }}" data-child-id="{{ $child['id'] }}" data-parent-id="{{ $parent['id'] }}" data-target="child-{{ $child['id'] }}">
-                                        <td colspan="8">
+                                        <td colspan="10">
                                             <div class="gc-inner">
                                                 <div class="gc-left">
                                                     <i class="fa fa-tag" style="color:#3598dc; font-size:11px;"></i>
@@ -344,6 +391,8 @@
                                     @php
                                         $hasPrice  = !is_null($product['dealer_price'] ?? null);
                                         $isNA      = !empty($product['not_available']);
+                                        $isDisc    = !empty($product['discontinued']);
+                                        $isFocus   = !empty($product['focus_product']);
                                         $isChecked = in_array($product['id'], $selectedProducts);
                                     @endphp
                                     <tr class="product-row child-of-{{ $child['id'] }} parent-of-{{ $parent['id'] }} {{ $isChecked ? 'selected-row' : '' }}"
@@ -353,7 +402,9 @@
                                         data-parent-id="{{ $parent['id'] }}"
                                         data-name="{{ strtolower($product['product_name']) }}"
                                         data-selected="{{ $isChecked ? 1 : 0 }}"
-                                        data-na="{{ $isNA ? 1 : 0 }}">
+                                        data-na="{{ $isNA ? 1 : 0 }}"
+                                        data-disc="{{ $isDisc ? 1 : 0 }}"
+                                        data-focus="{{ $isFocus ? 1 : 0 }}">
 
                                         <td class="sr-no-cell">{{ $index + 1 }}</td>
 
@@ -368,17 +419,41 @@
                                         </td>
 
                                         <td>
-                                            <span class="prod-name">{{ $product['product_name'] }}</span>
+                                            <span class="prod-name">
+                                                {{ $product['product_name'] }}
+                                                @if($isFocus)
+                                                    <span style="color:#f59e0b; font-size:14px; margin-left:4px;">&#9733;</span>
+                                                @endif
+                                            </span>
                                             @if(!empty($product['description']))
                                                 <span class="prod-desc">({{ $product['description'] }})</span>
                                             @endif
                                         </td>
 
+                                        {{-- Not Available --}}
                                         <td class="center-cell">
                                             @if($isNA)
                                                 <span class="info-pill na-yes"><i class="fa fa-times"></i></span>
                                             @else
                                                 <span class="info-pill na-no"><i class="fa fa-check"></i></span>
+                                            @endif
+                                        </td>
+
+                                        {{-- Discontinued --}}
+                                        <td class="center-cell">
+                                            @if($isDisc)
+                                                <span class="info-pill disc-yes"><i class="fa fa-times"></i></span>
+                                            @else
+                                                <span class="info-pill disc-no"><i class="fa fa-check"></i></span>
+                                            @endif
+                                        </td>
+
+                                        {{-- Focus Product --}}
+                                        <td class="center-cell">
+                                            @if($isFocus)
+                                                <span class="focus-star-yes">&#9733;</span>
+                                            @else
+                                                <span class="focus-star-no">&#9733;</span>
                                             @endif
                                         </td>
 
@@ -419,7 +494,8 @@
                             @endforeach
 
                             <tr id="empty-row" style="display:none;">
-                                <td colspan="8"> style="font-size:22px; display:block; margin-bottom:6px;"></i>
+                                <td colspan="10">
+                                    <i class="fa fa-search" style="font-size:22px; display:block; margin-bottom:6px;"></i>
                                     No products match the current filters.
                                 </td>
                             </tr>
@@ -449,8 +525,8 @@ $(document).ready(function () {
 
     /* ── 1. Parent group toggle ── */
     $(document).on('click', '.group-parent-row', function () {
-        var parentId = $(this).data('parent-id');
-        var $children = $('.child-of-' + parentId);
+        var parentId   = $(this).data('parent-id');
+        var $children  = $('.child-of-' + parentId);
         var isCollapsed = $(this).hasClass('collapsed');
 
         if (isCollapsed) {
@@ -459,7 +535,6 @@ $(document).ready(function () {
         } else {
             $(this).addClass('collapsed');
             $children.hide();
-            // also collapse child headers
             $children.filter('.group-child-row').addClass('collapsed');
             $children.filter('.group-child-row').each(function () {
                 var cid = $(this).data('child-id');
@@ -471,8 +546,8 @@ $(document).ready(function () {
     /* ── 2. Child group toggle ── */
     $(document).on('click', '.group-child-row', function (e) {
         e.stopPropagation();
-        var childId = $(this).data('child-id');
-        var $rows   = $('.product-row.child-of-' + childId);
+        var childId    = $(this).data('child-id');
+        var $rows      = $('.product-row.child-of-' + childId);
         var isCollapsed = $(this).hasClass('collapsed');
         $(this).toggleClass('collapsed', !isCollapsed);
         $rows.toggle(isCollapsed);
@@ -480,11 +555,11 @@ $(document).ready(function () {
 
     /* ── 3. Checkbox change ── */
     $(document).on('change', '.product-cb', function () {
-        var $cb       = $(this);
-        var childId   = $cb.data('child-id');
-        var parentId  = $cb.data('parent-id');
-        var $row      = $cb.closest('.product-row');
-        var checked   = $cb.is(':checked');
+        var $cb      = $(this);
+        var childId  = $cb.data('child-id');
+        var parentId = $cb.data('parent-id');
+        var $row     = $cb.closest('.product-row');
+        var checked  = $cb.is(':checked');
 
         $row.data('selected', checked ? 1 : 0);
         $row.toggleClass('selected-row', checked);
@@ -505,36 +580,37 @@ $(document).ready(function () {
         var selection = $('#filter-selection').val();
         var search    = $('#filter-search').val().toLowerCase().trim();
         var naOnly    = $('#filter-na').is(':checked');
+        var discOnly  = $('#filter-disc').is(':checked');
+        var focusOnly = $('#filter-focus').is(':checked');
         var visible   = 0;
 
-        // Show/hide product rows
         $('#link-tbody .product-row').each(function () {
             var $r = $(this);
-            if (parentId && $r.data('parent-id') + '' !== parentId)     { $r.hide(); return; }
-            if (childId  && $r.data('child-id')  + '' !== childId)      { $r.hide(); return; }
-            if (selection === 'selected'   && $r.data('selected') != 1) { $r.hide(); return; }
-            if (selection === 'unselected' && $r.data('selected') == 1) { $r.hide(); return; }
-            if (naOnly && $r.data('na') != 1)                           { $r.hide(); return; }
+            if (parentId  && $r.data('parent-id') + '' !== parentId)     { $r.hide(); return; }
+            if (childId   && $r.data('child-id')  + '' !== childId)      { $r.hide(); return; }
+            if (selection === 'selected'   && $r.data('selected') != 1)  { $r.hide(); return; }
+            if (selection === 'unselected' && $r.data('selected') == 1)  { $r.hide(); return; }
+            if (naOnly    && $r.data('na')   != 1)                       { $r.hide(); return; }
+            if (discOnly  && $r.data('disc') != 1)                       { $r.hide(); return; }
+            if (focusOnly && $r.data('focus')!= 1)                       { $r.hide(); return; }
             if (search) {
                 var name = $r.data('name') || '';
-                if (name.indexOf(search) === -1)                        { $r.hide(); return; }
+                if (name.indexOf(search) === -1)                         { $r.hide(); return; }
             }
             $r.show();
             visible++;
         });
 
-        // Show/hide child group headers
+        /* Show/hide child group headers */
         $('#link-tbody .group-child-row').each(function () {
-            var cid  = $(this).data('child-id');
-            var hasVisible = $('.product-row.child-of-' + cid + ':visible').length > 0;
-            $(this).toggle(hasVisible);
+            var cid = $(this).data('child-id');
+            $(this).toggle($('.product-row.child-of-' + cid + ':visible').length > 0);
         });
 
-        // Show/hide parent group headers
+        /* Show/hide parent group headers */
         $('#link-tbody .group-parent-row').each(function () {
             var pid = $(this).data('parent-id');
-            var hasVisible = $('.group-child-row.child-of-' + pid + ':visible').length > 0;
-            $(this).toggle(hasVisible);
+            $(this).toggle($('.group-child-row.child-of-' + pid + ':visible').length > 0);
         });
 
         $('#visible-count').text(visible);
@@ -542,7 +618,7 @@ $(document).ready(function () {
         renumber();
     }
 
-    // Filter child dropdown based on parent selection
+    /* Filter child dropdown based on parent selection */
     $('#filter-parent').on('change', function () {
         var pid = $(this).val();
         $('#filter-child option').each(function () {
@@ -554,8 +630,15 @@ $(document).ready(function () {
         applyFilters();
     });
 
-    $('#filter-child, #filter-selection, #filter-na').on('change', applyFilters);
+    $('#filter-child, #filter-selection').on('change', applyFilters);
     $('#filter-search').on('input', applyFilters);
+    $('#filter-na, #filter-disc, #filter-focus').on('change', function () {
+        /* Uncheck other toggles when one is checked (mutually exclusive) */
+        if ($(this).is(':checked')) {
+            $('#filter-na, #filter-disc, #filter-focus').not(this).prop('checked', false);
+        }
+        applyFilters();
+    });
 
     /* ── 5. Renumber visible product rows ── */
     function renumber() {

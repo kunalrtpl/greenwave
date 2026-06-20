@@ -547,7 +547,7 @@ class UsersController extends Controller
         // fullHierarchy() now internally fetches moq, dispatch, not_available,
         // and the latest dealer_price for each product — no changes needed here.
         $hierarchy = ProductDetail::fullHierarchy();
-
+        //echo "<pre>"; print_r($hierarchy); die;
         // Get already linked product IDs for this user
         $selectedProducts = $user->products()->pluck('product_id')->toArray();
 

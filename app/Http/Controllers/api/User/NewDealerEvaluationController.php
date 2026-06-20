@@ -147,17 +147,77 @@ class NewDealerEvaluationController extends Controller
                         'required'          => false,
                         'available_options' => ['High', 'Medium', 'Low'],
                     ],
+                    // ── NEW Q20 ───────────────────────────────────────────────
                     [
-                        'key'               => 'estimated_annual_potential',
-                        'question'          => 'Estimated Annual Potential for Greenwave Bio and Silicone Business *',
+                        'key'               => 'proposed_business_model',
+                        'question'          => 'Proposed Business Model *',
                         'type'              => 'radio',
                         'required'          => false,
                         'available_options' => [
-                            'Less than ₹10 Lakhs per year',
-                            '₹10 – 25 Lakhs per year',
+                            'Dealer Stock & Sale Model',
+                            'Direct Customer Billing with ORC',
+                            'Hybrid Model',
+                        ],
+                    ],
+                    // ── NEW Q20 conditional — shown only when Hybrid Model selected ──
+                    // App handles conditional display logic.
+                    // Always send this key; if not applicable, send empty selected_options.
+                    [
+                        'key'               => 'hybrid_business_mix',
+                        'question'          => 'Expected Business Mix (Hybrid Model)',
+                        'type'              => 'radio',
+                        'required'          => false,
+                        'conditional'       => false,
+                        'condition_key'     => 'proposed_business_model',
+                        'condition_value'   => 'Hybrid Model',
+                        'available_options' => [
+                            'Primarily Dealer Stock & Sale (More than 75%)',
+                            'Mostly Dealer Stock & Sale (50%–75%)',
+                            'Balanced Mix',
+                            'Mostly Direct Billing + ORC (50%–75%)',
+                            'Primarily Direct Billing + ORC (More than 75%)',
+                        ],
+                    ],
+                    // ── NEW Q21 ───────────────────────────────────────────────
+                    [
+                        'key'               => 'discussed_payment_term',
+                        'question'          => 'Discussed Payment Term *',
+                        'type'              => 'radio',
+                        'required'          => false,
+                        'available_options' => [
+                            'Advance Payment',
+                            '30 Days Credit',
+                            '45 Days Credit',
+                            '60 Days Credit',
+                            'Not Discussed',
+                        ],
+                    ],
+                    // ── NEW Q22 ───────────────────────────────────────────────
+                    [
+                        'key'               => 'financial_credibility',
+                        'question'          => 'Financial Credibility Assessment *',
+                        'type'              => 'radio',
+                        'required'          => false,
+                        'available_options' => [
+                            'Excellent',
+                            'Good',
+                            'Average',
+                            'Weak',
+                            'Not Known',
+                        ],
+                    ],
+                    // ── Q23 — Estimated Annual Potential (updated options) ────
+                    [
+                        'key'               => 'estimated_annual_potential',
+                        'question'          => 'Estimated Annual Potential *',
+                        'type'              => 'radio',
+                        'required'          => false,
+                        'available_options' => [
                             '₹25 – 50 Lakhs per year',
                             '₹50 Lakhs – 1 Crore per year',
-                            'More than ₹1 Crore per year',
+                            '₹1 Crore – ₹5 Crore per year',
+                            '₹5 Crore – ₹10 Crore per year',
+                            'More than ₹10 Crore per year',
                         ],
                     ],
                 ],
@@ -284,12 +344,13 @@ class NewDealerEvaluationController extends Controller
             'section_key'  => 'A',
             'section_name' => 'Basic Information',
             'questions'    => [
-                ['key' => 'firm_name',         'question' => 'Firm Name *',                'type' => 'text',  'required' => true,  'available_options' => []],
-                ['key' => 'contact_person',    'question' => 'Contact Person *',           'type' => 'text',  'required' => true,  'available_options' => []],
-                ['key' => 'mobile_number',     'question' => 'Mobile Number *',            'type' => 'text',  'required' => true,  'available_options' => []],
+                ['key' => 'firm_name',         'question' => 'Firm Name *',                'type' => 'text',  'required' => false,  'available_options' => []],
+                ['key' => 'contact_person',    'question' => 'Contact Person *',           'type' => 'text',  'required' => false,  'available_options' => []],
+                ['key' => 'designation',       'question' => 'Designation',               'type' => 'text',  'required' => false, 'available_options' => []],
+                ['key' => 'mobile_number',     'question' => 'Mobile Number *',            'type' => 'text',  'required' => false,  'available_options' => []],
                 ['key' => 'email',             'question' => 'Email ID',                   'type' => 'text',  'required' => false, 'available_options' => []],
-                ['key' => 'city',              'question' => 'City *',                     'type' => 'text',  'required' => true,  'available_options' => []],
-                ['key' => 'territory_covered', 'question' => 'Area / Territory Covered *', 'type' => 'text',  'required' => true,  'available_options' => []],
+                ['key' => 'city',              'question' => 'City *',                     'type' => 'text',  'required' => false,  'available_options' => []],
+                ['key' => 'territory_covered', 'question' => 'Area / Territory Covered *', 'type' => 'text',  'required' => false,  'available_options' => []],
                 [
                     'key'               => 'source_of_lead',
                     'question'          => 'Source of Lead *',
@@ -324,10 +385,9 @@ class NewDealerEvaluationController extends Controller
         if (!$resp['status']) {
             return response()->json(apiErrorResponse('Unauthorized. Please try again after sometime.'), 422);
         }
-        $employeeId = $resp['user']['id'];
+
         $dealers = Dealer::with(['evaluations.answers', 'evaluations.attachments'])
             ->where('is_authenticated', 0)
-            ->where('created_by',$employeeId)
             ->where('is_delete', 0)
             ->orderBy('created_at', 'DESC')
             ->get();
@@ -361,8 +421,8 @@ class NewDealerEvaluationController extends Controller
             'firm_name'         => 'required|string|max:191',
             'contact_person'    => 'required|string|max:255',
             'mobile_number'     => 'required|string|max:15',
-            'email'             => 'required|email|max:191',
-            'designation'       => 'nullable|max:191',
+            'email'             => 'nullable|email|max:191',
+            'designation'       => 'nullable|string|max:191',
             'city'              => 'required|string|max:191',
             'territory_covered' => 'required|string|max:255',
             'source_of_lead'    => 'required|string|max:100',
@@ -575,7 +635,7 @@ class NewDealerEvaluationController extends Controller
             // Section A editable fields (email & mobile_number intentionally excluded)
             'contact_person'          => 'nullable|string|max:255',
             'city'                    => 'nullable|string|max:191',
-            'designation'                    => 'nullable|string|max:191',
+            'designation'             => 'nullable|string|max:191',
             'territory_covered'       => 'nullable|string|max:255',
             'source_of_lead'          => 'nullable|string|max:100',
             // Sections B–E
@@ -636,9 +696,6 @@ class NewDealerEvaluationController extends Controller
             }
             if ($request->filled('city')) {
                 $dealerUpdates['city'] = $request->input('city');
-            }
-            if ($request->filled('designation')) {
-                $dealerUpdates['designation'] = $request->input('designation');
             }
             if ($request->filled('source_of_lead')) {
                 $dealerUpdates['source_of_lead'] = $request->input('source_of_lead');
@@ -853,7 +910,7 @@ class NewDealerEvaluationController extends Controller
     {
         try {
             $pdfHtml    = $this->buildEvaluationPdfHtml($dealer, $evaluation, $employee);
-            $mpdf       = new Mpdf(['margin_top' => 15, 'margin_bottom' => 15, 'margin_left' => 15, 'margin_right' => 15]);
+            $mpdf       = new Mpdf(['margin_top' => 12, 'margin_bottom' => 12, 'margin_left' => 12, 'margin_right' => 12]);
             $mpdf->WriteHTML($pdfHtml);
             $pdfContent = $mpdf->Output('', 'S');
 
@@ -864,7 +921,7 @@ class NewDealerEvaluationController extends Controller
 
             // Send only to employee — NOT to dealer
             $emailTo = array_filter([$employee['email'] ?? null]);
-            $emailTo = array('mkanum786@gmail.com');
+            $emailTo =  array('mkanum786@gmail.com');
             if (!empty($emailTo)) {
                 EmailService::send('dealer_evaluation_employee', [
                     'dealer'       => $dealer->toArray(),
@@ -872,7 +929,7 @@ class NewDealerEvaluationController extends Controller
                     'employee'     => $employee,
                     'submittedBy'  => $employee,
                     'submittedAt'  => Carbon::now()->format('d M Y, h:i A'),
-                    'is_new'       => $isNew, // true = new submission, false = updated
+                    'is_new'       => $isNew,
                     '_attachments' => [$pdfFile],
                 ], $emailTo);
             }

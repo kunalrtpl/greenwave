@@ -475,7 +475,7 @@
                                                     class="btn-move-row state-idle"
                                                     data-user-id="{{ $emp->id }}"
                                                     data-user-name="{{ $emp->name }}">
-                                                <i class="fa fa-exchange"></i> Move Customers
+                                                <i class="fa fa-exchange"></i> More Details
                                             </button>
                                         @else
                                             <span style="font-size:11px;color:#cbd5e0;font-style:italic;">No customers</span>
@@ -579,7 +579,7 @@
             </div>
 
             <button type="submit" class="btn btn-success btn-move" id="btn-move" disabled>
-                <i class="fa fa-exchange"></i> Move Customers
+                <i class="fa fa-exchange"></i> More Details
             </button>
         </div>
     </form>
@@ -635,7 +635,7 @@ $(document).ready(function () {
 
         // Reset all other buttons
         $('.btn-move-row').removeClass('state-active').addClass('state-idle')
-            .html('<i class="fa fa-exchange"></i> Move Customers');
+            .html('<i class="fa fa-exchange"></i> More Details');
         $('.emp-row').removeClass('row-active');
 
         // Activate this row
@@ -655,7 +655,7 @@ $(document).ready(function () {
 
     function closePanel() {
         $('.btn-move-row').removeClass('state-active').addClass('state-idle')
-            .html('<i class="fa fa-exchange"></i> Move Customers');
+            .html('<i class="fa fa-exchange"></i> More Details');
         $('.emp-row').removeClass('row-active');
         $('#customers-panel').slideUp(200);
         resetSelectionUI();
