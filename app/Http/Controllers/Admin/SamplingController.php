@@ -19,6 +19,7 @@ use Session;
 use DB;
 use PDF;
 use Carbon\Carbon;
+use Mpdf\Mpdf;
 class SamplingController extends Controller
 {
     //
@@ -1358,19 +1359,43 @@ class SamplingController extends Controller
         return view('admin.samplings.sample-dispatched-material')->with(compact('title','users','data'));
     }
 
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Place this method inside your SamplingController (or wherever downloadPdf lives)
+    // Requires: composer require mpdf/mpdf
+    // ─────────────────────────────────────────────────────────────────────────────
+
     public function downloadPdf($id)
     {
         $sampling = Sampling::with([
-            'sampleitems',
+            'sampleitems.requested_product',
             'customer',
-            'user'      // executive
+            'user',   // executive
         ])->findOrFail($id);
 
-        $pdf = PDF::loadView('admin.samplings.free.pdf', compact('sampling'))
-            ->setPaper('A4', 'portrait');
+        $html = view('admin.samplings.free.pdf', compact('sampling'))->render();
 
-        return $pdf->download(
-            'Sampling-' . $sampling->sample_ref_no_string . '.pdf'
-        );
+        $mpdf = new Mpdf([
+            'mode'              => 'utf-8',
+            'format'            => 'A4',
+            'orientation'       => 'P',
+            'margin_top'        => 12,
+            'margin_bottom'     => 14,
+            'margin_left'       => 10,
+            'margin_right'      => 10,
+            'default_font'      => 'dejavusans',
+            'default_font_size' => 9,
+            'tempDir'           => storage_path('app/mpdf-temp'),
+        ]);
+
+        $mpdf->SetTitle('Free Sample Request – ' . $sampling->sample_ref_no_string);
+        $mpdf->SetAuthor('Greenwave');
+        $mpdf->WriteHTML($html);
+
+        $filename = 'Sampling-' . $sampling->sample_ref_no_string . '.pdf';
+
+        return response($mpdf->Output($filename, 'S'), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     }
 }
