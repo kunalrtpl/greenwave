@@ -97,7 +97,7 @@
     /* ── Table ── */
     .pricing-wrap { width: 100%; overflow-x: auto; }
     .pricing-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
-    .pricing-table col.c-no       { width: 44px; }
+    .pricing-table col.c-no       { width: 28px; }
     .pricing-table col.c-name     { width: 14%; }
     .pricing-table col.c-moq      { width: 10%; }
     .pricing-table col.c-dispatch { width: 10%; }
@@ -174,6 +174,11 @@
     .btn-update.saving { opacity: 0.6; pointer-events: none; }
 
     .sr-no-cell { color: #a0aec0; font-size: 11px; text-align: center; }
+    .pricing-table thead tr th:first-child,
+    .sr-no-cell {
+        padding: 8px 4px !important;
+        max-width: 28px !important;
+    }
 
     #empty-row td {
         text-align: center; padding: 30px; color: #a0aec0;
@@ -355,12 +360,12 @@
                                 <th class="center">#</th>
                                 <th>Product Name</th>
                                 <th>MOQ</th>
-                                <th>Dispatch <br> (Days)</th>
-                                <th class="center">Not Avail.</th>
-                                <th class="center">Discontinued</th>
+                                <th>Disp. Time</th>
+                                <th class="center">N.A.</th>
+                                <th class="center">Discont.</th>
                                 <th class="center" style="color:#276749;">Focus</th>
-                                <th>DP (₹)</th>
-                                <th class="center">Price Date</th>
+                                <th>Std. DP (₹)</th>
+                                <th class="center">Date</th>
                                 <th class="center">Action</th>
                             </tr>
                         </thead>
@@ -395,14 +400,20 @@
                             </td>
 
                             <td>
-                                <input type="text" class="inline-input field-moq"
-                                       value="{{ $product->moq }}" maxlength="191">
+                                <div class="dp-wrap">
+                                    <input type="text" class="inline-input dp-input field-moq"
+                                           value="{{ $product->moq }}" maxlength="191">
+                                    <span class="cur">kg</span>
+                                </div>
                             </td>
 
                             <td>
-                                <input type="number" class="inline-input field-dispatch"
-                                       value="{{ $product->average_dispatch_time }}"
-                                       min="0" step="0.5">
+                                <div class="dp-wrap">
+                                    <input type="number" class="inline-input dp-input field-dispatch"
+                                           value="{{ $product->average_dispatch_time }}"
+                                           min="0" step="0.5">
+                                    <span class="cur">days</span>
+                                </div>
                             </td>
 
                             <td>

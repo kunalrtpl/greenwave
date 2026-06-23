@@ -49,10 +49,8 @@
             <td style="padding:16px 18px;">
               <p style="margin:0 0 6px 0;font-size:14px;font-weight:bold;color:#1b5e20;font-family:Arial,Helvetica,sans-serif;">Hello,</p>
               <p style="margin:0;font-size:13px;color:#33691e;line-height:1.8;font-family:Arial,Helvetica,sans-serif;">
-                A One-Time Password has been generated to verify the identity associated with
-                <strong>{{ $identifier }}</strong> as part of the
-                <strong>Greenwave Prospective Channel Partner Evaluation</strong> process.
-                This OTP confirms authenticity before the evaluation form can be submitted.
+                To create your business profile in our system, a One-Time Password has been generated to verify your email
+                <strong>{{ $identifier }}</strong>.
               </p>
             </td>
           </tr>
@@ -87,13 +85,11 @@
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fff8e1;border-left:4px solid #f9a825;">
           <tr>
             <td style="padding:14px 18px;">
-              <p style="margin:0 0 6px 0;font-size:11px;font-weight:bold;color:#b45309;text-transform:uppercase;letter-spacing:0.5px;font-family:Arial,Helvetica,sans-serif;">Action Required &mdash; Share with Executive</p>
+              <p style="margin:0 0 6px 0;font-size:11px;font-weight:bold;color:#b45309;text-transform:uppercase;letter-spacing:0.5px;font-family:Arial,Helvetica,sans-serif;">Action Required </p>
               <p style="margin:0;font-size:13px;color:#78350f;line-height:1.7;font-family:Arial,Helvetica,sans-serif;">
-                Please share this OTP with the <strong>Greenwave Sales Executive</strong> who is filling
-                your evaluation form. This OTP confirms you are a genuine prospective dealer and
-                authorises the submission of your channel partner application.
+                Please share this OTP with the <strong>Greenwave Representative assisting you.</strong>
                 <br><br>
-                <strong>Do not share this OTP with anyone other than the Greenwave executive who contacted you.</strong>
+                <strong>Do not share this OTP with anyone else.</strong>
               </p>
             </td>
           </tr>
@@ -111,7 +107,6 @@
               <p style="margin:0;font-size:12px;color:#7f1d1d;line-height:1.7;font-family:Arial,Helvetica,sans-serif;">
                 Greenwave will <strong>never</strong> ask for your OTP via phone call, WhatsApp, or any other channel.
                 This OTP is valid for <strong>single use only</strong> and will expire in {{ $expiresIn }}.
-                If you did not request this, please ignore this email.
               </p>
             </td>
           </tr>

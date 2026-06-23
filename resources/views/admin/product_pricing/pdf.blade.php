@@ -259,12 +259,12 @@ table.data-table tbody td.right  { text-align: right; }
             <th class="center" style="width:22px;">#</th>
             <th style="width:19%;">Product Name</th>
             <th style="width:7%;">Gen.</th>
-            <th class="center" style="width:6%;">Not Avail.</th>
-            <th class="center" style="width:6%;">Discont.</th>
+            <th class="center" style="width:6%;">Avail.</th>
+            <th class="center" style="width:6%;">Cont.</th>
             <th class="center" style="width:6%;">Focus</th>
             <th class="center" style="width:9%;">MOQ</th>
-            <th class="center" style="width:9%;">Dispatch Days</th>
-            <th class="right"  style="width:12%;">Std. DP. (&#8377;)</th>
+            <th class="center" style="width:9%;">Disp. Time</th>
+            <th class="right"  style="width:12%;">Std. DP (&#8377;)</th>
             <th class="center" style="width:11%;">Date</th>
         </tr>
     </thead>
@@ -320,9 +320,9 @@ table.data-table tbody td.right  { text-align: right; }
         </td>
 
         {{-- FIX: MOQ center aligned --}}
-        <td class="center plain-val">{{ $p->moq ?? '—' }} kg</td>
+        <td class="center plain-val">{{ $p->moq ?? '—' }} <small>kg<small></td>
 
-        <td class="center plain-val">{{ $p->average_dispatch_time ?? '—' }}</td>
+        <td class="center plain-val">{{ $p->average_dispatch_time ?? '—' }} <small>days<small></td>
 
         {{-- FIX: no decimal places --}}
         <td class="right">
