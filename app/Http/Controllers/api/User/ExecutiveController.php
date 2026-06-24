@@ -1812,15 +1812,44 @@ class ExecutiveController extends Controller
             $getSubRegions = \App\UserDepartmentRegion::where('user_id',$resp['user']['id'])->pluck('sub_region_id')->toArray();
             $cities = \App\RegionCity::wherein('region_id',$getSubRegions)->pluck('city')->toArray();
             $customerIds = \App\CustomerCity::wherein('city_name',$cities)->pluck('customer_id')->toArray();
-            $customers =  \App\Customer::wherein('id',$customerIds)->select('*', \DB::raw("'1' as status"))->where('status',1)->get()->toArray();
-            $request_customers = \App\CustomerRegisterRequest::with(['linkedExecutive','dealer'])->wherein('cities',$cities)->where('status','!=','Added')->get()->toArray();
+            
+            $customers = \App\Customer::with([
+                'cities',
+                'link_dealer' => function($q){
+                    $q->select('id','business_name','name');
+                },
+                'user_customer_shares' => function($q){
+                    $q->select('id','customer_id','user_id')
+                      ->orderBy('id','desc')
+                      ->with(['user' => function($u){ $u->select('id','name'); }]);
+                }
+            ])
+            ->wherein('id',$customerIds)
+            ->select('*', \DB::raw("'1' as status"))
+            ->where('status',1)
+            ->get();
+            $customers->each(function($c){
+                $c->cities = $c->cities->pluck('city_name')->implode(',');
+                $c->unsetRelation('cities');
+                $c->setRelation('linked_executive', optional($c->user_customer_shares->first())->user);
+                $c->unsetRelation('user_customer_shares'); // drop the rest so they don't serialize
+                $c->setRelation('dealer', $c->link_dealer);
+                $c->unsetRelation('link_dealer');
+            });
+
+            $customers = $customers->toArray();
+
+            $request_customers = \App\CustomerRegisterRequest::with(['linkedExecutive'=>function($query){
+                $query->select('id','name');
+            },'dealer'=>function($query){
+                $query->select('id','business_name','name');
+            }])->wherein('cities',$cities)->where('status','!=','Added')->get()->toArray();
 
             $result['registered_customers'] = $customers;
             $result['request_customers'] = $request_customers;
             $message = 'Customers has been fetched successfully';
             return response()->json(apiSuccessResponse($message,$result),200);
         }
-        
     }
 
     public function addedCustomerRequests(Request $request){
