@@ -142,6 +142,34 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 		Route::match(['get', 'post'], '/lost-sales-info', 'DataController@lostSalesInfo');
 		Route::match(['get', 'post'], '/lost-sales-info-detail', 'DataController@lostSalesInfoDetail');
 
+		Route::prefix('/channel-partners')->group(function () {
+
+		    // Listing — GET /admin/channel-partners
+		    Route::get('/', 'ChannelPartnerController@index')
+		         ->name('admin.channel-partners.index');
+
+		    // Add form — GET /admin/channel-partners/add
+		    Route::get('/add', 'ChannelPartnerController@addEdit')
+		         ->name('admin.channel-partners.create');
+
+		    // Edit form — GET /admin/channel-partners/{id}/edit
+		    Route::get('/{id}/edit', 'ChannelPartnerController@addEdit')
+		         ->name('admin.channel-partners.edit');
+
+		    // Save (add or update) — POST /admin/channel-partners/save  [AJAX]
+		    Route::post('/save', 'ChannelPartnerController@save')
+		         ->name('admin.channel-partners.save');
+
+		    // Stage change — POST /admin/channel-partners/{id}/stage  [AJAX]
+		    Route::post('/{id}/stage', 'ChannelPartnerController@updateStage')
+		         ->name('admin.channel-partners.stage');
+
+		    // Generate onboarding link — POST /admin/channel-partners/{id}/send-link  [AJAX]
+		    Route::post('/{id}/send-link', 'ChannelPartnerController@sendOnboardingLink')
+		         ->name('admin.channel-partners.send-link');
+
+		});
+		
 		/*Dealer Routes Starts*/
 		Route::match(['get', 'post'], '/dealers', 'DealerController@dealers');
 		Route::match(['get', 'post'], '/add-edit-dealer/{id?}', 'DealerController@addEditDealer');
@@ -567,3 +595,9 @@ Route::prefix('/export')->namespace('Export')->group(function(){
 	Route::get('dvrs/csv', 'DvrExportController@exportCsv');
 	Route::get('dvrs/user/csv', 'DvrExportController@exportUserDvrsCsv');
 });
+// Onboarding form shown to dealer — GET/POST /onboarding/{token}
+Route::get('/onboarding/{token}',  'Admin\ChannelPartnerController@onboardingForm')
+     ->name('onboarding.form');
+
+Route::post('/onboarding/{token}', 'Admin\ChannelPartnerController@onboardingSubmit')
+     ->name('onboarding.submit');

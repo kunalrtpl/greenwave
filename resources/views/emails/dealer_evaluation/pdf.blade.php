@@ -34,7 +34,11 @@ body {
     letter-spacing: 1.5px;
     margin-bottom: 4px;
 }
-.hdr-date { font-size: 8px; color: #64748b; }
+.hdr-date { 
+    font-size: 8px; 
+    color: #64748b; 
+    margin-top: 2px;
+}
 
 /* ═══════════════════════════════════════
    SECTION HEADER BAR
@@ -56,6 +60,8 @@ body {
     width: 100%;
     border-collapse: collapse;
     margin-bottom: 14px;
+    /* This prevents mPDF from breaking the section across multiple pages */
+    page-break-inside: avoid; 
 }
 
 .label-cell {
@@ -141,7 +147,9 @@ body {
         </td>
         <td class="hdr-right">
             <div class="hdr-doc-type">Prospective Channel Partner Evaluation</div>
-            <div class="hdr-date">Submitted: {{ $submittedAt }}</div>
+            {{-- Moved Submission Info Here --}}
+            <div class="hdr-date"><strong>Submitted By:</strong> {{ $submittedBy ?? '—' }}</div>
+            <div class="hdr-date"><strong>Submitted At:</strong> {{ $submittedAt }}</div>
         </td>
     </tr>
 </table>
@@ -191,15 +199,7 @@ body {
             <span class="chip-lead">{{ $dealer->source_of_lead ?: '—' }}</span>
         </td>
     </tr>
-    <tr>
-        <td class="label-cell">Submitted By</td>
-        <td class="value-cell">{{ $submittedBy ?? '—' }}</td>
-    </tr>
-    <tr>
-        <td class="label-cell">Submitted At</td>
-        <td class="value-cell">{{ $submittedAt }}</td>
-    </tr>
-
+    {{-- Removed Submitted By and Submitted At from here --}}
 </table>
 
 {{-- ── SECTIONS B–E ── --}}

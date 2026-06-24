@@ -152,7 +152,6 @@
           @if($is_new ?? true)
             Your <strong>Prospective Channel Partner Evaluation</strong> for
             <strong>{{ $dealer['business_name'] }}</strong> has been <strong>successfully submitted</strong>.
-            A copy of the filled form is attached as PDF for your reference.
             Our team will review the evaluation and get back to you with the next steps.
           @else
             Your <strong>updated Channel Partner Evaluation</strong> for
@@ -264,13 +263,13 @@
         <div class="note-new">
           📎 &nbsp;The complete evaluation form is attached as PDF for your records.
           If you need to make any changes, you can update the evaluation from the app.
-          For any queries, feel free to reach out to the Greenwave Sales Team.
+          For any queries, feel free to reach out to the Greenwave Team.
         </div>
       @else
         <div class="note-update">
           📎 &nbsp;The updated evaluation form is attached as PDF for your records.
           If further changes are needed, you can continue editing from the app.
-          For any queries, feel free to reach out to the Greenwave Sales Team.
+          For any queries, feel free to reach out to the Greenwave Team.
         </div>
       @endif
     </td>
@@ -287,7 +286,7 @@
         </div>
         <div class="footer-divider"></div>
         <div class="footer-text">
-          For any queries regarding this evaluation, please contact the Greenwave Sales Team.
+          For any queries regarding this evaluation, please contact the Greenwave Team.
         </div>
         <div class="footer-note">This is an automated message from Greenwave Partner Management System. Please do not reply.</div>
       </div>

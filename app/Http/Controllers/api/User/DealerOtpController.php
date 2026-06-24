@@ -70,7 +70,7 @@ class DealerOtpController extends Controller
 
         // ── Generate OTP ──────────────────────────────────────────────────────
         $otp       = (string) rand(100000, 999999);
-        $otp       = 123456;
+        //$otp       = 123456;
         $expiresAt = Carbon::now()->addMinutes(10);
         $now       = Carbon::now()->toDateTimeString();
 
@@ -92,7 +92,7 @@ class DealerOtpController extends Controller
 
         // ── Send OTP ──────────────────────────────────────────────────────────
         if ($identifierType === 'email') {
-            $identifier =  "bhupinder.rtpl@gmail.com";
+            //$identifier =  "bhupinder.rtpl@gmail.com";
             // Send via email
             EmailService::send('dealer_otp_employee', [
                 'otp'        => $otp,
@@ -102,10 +102,10 @@ class DealerOtpController extends Controller
 
         } else {
             // Send via SMS
-            /*$params            = [];
+            $params            = [];
             $params['mobile']  = $identifier;
-            $params['message'] = "Your OTP for Greenwave Dealer Verification is " . $otp . ". Valid for 10 minutes. -GREENWAVE GLOBAL LTD";
-            sendSms($params);*/
+            $params['message'] = "To create your business profile, please share mobile verification code ".$otp." with our representative assisting you. - Greenwave Global Ltd.";
+            sendSms($params);
         }
 
         return response()->json(apiSuccessResponse('OTP sent successfully.', [

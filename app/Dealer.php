@@ -34,6 +34,11 @@ class Dealer extends Model
         return $this->belongsTo('App\Dealer','parent_id','id')->with(['contact_persons','linked_products']);
     }
 
+    public function parentDealer()
+    {
+        return $this->belongsTo('App\Dealer', 'linked_dealer_id');
+    }
+
     // ── New: evaluations relationship ─────────────────────────────────────────
     public function evaluations(){
         return $this->hasMany('App\DealerEvaluation','dealer_id');
