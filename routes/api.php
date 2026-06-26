@@ -384,19 +384,27 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			});
 
 			Route::group(['prefix' => 'work-notes'], function () {
- 
+
 			    // GET  /api/work-notes
-			    // GET  /api/work-notes?month=4&year=2026
-			    // GET  /api/work-notes?month=4&year=2026&user_id=12
-			    Route::get('/',  'WorkNotesController@index');
-			 
-			    // POST /api/work-notes   (multipart/form-data)
-			    Route::post('/', 'WorkNotesController@store');
+			    // GET  /api/work-notes?month=4&year=2026&user_id=12&related_to=dealer&dealer_id=16
+			    Route::get('/',        'WorkNotesController@index');
 
-			    Route::delete('{id}', 'WorkNotesController@destroy');
-			 
+			    // POST /api/work-notes  (multipart/form-data)
+			    Route::post('/',       'WorkNotesController@store');
+
+			    // GET  /api/work-notes/{id}
+			    Route::get('{id}',     'WorkNotesController@show');
+
+			    // POST /api/work-notes/{id}  (use POST + _method=PUT for multipart file uploads)
+			    Route::post('{id}',    'WorkNotesController@update');
+
+			    // DELETE /api/work-notes/{id}
+			    Route::delete('{id}',  'WorkNotesController@destroy');
+
+			    // DELETE /api/work-notes/{id}/attachments/{attachmentId}
+			    Route::delete('{id}/attachments/{attachmentId}', 'WorkNotesController@destroyAttachment');
+
 			});
-
 
 			// ── Dealer Evaluation ─────────────────────────────────────────────────
 	        Route::get('/dealer-evaluation-questions','NewDealerEvaluationController@formQuestions');            // List
