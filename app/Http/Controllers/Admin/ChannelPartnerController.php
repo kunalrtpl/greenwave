@@ -402,7 +402,7 @@ class ChannelPartnerController extends Controller
         $dealer->save();
 
         $onboardingLink = url('/onboarding/' . $token);
-        $dealer->email = "mkanum786@gmail.com";
+        //$dealer->email = "mkanum786@gmail.com";
         // Send the email to the dealer
         // Note: Adjust `$dealer->email` if your column name is different
         EmailService::send('dealer_onboarding_link', [
