@@ -680,7 +680,7 @@ class ChannelPartnerController extends Controller
 
         // Prefer the dealer's real email; if blank, the template recipients are used.
         $to = !empty($dealer->email) ? $dealer->email : null;
-        $to =  "mkanum786@gmail.com";
+        //$to =  "mkanum786@gmail.com";
         EmailService::send('dealer_confirmed_dealer', [
             'dealer'       => $dealer->toArray(),
             'partnerType'  => $partnerType,        // "Primary Dealer" | "Sub Dealer"
