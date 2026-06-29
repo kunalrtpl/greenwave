@@ -585,9 +585,9 @@
                                     <a data-status="adjustment" class="btn btn-sm btn-primary poAdjustment" href="javascript:;" style="margin-right: 8px; border-radius: 6px;">
                                         <i class="fa fa-sliders"></i> Adjust Order
                                     </a>
-                                    <a data-status="cancel" class="btn btn-sm btn-danger poAdjustment" href="javascript:;" style="border-radius: 6px;">
+                                    <!-- <a data-status="cancel" class="btn btn-sm btn-danger poAdjustment" href="javascript:;" style="border-radius: 6px;">
                                         <i class="fa fa-times"></i> Cancel Order
-                                    </a>
+                                    </a> -->
                                 </div>
                                 @endif
                             @endif
@@ -664,7 +664,7 @@
                                     <div>
                                         <span class="product-name">
                                             <i class="fa fa-cube" style="margin-right: 8px; opacity: 0.7;"></i>
-                                            {{$orderItemInfo['product']['product_name']}}
+                                            {{$orderItemInfo['product']['product_name']}} ({{$orderItemInfo['product']['product_code']}})
                                         </span>
                                         <!-- Linked Badge -->
                                         @if(in_array($orderItemInfo['product']['id'],$linkedProducts))

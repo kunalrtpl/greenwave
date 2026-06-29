@@ -1663,7 +1663,7 @@ class OrdersController extends Controller
         }
 
         //$dispatchedDealer->email = "mkanum786@gmail.com";
-
+        $emails = getDealerTemplateRecipients('po_dealer_dispatched', $dispatchedDealer);
         // ── Send dispatch email — dealer orders only ─────────────────────
         if ($isDealerOrder && $dispatchedDealer && !empty($dispatchedDealer->email)) {
             \App\Services\EmailService::send(
@@ -1677,7 +1677,7 @@ class OrdersController extends Controller
                     'dispatch_date'    => \Carbon\Carbon::parse($data['dispatch_date'])->format('d M Y'),
                     'dispatched_by'    => auth()->user()->name,
                 ],
-                $dispatchedDealer->email
+                $emails
             );
         }
         // ── End email ─────────────────────────────────────────────────────

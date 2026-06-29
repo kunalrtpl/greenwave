@@ -7,6 +7,13 @@
 </head>
 <body style="margin:0;padding:0;background-color:#f4f6f8;font-family:Arial,Helvetica,sans-serif;">
 
+@php
+    // Derive partner type from the dealer record (no controller change needed).
+    // Falls back to an explicit $isSubDealer flag if the caller provides one.
+    $isSub = $isSubDealer ?? (($dealer['dealer_type'] ?? 'dealer') === 'sub dealer');
+    $partnerLabel = $isSub ? 'Sub-Dealer' : 'Channel Partner';
+@endphp
+
 <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f6f8">
 <tr>
 <td align="center" style="padding:30px 16px;">
@@ -46,7 +53,10 @@
             <td style="padding:16px 18px;">
               <p style="margin:0 0 6px 0;font-size:14px;font-weight:bold;color:#1b5e20;font-family:Arial,Helvetica,sans-serif;">Hello {{ $dealer['business_name'] ?? 'Partner' }},</p>
               <p style="margin:0;font-size:13px;color:#33691e;line-height:1.8;font-family:Arial,Helvetica,sans-serif;">
-                We are excited to proceed with your registration. Please click the button below to access your secure onboarding portal and complete your business profile.
+                Thank you for your interest in partnering with Greenwave Global Limited.
+                Based on our discussions and internal evaluation, your organization has been approved
+                for onboarding as a <strong>{{ $partnerLabel }}</strong>. Please review, update (where permitted),
+                complete and submit this form along with the required documents.
               </p>
             </td>
           </tr>

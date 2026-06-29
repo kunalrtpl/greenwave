@@ -269,6 +269,33 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::match(['get', 'post'], 'delete-scheduler/{id}','ExecutiveController@deleteScheduler');
 
 
+			Route::group(['prefix' => 'v2/schedulers'], function () {
+
+			    // GET  /api/v2/schedulers
+			    // GET  /api/v2/schedulers?date=2026-06-26
+			    // GET  /api/v2/schedulers?date=2026-06-26&user_id=5&status=Open&related_to=dealer
+			    Route::get('/',                        'SchedulersController@index');
+
+			    // POST /api/v2/schedulers
+			    Route::post('/',                       'SchedulersController@store');
+
+			    // GET  /api/v2/schedulers/{id}
+			    Route::get('{id}',                     'SchedulersController@show');
+
+			    // POST /api/v2/schedulers/{id}
+			    Route::post('{id}',                    'SchedulersController@update');
+
+			    // DELETE /api/v2/schedulers/{id}
+			    Route::delete('{id}',                  'SchedulersController@destroy');
+
+			    // POST /api/v2/schedulers/{id}/status
+			    Route::post('{id}/status',             'SchedulersController@updateStatus');
+
+			    // POST /api/v2/schedulers/{id}/next-scheduler
+			    Route::post('{id}/next-scheduler',     'SchedulersController@updateNextScheduler');
+
+			});
+
 			Route::match(['get', 'post'], 'trial-reports','ExecutiveController@trialReports');
 			Route::match(['get', 'post'], 'create-trial-report','ExecutiveController@createTrialReport');
 			Route::match(['get', 'post'], 'edit-trial-report','ExecutiveController@editTrialReport');

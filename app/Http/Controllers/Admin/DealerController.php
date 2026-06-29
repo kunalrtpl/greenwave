@@ -314,7 +314,7 @@ class DealerController extends Controller
 
         // Get already linked IDs using our new relationship
         $selectedProducts = $dealer->products()->pluck('product_id')->toArray();
-        $title = "Link Products - " . $dealer->name;
+        $title = "Link Products - " . $dealer->business_name;
         $dealerid = $id;
 
         return view('admin.dealers.dealer_products', compact(

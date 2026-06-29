@@ -37,7 +37,7 @@ class ChannelPartnerController extends Controller
 
     public function index(Request $request)
     {
-        Session::put('active', 'channel-partners');
+        Session::put('active', 'dealers');
 
         $query = Dealer::whereNull('parent_id')
             ->withCount([

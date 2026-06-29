@@ -41,6 +41,9 @@
                             @if($data['status'] == "adjustment")
                                 <option value="Pending qty adjusted as new order placed by the customer">Pending qty adjusted as new order placed by the customer</option>
                                 <option value="Pending qty adjusted due to difference in packing size">Pending qty adjusted due to difference in packing size</option>
+                                <option value="Order cancelled as payment not received">Order cancelled as payment not received</option>
+                                <option value="Order cancelled as P.O. entered twice">Order cancelled as P.O. entered twice</option>
+                                <option value="Order cancelled as wrong P.O. was entered">Order cancelled as wrong P.O. was entered</option>
                                 <option value="Others">Others</option>
                             @else
                                 <option value="Order cancelled as payment not received">Order cancelled as payment not received</option>

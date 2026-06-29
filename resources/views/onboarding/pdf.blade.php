@@ -1,43 +1,168 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Channel Partner Onboarding Form</title>
+<meta charset="UTF-8"/>
 <style>
-    /* mPDF-friendly CSS — avoid flex/grid; use tables + simple block layout */
-    @page { margin: 18px 16px; }
-    body  { font-family: 'DejaVu Sans', Arial, sans-serif; color: #1b3a2b; font-size: 11px; line-height: 1.5; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
-    .doc-header        { background: #1b5e20; color: #ffffff; padding: 18px 20px; border-radius: 8px; }
-    .doc-title         { font-size: 18px; font-weight: bold; margin: 0; }
-    .doc-sub           { font-size: 11px; color: #c8e6c9; margin-top: 4px; }
-    .doc-meta          { font-size: 10px; color: #a5d6a7; margin-top: 8px; }
+body {
+    font-family: DejaVu Sans, sans-serif;
+    font-size: 9px;
+    color: #1e293b;
+    background: #ffffff;
+    line-height: 1.5;
+}
 
-    .type-pill         { display: inline-block; padding: 3px 12px; border-radius: 12px; font-size: 10px;
-                         font-weight: bold; color: #ffffff; text-transform: uppercase; letter-spacing: .5px; }
+/* ═══════════════════════════════════════
+   HEADER
+═══════════════════════════════════════ */
+.hdr-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 18px;
+}
+.hdr-left  { vertical-align: middle; text-align: left; }
+.hdr-right { vertical-align: middle; text-align: right; }
 
-    .section-title     { font-size: 12px; font-weight: bold; color: #1b5e20; text-transform: uppercase;
-                         letter-spacing: .6px; border-bottom: 2px solid #43a047; padding-bottom: 5px;
-                         margin: 22px 0 10px; }
+.logo-img { width: 150px; height: auto; }
 
-    table.info         { width: 100%; border-collapse: collapse; border: 1px solid #c8e6c9; }
-    table.info td      { padding: 8px 12px; border-bottom: 1px solid #e8f5e9; vertical-align: top; }
-    table.info tr:last-child td { border-bottom: none; }
-    td.label           { width: 34%; background: #f1f8e9; color: #558b2f; font-weight: bold;
-                         font-size: 10px; text-transform: uppercase; letter-spacing: .3px; }
-    td.value           { color: #1b3a2b; font-size: 11px; }
-    td.value strong    { color: #1b5e20; }
+.hdr-doc-type {
+    font-size: 13px;
+    font-weight: bold;
+    color: #334155;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 4px;
+}
+.hdr-date {
+    font-size: 8px;
+    color: #64748b;
+    margin-top: 2px;
+}
+.hdr-pill {
+    display: inline-block;
+    background: #1a7f3c;
+    color: #ffffff;
+    border-radius: 3px;
+    padding: 2px 9px;
+    font-size: 8px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    margin-top: 5px;
+}
+.hdr-pill.sub { background: #d2691e; }
 
-    .docs td           { padding: 8px 12px; border-bottom: 1px solid #e8f5e9; font-size: 11px; }
-    .ok                { color: #2e7d32; font-weight: bold; }
-    .no                { color: #9e9e9e; }
+/* ═══════════════════════════════════════
+   SECTION HEADER BAR
+═══════════════════════════════════════ */
+.section-bar {
+    background: #1a7f3c;
+    color: #ffffff;
+    font-size: 8px;
+    font-weight: bold;
+    padding: 7px 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
 
-    .declaration       { margin-top: 22px; background: #f1f8e9; border: 1px solid #c5e1a5;
-                         border-left: 4px solid #558b2f; border-radius: 6px; padding: 12px 14px;
-                         font-size: 10px; color: #33691e; line-height: 1.6; }
+/* ═══════════════════════════════════════
+   DATA ROWS
+═══════════════════════════════════════ */
+.main-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 14px;
+    /* prevents mPDF from breaking the section across multiple pages */
+    page-break-inside: avoid;
+}
 
-    .footer            { margin-top: 26px; text-align: center; font-size: 9px; color: #9e9e9e;
-                         border-top: 1px solid #e0e0e0; padding-top: 10px; }
+.label-cell {
+    width: 40%;
+    padding: 8px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #475569;
+    font-weight: bold;
+    font-size: 8px;
+    vertical-align: top;
+    background: #f8fafc;
+}
+
+.value-cell {
+    padding: 8px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #1e293b;
+    font-size: 8.5px;
+    vertical-align: top;
+    background: #ffffff;
+}
+
+.firm-name {
+    font-weight: bold;
+    color: #0f172a;
+}
+
+/* ═══════════════════════════════════════
+   CHIPS / STATUS
+═══════════════════════════════════════ */
+.chip-lead {
+    display: inline-block;
+    background: #e8f5e9;
+    color: #1a7f3c;
+    border: 1px solid #a5d6a7;
+    border-radius: 3px;
+    padding: 2px 8px;
+    font-size: 8px;
+    font-weight: bold;
+}
+
+.doc-ok {
+    color: #1a7f3c;
+    font-weight: bold;
+    font-size: 8.5px;
+}
+.doc-no {
+    color: #94a3b8;
+    font-style: italic;
+    font-size: 8px;
+}
+
+.not-provided {
+    color: #94a3b8;
+    font-style: italic;
+    font-size: 8px;
+}
+
+/* ═══════════════════════════════════════
+   DECLARATION
+═══════════════════════════════════════ */
+.declaration {
+    margin-top: 4px;
+    margin-bottom: 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #1a7f3c;
+    padding: 9px 12px;
+    font-size: 8px;
+    color: #475569;
+    line-height: 1.6;
+    page-break-inside: avoid;
+}
+.declaration strong { color: #334155; }
+
+/* ═══════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════ */
+.footer-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    border-top: 1px solid #cbd5e1;
+    padding-top: 6px;
+}
+.footer-left  { font-size: 7.5px; font-weight: bold; color: #334155; }
+.footer-mid   { font-size: 7px; color: #64748b; text-align: center; }
+.footer-right { font-size: 7px; color: #64748b; text-align: right; }
 </style>
 </head>
 <body>
@@ -47,7 +172,6 @@
     $d           = is_array($dealer ?? null) ? (object) $dealer : ($dealer ?? null);
     $isSub       = $isSubDealer ?? (($d->dealer_type ?? '') === 'sub dealer');
     $pTypeLabel  = $isSub ? 'Sub Dealer' : 'Primary Dealer';
-    $pTypeColor  = $isSub ? '#d2691e' : '#6a1b9a';
     $bizName     = $d->business_name ?? ($d->name ?? 'N/A');
     $shortName   = $d->short_name ?? null;
     $contactName = $d->name ?? '—';
@@ -68,145 +192,154 @@
     ];
 @endphp
 
-{{-- ════════════ HEADER ════════════ --}}
-<table width="100%" cellpadding="0" cellspacing="0" border="0">
+{{-- ── HEADER ── --}}
+<table class="hdr-table" cellspacing="0" cellpadding="0">
     <tr>
-        <td>
-            <div class="doc-header">
-                <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                    <tr>
-                        <td>
-                            <p class="doc-title">Channel Partner Onboarding Form</p>
-                            <div class="doc-sub">Greenwave System</div>
-                            <div class="doc-meta">Submitted on {{ $submitted }}</div>
-                        </td>
-                        <td align="right" valign="top">
-                            <span class="type-pill" style="background: {{ $pTypeColor }};">{{ $pTypeLabel }}</span>
-                        </td>
-                    </tr>
-                </table>
-            </div>
+        <td class="hdr-left">
+            <img src="https://g2app.in/public/images/greenwave-logo-1-275-sl.jpg" class="logo-img" />
+        </td>
+        <td class="hdr-right">
+            <div class="hdr-doc-type">Channel Partner Onboarding</div>
+            <div class="hdr-date"><strong>Submitted On:</strong> {{ $submitted }}</div>
+            <span class="hdr-pill {{ $isSub ? 'sub' : '' }}">{{ $pTypeLabel }}</span>
         </td>
     </tr>
 </table>
 
-{{-- ════════════ PARTNER DETAILS ════════════ --}}
-<div class="section-title">Partner Details</div>
-<table class="info" cellpadding="0" cellspacing="0">
+{{-- ── SECTION A — PARTNER DETAILS ── --}}
+<table class="main-table" cellspacing="0" cellpadding="0">
     <tr>
-        <td class="label">Business Name</td>
-        <td class="value"><strong>{{ $bizName }}</strong>@if($shortName) ({{ $shortName }})@endif</td>
+        <td colspan="2" class="section-bar">Section A &ndash; Partner Details</td>
     </tr>
     <tr>
-        <td class="label">Partner Type</td>
-        <td class="value">{{ $pTypeLabel }}</td>
+        <td class="label-cell">Business Name</td>
+        <td class="value-cell firm-name">{{ $bizName }}@if($shortName) ({{ $shortName }})@endif</td>
+    </tr>
+    <tr>
+        <td class="label-cell">Partner Type</td>
+        <td class="value-cell">{{ $pTypeLabel }}</td>
     </tr>
     @if($isSub && !empty($linkedDealer))
     <tr>
-        <td class="label">Parent Dealer</td>
-        <td class="value">{{ $linkedDealer }}</td>
+        <td class="label-cell">Parent Dealer</td>
+        <td class="value-cell">{{ $linkedDealer }}</td>
     </tr>
     @endif
     <tr>
-        <td class="label">Contact Person</td>
-        <td class="value">{{ $contactName }}@if($designation) — {{ $designation }}@endif</td>
+        <td class="label-cell">Contact Person</td>
+        <td class="value-cell">{{ $contactName }}@if($designation) &mdash; {{ $designation }}@endif</td>
     </tr>
     <tr>
-        <td class="label">City</td>
-        <td class="value">{{ $city }}</td>
+        <td class="label-cell">Mobile Number</td>
+        <td class="value-cell">{{ $ownerMobile ?: '—' }}</td>
     </tr>
-    @if($ownerMobile)
     <tr>
-        <td class="label">Mobile</td>
-        <td class="value">{{ $ownerMobile }}</td>
+        <td class="label-cell">Email</td>
+        <td class="value-cell">{{ $emailAddr ?: '—' }}</td>
     </tr>
-    @endif
-    @if($emailAddr)
     <tr>
-        <td class="label">Email</td>
-        <td class="value">{{ $emailAddr }}</td>
+        <td class="label-cell">City</td>
+        <td class="value-cell">{{ $city }}</td>
     </tr>
-    @endif
     <tr>
-        <td class="label">Territory</td>
-        <td class="value">{{ $terr ?: '—' }}</td>
+        <td class="label-cell">Territory Covered</td>
+        <td class="value-cell">
+            <span class="chip-lead">{{ $terr ?: '—' }}</span>
+        </td>
     </tr>
 </table>
 
-{{-- ════════════ BUSINESS & TAX (primary only) ════════════ --}}
+{{-- ── SECTION B — BUSINESS & TAX (primary only) ── --}}
 @if(!$isSub)
-<div class="section-title">Business &amp; Tax</div>
-<table class="info" cellpadding="0" cellspacing="0">
+<table class="main-table" cellspacing="0" cellpadding="0">
     <tr>
-        <td class="label">Constitution</td>
-        <td class="value">{{ $d->business_constitution ?? '—' }}</td>
+        <td colspan="2" class="section-bar">Section B &ndash; Business &amp; Tax</td>
     </tr>
     <tr>
-        <td class="label">GST No.</td>
-        <td class="value"><strong>{{ $d->gst_no ?? '—' }}</strong></td>
+        <td class="label-cell">Business Constitution</td>
+        <td class="value-cell">{{ $d->business_constitution ?? '—' }}</td>
     </tr>
     <tr>
-        <td class="label">PAN No.</td>
-        <td class="value"><strong>{{ $d->pan_no ?? '—' }}</strong></td>
+        <td class="label-cell">GST No.</td>
+        <td class="value-cell firm-name">{{ $d->gst_no ?? '—' }}</td>
     </tr>
     <tr>
-        <td class="label">Billing Address</td>
-        <td class="value">{{ $d->billing_address ?? '—' }}</td>
+        <td class="label-cell">PAN No.</td>
+        <td class="value-cell firm-name">{{ $d->pan_no ?? '—' }}</td>
     </tr>
     <tr>
-        <td class="label">Shipping Address</td>
-        <td class="value">{{ $d->shipping_address ?? '—' }}</td>
+        <td class="label-cell">Billing Address</td>
+        <td class="value-cell">{{ $d->billing_address ?? '—' }}</td>
+    </tr>
+    <tr>
+        <td class="label-cell">Shipping Address</td>
+        <td class="value-cell">{{ $d->shipping_address ?? '—' }}</td>
     </tr>
 </table>
 
-{{-- ════════════ ACCOUNTS CONTACT ════════════ --}}
+{{-- ── SECTION C — ACCOUNTS CONTACT ── --}}
 @if(!empty($d->accounts_contact_person) || !empty($d->accounts_mobile) || !empty($d->accounts_email))
-<div class="section-title">Accounts Contact</div>
-<table class="info" cellpadding="0" cellspacing="0">
+<table class="main-table" cellspacing="0" cellpadding="0">
+    <tr>
+        <td colspan="2" class="section-bar">Section C &ndash; Accounts Contact</td>
+    </tr>
     @if(!empty($d->accounts_contact_person))
-    <tr><td class="label">Contact Person</td><td class="value">{{ $d->accounts_contact_person }}</td></tr>
+    <tr>
+        <td class="label-cell">Contact Person</td>
+        <td class="value-cell">{{ $d->accounts_contact_person }}</td>
+    </tr>
     @endif
     @if(!empty($d->accounts_mobile))
-    <tr><td class="label">Mobile</td><td class="value">{{ $d->accounts_mobile }}</td></tr>
+    <tr>
+        <td class="label-cell">Mobile</td>
+        <td class="value-cell">{{ $d->accounts_mobile }}</td>
+    </tr>
     @endif
     @if(!empty($d->accounts_email))
-    <tr><td class="label">Email</td><td class="value">{{ $d->accounts_email }}</td></tr>
+    <tr>
+        <td class="label-cell">Email</td>
+        <td class="value-cell">{{ $d->accounts_email }}</td>
+    </tr>
     @endif
 </table>
 @endif
 
-{{-- ════════════ BANK DETAILS ════════════ --}}
-<div class="section-title">Bank Details</div>
-<table class="info" cellpadding="0" cellspacing="0">
+{{-- ── SECTION D — BANK DETAILS ── --}}
+<table class="main-table" cellspacing="0" cellpadding="0">
     <tr>
-        <td class="label">Bank Name</td>
-        <td class="value">{{ $d->bank_name ?? '—' }}</td>
+        <td colspan="2" class="section-bar">Section D &ndash; Bank Details</td>
     </tr>
     <tr>
-        <td class="label">Account Name</td>
-        <td class="value">{{ $d->bank_account_name ?? '—' }}</td>
+        <td class="label-cell">Bank Name</td>
+        <td class="value-cell">{{ $d->bank_name ?? '—' }}</td>
     </tr>
     <tr>
-        <td class="label">Account No.</td>
-        <td class="value">{{ $d->bank_account_number ?? '—' }}</td>
+        <td class="label-cell">Account Name</td>
+        <td class="value-cell">{{ $d->bank_account_name ?? '—' }}</td>
     </tr>
     <tr>
-        <td class="label">IFSC</td>
-        <td class="value">{{ $d->bank_ifsc ?? '—' }}</td>
+        <td class="label-cell">Account No.</td>
+        <td class="value-cell">{{ $d->bank_account_number ?? '—' }}</td>
+    </tr>
+    <tr>
+        <td class="label-cell">IFSC</td>
+        <td class="value-cell">{{ $d->bank_ifsc ?? '—' }}</td>
     </tr>
 </table>
 
-{{-- ════════════ DOCUMENTS ════════════ --}}
-<div class="section-title">Uploaded Documents</div>
-<table class="info docs" cellpadding="0" cellspacing="0">
+{{-- ── SECTION E — UPLOADED DOCUMENTS ── --}}
+<table class="main-table" cellspacing="0" cellpadding="0">
+    <tr>
+        <td colspan="2" class="section-bar">Section E &ndash; Uploaded Documents</td>
+    </tr>
     @foreach($docs as $label => $path)
     <tr>
-        <td class="label">{{ $label }}</td>
-        <td class="value">
+        <td class="label-cell">{{ $label }}</td>
+        <td class="value-cell">
             @if(!empty($path))
-                <span class="ok">&#10003; Uploaded</span>
+                <span class="doc-ok">&#10003; Uploaded</span>
             @else
-                <span class="no">&mdash; Not provided</span>
+                <span class="doc-no">&mdash; Not provided</span>
             @endif
         </td>
     </tr>
@@ -214,7 +347,7 @@
 </table>
 @endif
 
-{{-- ════════════ DECLARATION ════════════ --}}
+{{-- ── DECLARATION ── --}}
 <div class="declaration">
     <strong>Declaration:</strong>
     The partner has confirmed that the information provided above is true and correct to the best of
@@ -226,11 +359,14 @@
     @endif
 </div>
 
-{{-- ════════════ FOOTER ════════════ --}}
-<div class="footer">
-    This document was generated automatically by the Greenwave System.<br>
-    {{ $bizName }} &middot; {{ $pTypeLabel }} &middot; Generated {{ \Carbon\Carbon::now()->format('d M Y, h:i A') }}
-</div>
+{{-- ── FOOTER ── --}}
+<table class="footer-table" cellspacing="0" cellpadding="0">
+    <tr>
+        <td class="footer-left">Greenwave &bull; Channel Partner Onboarding</td>
+        <td class="footer-mid">Confidential &mdash; Internal Use Only</td>
+        <td class="footer-right">{{ $submitted }}</td>
+    </tr>
+</table>
 
 </body>
 </html>

@@ -104,7 +104,8 @@ class DealerOtpController extends Controller
             // Send via SMS
             $params            = [];
             $params['mobile']  = $identifier;
-            $params['message'] = "To create your business profile, please share mobile verification code ".$otp." with our representative assisting you. - Greenwave Global Ltd.";
+            $params['message'] = "To create your Business profile, please share Mobile verification code ".$otp." with our representative assisting you.
+Greenwave Global Ltd.";
             sendSms($params);
         }
 

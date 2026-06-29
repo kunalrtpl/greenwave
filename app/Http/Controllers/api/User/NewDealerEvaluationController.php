@@ -574,10 +574,9 @@ class NewDealerEvaluationController extends Controller
             $evaluation = DealerEvaluation::with(['answers', 'attachments'])->find($evaluationId);
             $evaluation->attachments->each(fn($att) => $att->file_url = url('dealer_evaluations/attachments/' . $att->file));
 
-            // Send email only if is_submitted = 1
-            if ((int)$request->input('is_submitted') === 1) {
-                $this->sendEvaluationEmail($dealer, $evaluation, $resp['user'], true);
-            }
+            // Always store the evaluation PDF on the dealer; email only when submitted.
+            $isSubmitted = (int)$request->input('is_submitted') === 1;
+            $this->sendEvaluationEmail($dealer, $evaluation, $resp['user'], true, $isSubmitted);
 
             return response()->json(apiSuccessResponse('Dealer evaluation created successfully.', [
                 'dealer'     => $dealer,
@@ -798,10 +797,9 @@ class NewDealerEvaluationController extends Controller
             $evaluation->attachments->each(fn($att) => $att->file_url = url('dealer_evaluations/attachments/' . $att->file));
             $evaluation->answers_grouped = $this->reshapeAnswersForResponse($evaluation->answers);
 
-            // ── Send email only if is_submitted = 1 ──────────────────────────
-            if ((int)$request->input('is_submitted') === 1) {
-                $this->sendEvaluationEmail($dealer, $evaluation, $resp['user'], false);
-            }
+            // ── Always refresh the stored PDF; email only when submitted ──────
+            $isSubmitted = (int)$request->input('is_submitted') === 1;
+            $this->sendEvaluationEmail($dealer, $evaluation, $resp['user'], false, $isSubmitted);
 
             return response()->json(apiSuccessResponse('Evaluation updated successfully.', [
                 'dealer'     => $dealer,
@@ -907,22 +905,70 @@ class NewDealerEvaluationController extends Controller
     // =========================================================================
     // EMAIL + PDF
     // =========================================================================
-        protected function sendEvaluationEmail($dealer, $evaluation, $employee, $isNew = true)
-    {
-        try {
-            $pdfHtml    = $this->buildEvaluationPdfHtml($dealer, $evaluation, $employee);
-            $mpdf       = new Mpdf(['margin_top' => 12, 'margin_bottom' => 12, 'margin_left' => 12, 'margin_right' => 12]);
-            $mpdf->WriteHTML($pdfHtml);
-            $pdfContent = $mpdf->Output('', 'S');
 
-            $pdfDir  = storage_path('app/temp_eval_pdfs');
-            if (!file_exists($pdfDir)) mkdir($pdfDir, 0775, true);
-            $pdfFile = $pdfDir . '/eval_' . $evaluation->id . '_' . time() . '.pdf';
-            file_put_contents($pdfFile, $pdfContent);
+    /**
+     * Build the evaluation PDF once, save a PERMANENT public copy, store its
+     * relative path on the dealer (evaluation_form_pdf), and return the raw
+     * PDF bytes so the caller can also attach it to an email.
+     *
+     * Mirrors the onboarding_form_pdf approach used on the admin side.
+     *
+     * @return string  Raw PDF content (binary string)
+     */
+    protected function storeEvaluationPdf($dealer, $evaluation, $employee)
+    {
+        // 1. Render HTML → PDF bytes via mPDF
+        $pdfHtml = $this->buildEvaluationPdfHtml($dealer, $evaluation, $employee);
+        $mpdf    = new Mpdf(['margin_top' => 12, 'margin_bottom' => 12, 'margin_left' => 12, 'margin_right' => 12]);
+        $mpdf->WriteHTML($pdfHtml);
+        $pdfContent = $mpdf->Output('', 'S'); // return as string
+
+        // 2. Save a permanent public copy (so admin panel can link to it)
+        $publicDir = public_path('uploads/evaluation/' . $dealer->id);
+        if (!is_dir($publicDir)) {
+            mkdir($publicDir, 0775, true);
+        }
+        $relative = 'uploads/evaluation/' . $dealer->id . '/evaluation-form.pdf';
+        file_put_contents(public_path($relative), $pdfContent);
+
+        // 3. Persist the path on the dealer
+        $dealer->evaluation_form_pdf = $relative;
+        $dealer->save();
+
+        return $pdfContent;
+    }
+
+    /**
+     * @param Dealer            $dealer
+     * @param DealerEvaluation  $evaluation
+     * @param array             $employee
+     * @param bool              $isNew
+     * @param bool              $sendEmail  When true, also email the employee with the PDF attached.
+     */
+    protected function sendEvaluationEmail($dealer, $evaluation, $employee, $isNew = true, $sendEmail = true)
+    {
+        $tempPdfFile = null;
+
+        try {
+            // Build PDF once, save permanent copy + set evaluation_form_pdf, get bytes back
+            $pdfContent = $this->storeEvaluationPdf($dealer, $evaluation, $employee);
+
+            // Nothing more to do if we're not emailing (draft save)
+            if (!$sendEmail) {
+                return;
+            }
+
+            // Temp copy for the email attachment
+            $pdfDir = storage_path('app/temp_eval_pdfs');
+            if (!file_exists($pdfDir)) {
+                mkdir($pdfDir, 0775, true);
+            }
+            $tempPdfFile = $pdfDir . '/eval_' . $evaluation->id . '_' . time() . '.pdf';
+            file_put_contents($tempPdfFile, $pdfContent);
 
             // Send only to employee — NOT to dealer
             $emailTo = array_filter([$employee['email'] ?? null]);
-            //$emailTo =  array('mkanum786@gmail.com');
+            //$emailTo = array('mkanum786@gmail.com');
             if (!empty($emailTo)) {
                 EmailService::send('dealer_evaluation_employee', [
                     'dealer'       => $dealer->toArray(),
@@ -931,14 +977,17 @@ class NewDealerEvaluationController extends Controller
                     'submittedBy'  => $employee,
                     'submittedAt'  => Carbon::now()->format('d M Y, h:i A'),
                     'is_new'       => $isNew,
-                    '_attachments' => [$pdfFile],
+                    '_attachments' => [$tempPdfFile],
                 ], $emailTo);
             }
 
-            if (file_exists($pdfFile)) unlink($pdfFile);
-
         } catch (\Exception $e) {
             \Log::error('Dealer evaluation email failed: ' . $e->getMessage());
+        } finally {
+            // Always remove the temp attachment copy (permanent copy stays)
+            if (!empty($tempPdfFile) && file_exists($tempPdfFile)) {
+                @unlink($tempPdfFile);
+            }
         }
     }
 

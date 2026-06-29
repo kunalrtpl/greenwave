@@ -84,7 +84,7 @@
 @php
     // Normalise inputs (dealer may be array or object depending on caller)
     $d            = is_array($dealer ?? null) ? (object) $dealer : ($dealer ?? null);
-    $isSub        = $isSubDealer ?? false;
+    $isSub         = $isSubDealer ?? false;
     $pTypeLabel   = $partnerType ?? ($isSub ? 'Sub Dealer' : 'Primary Dealer');
     $pTypeColor   = $isSub ? '#d2691e' : '#6a1b9a';
     $bizName      = $d->business_name ?? ($d->name ?? 'N/A');
@@ -101,7 +101,7 @@
     // Document checklist (only meaningful for primary dealers)
     $docs = [
         'GST Certificate'  => $d->doc_gst_certificate  ?? null,
-        'PAN Card'         => $d->doc_pan_card          ?? null,
+        'PAN Card'         => $d->doc_pan_card           ?? null,
         'Cancelled Cheque' => $d->doc_cancelled_cheque  ?? null,
         'Visiting Card'    => $d->doc_visiting_card     ?? null,
     ];
@@ -146,11 +146,6 @@
                     <div class="greeting-name">Dear Admin,</div>
                     <div class="greeting-body">
                         <strong>{{ $bizName }}</strong>
-                        @if($isSub)
-                            (a <strong>Sub Dealer</strong>@if(!empty($linkedDealer)) under <strong>{{ $linkedDealer }}</strong>@endif)
-                        @else
-                            (a <strong>Primary Dealer</strong>)
-                        @endif
                         has completed and submitted their onboarding form.
                         The full submission is attached to this email as a PDF.
                         Please review the details in the admin panel and proceed to confirm the partner.
@@ -171,7 +166,6 @@
                         <td class="info-row-label">Business Name</td>
                         <td class="info-row-value">
                             {{ $bizName }}
-                            @if($shortName)<span class="dealer-mobile">{{ $shortName }}</span>@endif
                         </td>
                     </tr>
 
@@ -327,10 +321,13 @@
                     <div class="action-box-body">
                         Open the channel partner in the admin panel to review the submission and confirm.
                     </div>
-                    <table cellpadding="0" cellspacing="0" border="0" align="center">
+                    <!-- Fixed alignment using inline style margin: 0 auto for compatibility -->
+                    <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 0 auto;">
                         <tr>
                             <td class="action-btn">
-                                <a href="{{ $panel }}">🔍 &nbsp;Review in Admin Panel</a>
+                                <a href="{{ $panel }}" style="display:inline-block;background-color:#1a7f3c;color:#ffffff;font-size:16px;font-weight:bold;text-decoration:none;padding:14px 32px;border-radius:6px;font-family:Arial,Helvetica,sans-serif;">
+                                    Review in Admin Panel
+                                </a>
                             </td>
                         </tr>
                     </table>

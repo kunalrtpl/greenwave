@@ -74,10 +74,15 @@ Stage transitions handled via hidden `action` posted to save().
    #cpEdit .cpx-seg input{display:none}
    #cpEdit .cpx-seg label.on{background:#fff;color:var(--gd);box-shadow:0 1px 3px rgba(20,36,28,.1)}
    #cpEdit .cpx-checks{border:1px solid var(--line);border-radius:var(--rs);overflow:hidden;max-width:460px}
+   #cpEdit .cpx-checks.full{max-width:none}
+   #cpEdit .cpx-checks.scroll{max-height:330px;overflow:auto}
    #cpEdit .cpx-crow{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--line2);font-size:13.5px}
    #cpEdit .cpx-crow:last-child{border-bottom:none}
-   #cpEdit .cpx-crow .lbl{font-weight:500}
+   #cpEdit .cpx-crow .lbl{font-weight:500;display:flex;align-items:center;gap:10px}
    #cpEdit .cpx-crow .lbl small{color:var(--muted);font-weight:400}
+   #cpEdit .cpx-crow .lbl .num{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;background:var(--gsoft);color:var(--gd);font-size:11px;font-weight:700;font-family:var(--mono);flex-shrink:0}
+   #cpEdit .cpx-crow .mod-check{width:18px;height:18px;cursor:pointer;accent-color:var(--g);flex-shrink:0}
+   #cpEdit .cpx-checks-head{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:#f4f6f9;border-bottom:1px solid var(--line2);font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
    #cpEdit .cpx-sw{position:relative;width:38px;height:21px;border-radius:30px;background:#cfd8d3;cursor:pointer;transition:.2s;flex-shrink:0}
    #cpEdit .cpx-sw::after{content:"";position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
    #cpEdit .cpx-sw.on{background:var(--g)}
@@ -305,8 +310,12 @@ Stage transitions handled via hidden `action` posted to save().
                      <div class="cpx-lstat cpx-hide" id="linkErr" style="color:#d14343"></div>
                   </div>
                   @else
-                  <div class="cpx-shdr mt">Onboarding Link</div>
-                  <p class="cpx-hint" style="font-size:12.5px">Move this partner to <b>Onboarding</b> (button below) to activate the onboarding link.</p>
+                  @if($stage=="confirmed")
+                     @else
+
+                     <div class="cpx-shdr mt">Onboarding Link</div>
+                     <p class="cpx-hint" style="font-size:12.5px">Move this partner to <b>Onboarding</b> (button below) to activate the onboarding link.</p>
+                     @endif
                   @endif
                </div>
             </div>
@@ -328,9 +337,6 @@ Stage transitions handled via hidden `action` posted to save().
                   <p class="cpx-hint" style="margin:-2px 0 14px"><i class="fa fa-pencil"></i> Edit anything the partner submitted, then Save. (Firm Name, Contact &amp; City are edited in <b>Evaluation Details</b> above.)</p>
                   @if(!$isSubSaved)
                   <div class="cpx-grid">
-                     <div class="cpx-f full"><label>Address</label><input class="cpx-in" name="address" value="{{ $dealerdata['address'] ?? '' }}" placeholder="Full address">
-                        <div class="cpx-err" id="Dealer-address"></div>
-                     </div>
                      <div class="cpx-f"><label>GST No.</label><input class="cpx-in data" name="gst_no" value="{{ $dealerdata['gst_no'] ?? '' }}" placeholder="GST Number"></div>
                      <div class="cpx-f"><label>PAN Number</label><input class="cpx-in data" name="pan_no" value="{{ $dealerdata['pan_no'] ?? '' }}"></div>
                      <div class="cpx-f"><label>Business Constitution</label>
@@ -425,50 +431,23 @@ Stage transitions handled via hidden `action` posted to save().
                   </div>
                   @else
                   <input type="hidden" name="confirmation_visible" value="1">
-                  <div class="cpx-shdr">Activation</div>
-                  <div class="cpx-grid">
-                     <div class="cpx-f">
-                        <label>Authorized Dealer <small style="text-transform:none;color:var(--muted)">(= OTP &amp; Pin Enabled)</small></label>
-                        <div class="cpx-seg">
-                           <label class="{{ (empty($dealerdata) || ($dealerdata['is_authenticated'] ?? 1)==1) ? 'on':'' }}"><input type="radio" name="is_authenticated" value="1" {{ (empty($dealerdata) || ($dealerdata['is_authenticated'] ?? 1)==1) ? 'checked':'' }}><span>Yes</span></label>
-                           <label class="{{ (!empty($dealerdata) && ($dealerdata['is_authenticated'] ?? 1)==0) ? 'on':'' }}"><input type="radio" name="is_authenticated" value="0" {{ (!empty($dealerdata) && ($dealerdata['is_authenticated'] ?? 1)==0) ? 'checked':'' }}><span>No</span></label>
-                        </div>
-                     </div>
-                     <div class="cpx-f">
-                        <label>Account Status</label>
-                        <div class="cpx-seg">
-                           <label class="{{ (empty($dealerdata) || ($dealerdata['status'] ?? 1)==1) ? 'on':'' }}"><input type="radio" name="status" value="1" {{ (empty($dealerdata) || ($dealerdata['status'] ?? 1)==1) ? 'checked':'' }}><span>Active</span></label>
-                           <label class="{{ (!empty($dealerdata) && ($dealerdata['status'] ?? 1)==0) ? 'on':'' }}"><input type="radio" name="status" value="0" {{ (!empty($dealerdata) && ($dealerdata['status'] ?? 1)==0) ? 'checked':'' }}><span>Inactive</span></label>
-                        </div>
-                     </div>
-                     <div class="cpx-f">
-                        <label>Show Class</label>
-                        <select class="cpx-in" name="show_class">
-                           <option value="">— Select —</option>
-                           @foreach(classes() as $pkey => $sc)
-                           <option value="{{ $sc }}"
-                           @if(empty($dealerdata)) @if($pkey==1) selected @endif
-                           @else @if(($dealerdata['show_class'] ?? '')==$sc) selected @endif @endif>{{ $sc }}</option>
-                           @endforeach
-                        </select>
-                     </div>
-                  </div>
+                  {{-- Primary-only confirmation --}}
                   <div id="confPrimary">
-                     <div class="cpx-shdr mt">Deposit &amp; Status</div>
-                     <div class="cpx-grid">
+                     <div class="cpx-shdr">Deposit &amp; Status</div>
+                     <div class="cpx-grid g3">
                         <div class="cpx-f">
                            <label>Security Deposit Status <span class="rq">*</span></label>
-                           <div class="cpx-seg">
+                           <div class="cpx-seg" id="depStatusSeg">
                               <label class="{{ (($dealerdata['security_deposit_status'] ?? '')=='received') ? 'on':'' }}"><input type="radio" name="security_deposit_status" value="received" {{ (($dealerdata['security_deposit_status'] ?? '')=='received') ? 'checked':'' }}><span>Received</span></label>
                               <label class="{{ (($dealerdata['security_deposit_status'] ?? '')=='waived') ? 'on':'' }}"><input type="radio" name="security_deposit_status" value="waived" {{ (($dealerdata['security_deposit_status'] ?? '')=='waived') ? 'checked':'' }}><span>Waived</span></label>
                            </div>
                            <div class="cpx-err" id="Dealer-security_deposit_status"></div>
                         </div>
-                        <div class="cpx-f">
+                        <div class="cpx-f depReceivedOnly">
                            <label>Amount of Deposit Received</label>
                            <div class="cpx-unit"><span class="pre">₹</span><input class="cpx-in data" name="security_deposit_received_amount" value="{{ $dealerdata['security_deposit_received_amount'] ?? '' }}" placeholder="0"></div>
                         </div>
-                        <div class="cpx-f"><label>Deposit Credit Details</label><input class="cpx-in" name="deposit_credit_details" value="{{ $dealerdata['deposit_credit_details'] ?? '' }}" placeholder="Cheque/UTR No. &amp; date"></div>
+                        <div class="cpx-f depReceivedOnly"><label>Deposit Credit Details</label><input class="cpx-in" name="deposit_credit_details" value="{{ $dealerdata['deposit_credit_details'] ?? '' }}" placeholder="Cheque/UTR No. &amp; date"></div>
                      </div>
                      <div class="cpx-shdr mt">Verification Checklist</div>
                      <div class="cpx-checks">
@@ -517,24 +496,41 @@ Stage transitions handled via hidden `action` posted to save().
                      </div>
                      @endif
                   </div>
-                  <div class="cpx-shdr mt">Modules to Access</div>
-                  <div style="border:1px solid var(--line);border-radius:8px;max-height:300px;overflow:auto">
-                     <table class="table table-condensed" style="margin:0">
-                        <thead><tr><th style="width:50px">#</th><th>Module</th><th style="width:70px" class="text-center">Allow</th></tr></thead>
-                        <tbody>
-                           @foreach(app_roles('dealer') as $pkey => $role)
-                           @php $hideRole51 = $role['id']==51 && (empty($dealerdata['id']) || $dealerdata['id']!=3); @endphp
-                           @if(!$hideRole51)
-                           <tr id="role-row-{{ $role['id'] }}">
-                              <td>{{ $pkey+1 }}</td>
-                              <td>{{ $role['name_admin'] }}</td>
-                              <td class="text-center"><input type="checkbox" name="app_roles[]" value="{{ $role['key'] }}" {{ in_array($role['key'],$selAppRoles) ? 'checked':'' }}></td>
-                           </tr>
-                           @endif
-                           @endforeach
-                        </tbody>
-                     </table>
+                  {{-- ── ACTIVATION — moved below Modules; Show Class removed ── --}}
+                  <div class="cpx-shdr mt">Activation</div>
+                  <div class="cpx-grid">
+                     <div class="cpx-f">
+                        <label>OTP &amp; Pin Enabled <small style="text-transform:none;color:var(--muted)"></small></label>
+                        <div class="cpx-seg">
+                           <label class="{{ (empty($dealerdata) || ($dealerdata['is_authenticated'] ?? 1)==1) ? 'on':'' }}"><input type="radio" name="is_authenticated" value="1" {{ (empty($dealerdata) || ($dealerdata['is_authenticated'] ?? 1)==1) ? 'checked':'' }}><span>Yes</span></label>
+                           <label class="{{ (!empty($dealerdata) && ($dealerdata['is_authenticated'] ?? 1)==0) ? 'on':'' }}"><input type="radio" name="is_authenticated" value="0" {{ (!empty($dealerdata) && ($dealerdata['is_authenticated'] ?? 1)==0) ? 'checked':'' }}><span>No</span></label>
+                        </div>
+                     </div>
+                     <div class="cpx-f">
+                        <label>Account Status</label>
+                        <div class="cpx-seg">
+                           <label class="{{ (empty($dealerdata) || ($dealerdata['status'] ?? 1)==1) ? 'on':'' }}"><input type="radio" name="status" value="1" {{ (empty($dealerdata) || ($dealerdata['status'] ?? 1)==1) ? 'checked':'' }}><span>Active</span></label>
+                           <label class="{{ (!empty($dealerdata) && ($dealerdata['status'] ?? 1)==0) ? 'on':'' }}"><input type="radio" name="status" value="0" {{ (!empty($dealerdata) && ($dealerdata['status'] ?? 1)==0) ? 'checked':'' }}><span>Inactive</span></label>
+                        </div>
+                     </div>
                   </div>
+                  {{-- ── MODULES TO ACCESS — identical toggle style to Verification Checklist ── --}}
+                  <div class="cpx-shdr mt">Modules to Access</div>
+                  <div class="cpx-checks full scroll">
+                     <div class="cpx-checks-head"><span>Module</span><span>Allow</span></div>
+                     @foreach(app_roles('dealer') as $pkey => $role)
+                     @php $hideRole51 = $role['id']==51 && (empty($dealerdata['id']) || $dealerdata['id']!=3); @endphp
+                     @if(!$hideRole51)
+                     @php $modOn = in_array($role['key'],$selAppRoles); @endphp
+                     <div class="cpx-crow" id="role-row-{{ $role['id'] }}">
+                        <div class="lbl"><span class="num">{{ $pkey+1 }}</span> {{ $role['name_admin'] }}</div>
+                        <div class="cpx-sw {{ $modOn ? 'on':'' }}" onclick="cpModToggle(this)"></div>
+                        <input type="checkbox" class="mod-check cpx-hide" name="app_roles[]" value="{{ $role['key'] }}" {{ $modOn ? 'checked':'' }}>
+                     </div>
+                     @endif
+                     @endforeach
+                  </div>
+                  
                   @endif
                </div>
             </div>
@@ -577,7 +573,11 @@ Stage transitions handled via hidden `action` posted to save().
        if(!isSub){ $('[name=linked_dealer_id]').val('').trigger('change'); }
        [28,32,33,34,35,40,50,52].forEach(function(rid){
          var row = document.getElementById('role-row-'+rid); if(!row) return;
-         if(isSub){ row.style.display='none'; var cb=row.querySelector('input[type=checkbox]'); if(cb) cb.checked=false; }
+         if(isSub){
+           row.style.display='none';
+           var cb=row.querySelector('input.mod-check'); if(cb) cb.checked=false;
+           var sw=row.querySelector('.cpx-sw'); if(sw) sw.classList.remove('on');
+         }
          else row.style.display='';
        });
      }
@@ -592,6 +592,14 @@ Stage transitions handled via hidden `action` posted to save().
        if(mul>0) $('#credit_allowed').val((sec*mul).toFixed(2));
      });
      $('.cpx-select2').select2({ width:'resolve' });
+
+     // Show Amount + Deposit Credit Details only when "Received" is selected
+     function refreshDepStatus(){
+       var val = $('input[name=security_deposit_status]:checked').val();
+       $('.depReceivedOnly').toggle(val === 'received');
+     }
+     $('input[name=security_deposit_status]').on('change', refreshDepStatus);
+     refreshDepStatus();
      window.cpSubmit = function(action){
        $('#cpAction').val(action);
        $('.cpx-err').hide().text('');
@@ -639,6 +647,12 @@ Stage transitions handled via hidden `action` posted to save().
      el.classList.toggle('on');
      var key=el.getAttribute('data-check');
      document.getElementById('hid_'+key).value = el.classList.contains('on') ? 1 : 0;
+   }
+   // module toggle → drive the row's hidden app_roles[] checkbox
+   function cpModToggle(el){
+     el.classList.toggle('on');
+     var cb = el.parentNode.querySelector('input.mod-check');
+     if(cb) cb.checked = el.classList.contains('on');
    }
    // show chosen filename under each document upload input
    function cpFileName(input, targetId){
