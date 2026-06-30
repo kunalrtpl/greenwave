@@ -24,51 +24,28 @@ class SchedulersController extends Controller
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
     /**
-     * Resolve which FK column to populate based on related_to value.
-     * All other FK columns are set to null to keep data clean.
+     * Resolve FK columns independently — whichever keys are present
+     * and non-empty in the payload get saved. related_to is just free text
+     * and has no bearing on which FK gets set.
      */
-    private function resolveForeignKeys(string $relatedTo, array $data): array
+    private function resolveForeignKeys(array $data): array
     {
-        $dealerId                  = null;
-        $customerId                = null;
-        $customerRegisterRequestId = null;
-        $userDvrId                 = null;
-        $otherCustomerName         = null;
+        return [
+            'dealerId'                  => isset($data['dealer_id']) && !empty($data['dealer_id'])
+                ? (int) $data['dealer_id'] : null,
 
-        switch ($relatedTo) {
-            case 'dealer':
-                $dealerId = isset($data['dealer_id']) ? (int) $data['dealer_id'] : null;
-                break;
+            'customerId'                => isset($data['customer_id']) && !empty($data['customer_id'])
+                ? (int) $data['customer_id'] : null,
 
-            case 'customer':
-                $customerId = isset($data['customer_id']) ? (int) $data['customer_id'] : null;
-                break;
+            'customerRegisterRequestId' => isset($data['customer_register_request_id']) && !empty($data['customer_register_request_id'])
+                ? (int) $data['customer_register_request_id'] : null,
 
-            case 'customer_register_request':
-                $customerRegisterRequestId = isset($data['customer_register_request_id'])
-                    ? (int) $data['customer_register_request_id']
-                    : null;
-                break;
+            'userDvrId'                 => isset($data['user_dvr_id']) && !empty($data['user_dvr_id'])
+                ? (int) $data['user_dvr_id'] : null,
 
-            case 'user_dvr':
-                $userDvrId = isset($data['user_dvr_id']) ? (int) $data['user_dvr_id'] : null;
-                break;
-
-            default:
-                // "Other Important Activity" or any free-text type
-                $otherCustomerName = isset($data['other_customer_name'])
-                    ? $data['other_customer_name']
-                    : null;
-                break;
-        }
-
-        return compact(
-            'dealerId',
-            'customerId',
-            'customerRegisterRequestId',
-            'userDvrId',
-            'otherCustomerName'
-        );
+            'otherCustomerName'         => isset($data['other_customer_name']) && !empty($data['other_customer_name'])
+                ? $data['other_customer_name'] : null,
+        ];
     }
 
     /**
@@ -132,7 +109,7 @@ class SchedulersController extends Controller
      * Query params (all optional):
      *   date        string  YYYY-MM-DD  — filter by date; omit to get unscheduled
      *   user_id     integer             — defaults to authenticated user
-     *   related_to  string              — filter by related_to type
+     *   related_to  string              — filter by related_to text (LIKE match not needed, exact)
      *   status      string              — Open | Pending | Done | Cancelled
      */
     public function index(Request $request)
@@ -182,12 +159,12 @@ class SchedulersController extends Controller
      * Content-Type: application/json  or  multipart/form-data
      *
      * Fields:
-     *   related_to                    string   required — dealer | customer | customer_register_request | user_dvr | <free text>
-     *   dealer_id                     integer  required when related_to = dealer
-     *   customer_id                   integer  required when related_to = customer
-     *   customer_register_request_id  integer  required when related_to = customer_register_request
-     *   user_dvr_id                   integer  required when related_to = user_dvr
-     *   other_customer_name           string   optional — free-text name for other types
+     *   related_to                    string   optional — plain free text, no validation tied to it
+     *   dealer_id                     integer  optional — saved if present & non-empty
+     *   customer_id                   integer  optional — saved if present & non-empty
+     *   customer_register_request_id  integer  optional — saved if present & non-empty
+     *   user_dvr_id                   integer  optional — saved if present & non-empty
+     *   other_customer_name           string   optional — saved if present & non-empty
      *   previous_scheduler_id         integer  optional
      *   subject                       string   optional
      *   scheduler_date                string   YYYY-MM-DD  required
@@ -203,9 +180,9 @@ class SchedulersController extends Controller
             return response()->json(apiErrorResponse("Unauthorized. Please try again after sometime."), 422);
         }
 
-        // ── Base rules ────────────────────────────────────────────────────────
+        // ── Validation — no conditional FK requirements tied to related_to ────
         $rules = [
-            'related_to'                   => 'required|string|max:100',
+            'related_to'                   => 'nullable|string|max:100',
             'dealer_id'                    => 'nullable|integer|exists:dealers,id',
             'customer_id'                  => 'nullable|integer|exists:customers,id',
             'customer_register_request_id' => 'nullable|integer|exists:customer_register_requests,id',
@@ -219,19 +196,6 @@ class SchedulersController extends Controller
             'status'                       => 'nullable|string|in:Open,Pending,Done,Cancelled',
         ];
 
-        // ── Conditional FK requirement ────────────────────────────────────────
-        $relatedTo = strtolower(trim($request->input('related_to', '')));
-
-        if ($relatedTo === 'dealer') {
-            $rules['dealer_id'] = 'required|integer|exists:dealers,id';
-        } elseif ($relatedTo === 'customer') {
-            $rules['customer_id'] = 'required|integer|exists:customers,id';
-        } elseif ($relatedTo === 'customer_register_request') {
-            $rules['customer_register_request_id'] = 'required|integer|exists:customer_register_requests,id';
-        } elseif ($relatedTo === 'user_dvr') {
-            $rules['user_dvr_id'] = 'required|integer|exists:user_dvrs,id';
-        }
-
         $validator = \Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
@@ -239,7 +203,7 @@ class SchedulersController extends Controller
         }
 
         $data = $request->all();
-        $fks  = $this->resolveForeignKeys($relatedTo, $data);
+        $fks  = $this->resolveForeignKeys($data);
 
         $scheduler = UserScheduler::create([
             'user_id'                      => $resp['user']['id'],
@@ -290,7 +254,8 @@ class SchedulersController extends Controller
     /**
      * POST /api/v2/schedulers/{id}
      * All fields optional — only send what needs changing.
-     * If related_to is sent, all FK columns are re-resolved and reset cleanly.
+     * Each FK key is saved independently if present & non-empty in payload.
+     * Sending an empty value for an FK key clears it (sets to null).
      */
     public function update(Request $request, $id)
     {
@@ -310,7 +275,7 @@ class SchedulersController extends Controller
 
         // ── Validation ────────────────────────────────────────────────────────
         $rules = [
-            'related_to'                   => 'sometimes|string|max:100',
+            'related_to'                   => 'nullable|string|max:100',
             'dealer_id'                    => 'nullable|integer|exists:dealers,id',
             'customer_id'                  => 'nullable|integer|exists:customers,id',
             'customer_register_request_id' => 'nullable|integer|exists:customer_register_requests,id',
@@ -324,40 +289,23 @@ class SchedulersController extends Controller
             'status'                       => 'nullable|string|in:Open,Pending,Done,Cancelled',
         ];
 
-        $relatedTo = strtolower(trim($request->input('related_to', $scheduler->related_to ?? '')));
-
-        if ($request->has('related_to')) {
-            if ($relatedTo === 'dealer') {
-                $rules['dealer_id'] = 'required|integer|exists:dealers,id';
-            } elseif ($relatedTo === 'customer') {
-                $rules['customer_id'] = 'required|integer|exists:customers,id';
-            } elseif ($relatedTo === 'customer_register_request') {
-                $rules['customer_register_request_id'] = 'required|integer|exists:customer_register_requests,id';
-            } elseif ($relatedTo === 'user_dvr') {
-                $rules['user_dvr_id'] = 'required|integer|exists:user_dvrs,id';
-            }
-        }
-
         $validator = \Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
             return response()->json(apiErrorResponse($validator->errors()->first()), 422);
         }
 
-        // ── Build update payload ──────────────────────────────────────────────
+        $data       = $request->all();
         $updateData = [];
 
-        if ($request->has('related_to')) {
-            $data = $request->all();
-            $fks  = $this->resolveForeignKeys($relatedTo, $data);
+        if ($request->has('related_to'))                   $updateData['related_to']                   = $request->input('related_to');
 
-            $updateData['related_to']                   = $request->input('related_to');
-            $updateData['dealer_id']                    = $fks['dealerId'];
-            $updateData['customer_id']                  = $fks['customerId'];
-            $updateData['customer_register_request_id'] = $fks['customerRegisterRequestId'];
-            $updateData['user_dvr_id']                  = $fks['userDvrId'];
-            $updateData['other_customer_name']          = $fks['otherCustomerName'];
-        }
+        // Each FK key independently — present in payload → save/clear it
+        if ($request->has('dealer_id'))                     $updateData['dealer_id']                    = !empty($data['dealer_id']) ? (int) $data['dealer_id'] : null;
+        if ($request->has('customer_id'))                   $updateData['customer_id']                  = !empty($data['customer_id']) ? (int) $data['customer_id'] : null;
+        if ($request->has('customer_register_request_id'))  $updateData['customer_register_request_id'] = !empty($data['customer_register_request_id']) ? (int) $data['customer_register_request_id'] : null;
+        if ($request->has('user_dvr_id'))                   $updateData['user_dvr_id']                  = !empty($data['user_dvr_id']) ? (int) $data['user_dvr_id'] : null;
+        if ($request->has('other_customer_name'))           $updateData['other_customer_name']          = !empty($data['other_customer_name']) ? $data['other_customer_name'] : null;
 
         if ($request->has('previous_scheduler_id')) $updateData['previous_scheduler_id'] = $request->input('previous_scheduler_id');
         if ($request->has('subject'))               $updateData['subject']               = $request->input('subject');
