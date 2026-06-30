@@ -80,8 +80,8 @@ class DailyActivityController extends Controller
         // ── 2. Work Notes ─────────────────────────────────────────────────────
         $workNotes = WorkNote::with(['attachments'])
             ->where('user_id', $userId)
-            ->whereDate('request_date', $date)
-            ->orderBy('request_date', 'DESC')
+            ->whereDate('created_at', $date)
+            ->orderBy('created_at', 'DESC')
             ->orderBy('id', 'DESC')
             ->get();
         // Append full URL to each attachment
