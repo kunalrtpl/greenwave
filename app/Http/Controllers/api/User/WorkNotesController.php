@@ -22,6 +22,27 @@ class WorkNotesController extends Controller
         }
     }
 
+    // ─── Helpers ──────────────────────────────────────────────────────────────
+
+    /**
+     * Resolve FK columns independently — whichever keys are present
+     * and non-empty in the payload get saved. related_to is just free text
+     * and has no bearing on which FK gets set.
+     */
+    private function resolveForeignKeys(array $data): array
+    {
+        return [
+            'dealerId'                  => isset($data['dealer_id']) && !empty($data['dealer_id'])
+                ? (int) $data['dealer_id'] : null,
+
+            'customerId'                => isset($data['customer_id']) && !empty($data['customer_id'])
+                ? (int) $data['customer_id'] : null,
+
+            'customerRegisterRequestId' => isset($data['customer_register_request_id']) && !empty($data['customer_register_request_id'])
+                ? (int) $data['customer_register_request_id'] : null,
+        ];
+    }
+
     // ─── 1. List Work Notes ───────────────────────────────────────────────────
     /**
      * GET /api/work-notes
@@ -30,7 +51,7 @@ class WorkNotesController extends Controller
      *   month        integer   optional, defaults to current month
      *   year         integer   optional, defaults to current year
      *   user_id      integer   optional, defaults to authenticated user
-     *   related_to   string    optional  — filter by 'dealer' | 'customer' | 'customer_register_request'
+     *   related_to   string    optional  — filter by free text value
      *   dealer_id    integer   optional  — filter by specific dealer
      *   customer_id  integer   optional  — filter by specific customer
      *   customer_register_request_id  integer  optional
@@ -111,10 +132,10 @@ class WorkNotesController extends Controller
      *
      * Fields:
      *   date                          string   YYYY-MM-DD   required
-     *   related_to                    string                required  — dealer | customer | customer_register_request
-     *   dealer_id                     integer               required when related_to = 'dealer'
-     *   customer_id                   integer               required when related_to = 'customer'
-     *   customer_register_request_id  integer               required when related_to = 'customer_register_request'
+     *   related_to                    string                optional — plain free text, no validation tied to it
+     *   dealer_id                     integer               optional — saved if present & non-empty
+     *   customer_id                   integer               optional — saved if present & non-empty
+     *   customer_register_request_id  integer               optional — saved if present & non-empty
      *   subject                       string                optional
      *   activity_mode                 string                optional  — visit | call | email | …
      *   description                   string                optional
@@ -137,10 +158,10 @@ class WorkNotesController extends Controller
             return response()->json(apiErrorResponse($message), 422);
         }
 
-        // ── Base validation rules ─────────────────────────────────────────────
+        // ── Validation — no conditional FK requirements tied to related_to ────
         $rules = [
             'date'                         => 'required|date_format:Y-m-d',
-            'related_to'                   => 'required|in:dealer,customer,customer_register_request',
+            'related_to'                   => 'nullable|string|max:100',
             'dealer_id'                    => 'nullable|integer|exists:dealers,id',
             'customer_id'                  => 'nullable|integer|exists:customers,id',
             'customer_register_request_id' => 'nullable|integer|exists:customer_register_requests,id',
@@ -160,17 +181,6 @@ class WorkNotesController extends Controller
             'attachment_durations'         => 'nullable|array',
             'attachment_durations.*'       => 'nullable|integer|min:0',
         ];
-
-        // ── Conditional FK requirement based on related_to ────────────────────
-        $relatedTo = strtolower(trim($request->input('related_to', '')));
-
-        if ($relatedTo === 'dealer') {
-            $rules['dealer_id'] = 'required|integer|exists:dealers,id';
-        } elseif ($relatedTo === 'customer') {
-            $rules['customer_id'] = 'required|integer|exists:customers,id';
-        } elseif ($relatedTo === 'customer_register_request') {
-            $rules['customer_register_request_id'] = 'required|integer|exists:customer_register_requests,id';
-        }
 
         // ── Conditional action fields when further_action_required = 1 ────────
         if ((int) $request->input('further_action_required', 0) === 1) {
@@ -194,18 +204,9 @@ class WorkNotesController extends Controller
         if (!file_exists($voiceDir))      mkdir($voiceDir,      0775, true);
         if (!file_exists($attachmentDir)) mkdir($attachmentDir, 0775, true);
 
-        // ── Resolve nullable FK columns ───────────────────────────────────────
-        $dealerId                  = null;
-        $customerId                = null;
-        $customerRegisterRequestId = null;
-
-        if ($relatedTo === 'dealer') {
-            $dealerId = (int) $request->input('dealer_id');
-        } elseif ($relatedTo === 'customer') {
-            $customerId = (int) $request->input('customer_id');
-        } elseif ($relatedTo === 'customer_register_request') {
-            $customerRegisterRequestId = (int) $request->input('customer_register_request_id');
-        }
+        // ── Resolve FK columns independently ──────────────────────────────────
+        $data = $request->all();
+        $fks  = $this->resolveForeignKeys($data);
 
         $furtherActionRequired = (int) $request->input('further_action_required', 0);
 
@@ -213,10 +214,10 @@ class WorkNotesController extends Controller
         $workNote = WorkNote::create([
             'user_id'                      => $userId,
             'date'                         => $request->input('date'),
-            'related_to'                   => $relatedTo,
-            'dealer_id'                    => $dealerId,
-            'customer_id'                  => $customerId,
-            'customer_register_request_id' => $customerRegisterRequestId,
+            'related_to'                   => $request->input('related_to'),
+            'dealer_id'                    => $fks['dealerId'],
+            'customer_id'                  => $fks['customerId'],
+            'customer_register_request_id' => $fks['customerRegisterRequestId'],
             'subject'                      => $request->input('subject'),
             'activity_mode'                => $request->input('activity_mode'),
             'description'                  => $request->input('description'),
@@ -309,7 +310,9 @@ class WorkNotesController extends Controller
      * POST /api/work-notes/{id}   (use POST with _method=PUT for multipart)
      * or PUT /api/work-notes/{id} (for JSON body without files)
      *
-     * Same fields as store(); all optional except those conditionally required.
+     * All fields optional — only send what needs changing.
+     * Each FK key is saved independently if present & non-empty in payload.
+     * Sending an empty value for an FK key clears it (sets to null).
      * Attachments: newly uploaded files are APPENDED (existing ones are kept).
      */
     public function update(Request $request, $id)
@@ -336,7 +339,7 @@ class WorkNotesController extends Controller
         // ── Validation ────────────────────────────────────────────────────────
         $rules = [
             'date'                         => 'sometimes|date_format:Y-m-d',
-            'related_to'                   => 'sometimes|in:dealer,customer,customer_register_request',
+            'related_to'                   => 'nullable|string|max:100',
             'dealer_id'                    => 'nullable|integer|exists:dealers,id',
             'customer_id'                  => 'nullable|integer|exists:customers,id',
             'customer_register_request_id' => 'nullable|integer|exists:customer_register_requests,id',
@@ -357,19 +360,6 @@ class WorkNotesController extends Controller
             'attachment_durations.*'       => 'nullable|integer|min:0',
         ];
 
-        // Resolve the effective related_to (incoming or existing)
-        $relatedTo = strtolower(trim($request->input('related_to', $workNote->related_to ?? '')));
-
-        if ($request->has('related_to')) {
-            if ($relatedTo === 'dealer') {
-                $rules['dealer_id'] = 'required|integer|exists:dealers,id';
-            } elseif ($relatedTo === 'customer') {
-                $rules['customer_id'] = 'required|integer|exists:customers,id';
-            } elseif ($relatedTo === 'customer_register_request') {
-                $rules['customer_register_request_id'] = 'required|integer|exists:customer_register_requests,id';
-            }
-        }
-
         $furtherActionRequired = $request->has('further_action_required')
             ? (int) $request->input('further_action_required')
             : $workNote->further_action_required;
@@ -386,34 +376,17 @@ class WorkNotesController extends Controller
             return response()->json(apiErrorResponse($message), 422);
         }
 
-        // ── Resolve FK nulls based on effective related_to ────────────────────
-        $dealerId                  = $workNote->dealer_id;
-        $customerId                = $workNote->customer_id;
-        $customerRegisterRequestId = $workNote->customer_register_request_id;
-
-        if ($request->has('related_to')) {
-            // Reset all FKs when related_to changes
-            $dealerId                  = null;
-            $customerId                = null;
-            $customerRegisterRequestId = null;
-
-            if ($relatedTo === 'dealer') {
-                $dealerId = (int) $request->input('dealer_id');
-            } elseif ($relatedTo === 'customer') {
-                $customerId = (int) $request->input('customer_id');
-            } elseif ($relatedTo === 'customer_register_request') {
-                $customerRegisterRequestId = (int) $request->input('customer_register_request_id');
-            }
-        }
-
-        // ── Build update payload ──────────────────────────────────────────────
+        $data       = $request->all();
         $updateData = [];
 
-        if ($request->has('date'))                         $updateData['date']                         = $request->input('date');
-        if ($request->has('related_to'))                   $updateData['related_to']                   = $relatedTo;
-        if ($request->has('related_to'))                   $updateData['dealer_id']                    = $dealerId;
-        if ($request->has('related_to'))                   $updateData['customer_id']                  = $customerId;
-        if ($request->has('related_to'))                   $updateData['customer_register_request_id'] = $customerRegisterRequestId;
+        if ($request->has('date'))        $updateData['date']        = $request->input('date');
+        if ($request->has('related_to'))  $updateData['related_to']  = $request->input('related_to');
+
+        // Each FK key independently — present in payload → save/clear it
+        if ($request->has('dealer_id'))                     $updateData['dealer_id']                    = !empty($data['dealer_id']) ? (int) $data['dealer_id'] : null;
+        if ($request->has('customer_id'))                   $updateData['customer_id']                  = !empty($data['customer_id']) ? (int) $data['customer_id'] : null;
+        if ($request->has('customer_register_request_id'))  $updateData['customer_register_request_id'] = !empty($data['customer_register_request_id']) ? (int) $data['customer_register_request_id'] : null;
+
         if ($request->has('subject'))                      $updateData['subject']                      = $request->input('subject');
         if ($request->has('activity_mode'))                $updateData['activity_mode']                = $request->input('activity_mode');
         if ($request->has('description'))                  $updateData['description']                  = $request->input('description');
