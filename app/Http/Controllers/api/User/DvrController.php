@@ -12,6 +12,7 @@ use App\Trial;
 use App\UserDvrTrialLink;
 use App\UserDvrCustomerContact;
 use App\UserDvrAttachment;
+use App\UserScheduler;
 use Validator;
 use DB;
 use Illuminate\Support\Facades\Input;
@@ -261,6 +262,28 @@ class DvrController extends Controller
                 }
 
                 DB::table('user_dvr_trial_links')->insert($rows);
+            }
+            // 🔹 LINK SCHEDULERS TO NEW DVR
+            if ($isNew) {
+                $dvrDate = $data['dvr_date'];
+
+                $schedulerQuery = UserScheduler::where('user_id', $userId)
+                    ->where('scheduler_date', $dvrDate)
+                    ->where('status', '!=', 'Done')
+                    ->where(function ($q) use ($dvr) {
+                        if (!empty($dvr->customer_id)) {
+                            $q->orWhere('customer_id', $dvr->customer_id);
+                        }
+                        if (!empty($dvr->customer_register_request_id)) {
+                            $q->orWhere('customer_register_request_id', $dvr->customer_register_request_id);
+                        }
+                    });
+
+                foreach ($schedulerQuery->get() as $scheduler) {
+                    $scheduler->user_dvr_id = $dvr->id;
+                    $scheduler->status      = 'Done';
+                    $scheduler->save();
+                }
             }
 
             DB::commit();

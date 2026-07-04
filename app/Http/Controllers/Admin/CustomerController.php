@@ -23,499 +23,488 @@ use Validator;
 class CustomerController extends Controller
 {
     //
-    public function customers(Request $Request){
-        Session::put('active','customers'); 
-        if($Request->ajax()){
-            $conditions = array();
+    public function customers(Request $Request)
+    {
+        Session::put('active', 'customers');
+
+        if ($Request->ajax()) {
+
             $data = $Request->input();
-            $querys = Customer::with(['cities','dealer','user_customer_shares']);
-            if(!empty($data['name'])){
-                $querys = $querys->where('name','like','%'.$data['name'].'%');
-            }
-            if (!empty($data['city_name'])) {
-                $querys->whereHas('cities', function($q) use ($data) {
-                    $q->where('city_name', 'like', '%' . $data['city_name'] . '%');
-                });
-            }
-            if(!empty($data['email'])){
-                $querys = $querys->where('email','like','%'.$data['email'].'%');
-            }
 
-            if(!empty($data['email_status'])){
-                if($data['email_status'] =="tick"){
-                    $querys = $querys->where('email','!=','');
-                }else if($data['email_status'] =="cross"){
-                    $querys = $querys->where('email','');
+            // ── Base query builder (reused for counts + rows) ─────
+            $buildQuery = function () use ($data) {
+                $q = Customer::query();
+
+                if (!empty($data['name'])) {
+                    $q->where('name', 'like', '%' . $data['name'] . '%');
                 }
-                
-            }
-
-            if (!empty($data['b_card_status'])) {
-                if ($data['b_card_status'] == "tick") {
-                    $querys = $querys->where(function($q) {
-                        $q->where(function($sub) {
-                            $sub->whereNotNull('business_card')
-                                ->where('business_card', '!=', '');
-                        })->orWhere(function($sub) {
-                            $sub->whereNotNull('business_card_two')
-                                ->where('business_card_two', '!=', '');
-                        });
-                    });
-                } elseif ($data['b_card_status'] == "cross") {
-                    $querys = $querys->where(function($q) {
-                        $q->where(function($sub) {
-                            $sub->whereNull('business_card')
-                                ->orWhere('business_card', '');
-                        })->where(function($sub) {
-                            $sub->whereNull('business_card_two')
-                                ->orWhere('business_card_two', '');
-                        });
+                if (!empty($data['city_name'])) {
+                    $q->whereHas('cities', function ($c) use ($data) {
+                        $c->where('city_name', 'like', '%' . $data['city_name'] . '%');
                     });
                 }
-            }
-
-
-            if(!empty($data['category'])){
-                $querys = $querys->where('category','like','%'.$data['category'].'%');
-            }
-            if(!empty($data['mobile'])){
-                $querys = $querys->where('mobile',$data['mobile']);
-            }
-
-            if(!empty($data['status'])){
-                if($data['status'] =="Active"){
-                    $querys = $querys->where('customers.status',1);
-                }else if($data['status'] == "Inactive"){
-                    $querys = $querys->where('customers.status',0);
+                if (!empty($data['email_status']) && $data['email_status'] !== 'All') {
+                    if ($data['email_status'] === 'tick') {
+                        $q->where('email', '!=', '')->whereNotNull('email');
+                    } elseif ($data['email_status'] === 'cross') {
+                        $q->where(function ($e) { $e->whereNull('email')->orWhere('email', ''); });
+                    }
                 }
-            }
-
-            if(!empty($data['business_linking'])){
-
-                if($data['business_linking'] == "Open" || $data['business_linking'] == "Direct Customer"){
-                    $querys = $querys->where('business_model',$data['business_linking']);
-                }elseif(is_numeric($data['business_linking'])){
-                    $querys = $querys->where('dealer_id',$data['business_linking']);
+                if (!empty($data['b_card_status']) && $data['b_card_status'] !== 'All') {
+                    if ($data['b_card_status'] === 'tick') {
+                        $q->where(function ($b) {
+                            $b->where(function ($s) { $s->whereNotNull('business_card')->where('business_card', '!=', ''); })
+                              ->orWhere(function ($s) { $s->whereNotNull('business_card_two')->where('business_card_two', '!=', ''); });
+                        });
+                    } elseif ($data['b_card_status'] === 'cross') {
+                        $q->where(function ($b) {
+                            $b->where(function ($s) { $s->whereNull('business_card')->orWhere('business_card', ''); })
+                              ->where(function ($s) { $s->whereNull('business_card_two')->orWhere('business_card_two', ''); });
+                        });
+                    }
                 }
-            }
+                if (!empty($data['status']) && $data['status'] !== 'All') {
+                    $q->where('customers.status', $data['status'] === 'Active' ? 1 : 0);
+                }
+                if (!empty($data['business_linking']) && $data['business_linking'] !== 'All') {
+                    if (in_array($data['business_linking'], ['Open', 'Direct Customer', 'Hybrid'])) {
+                        $q->where('business_model', $data['business_linking']);
+                    } elseif (is_numeric($data['business_linking'])) {
+                        $q->where('dealer_id', $data['business_linking']);
+                    }
+                }
+                if (!empty($data['linked_executive']) && $data['linked_executive'] !== 'All') {
+                    $q->whereHas('user_customer_shares.user', function ($u) use ($data) {
+                        $u->where('name', 'like', '%' . $data['linked_executive'] . '%');
+                    });
+                }
+                return $q;
+            };
 
-            if (!empty($data['linked_executive']) && $data['linked_executive'] !="All") {
-                $querys->whereHas('user_customer_shares.user', function ($q) use ($data) {
-                    $q->where('name', 'like', '%' . $data['linked_executive'] . '%');
-                });
-            }
-            
-            $iDisplayLength = intval($_REQUEST['length']);
-            $iDisplayStart = intval($_REQUEST['start']);
-            $iDisplayLength = $iDisplayLength < 0 ? $iTotalRecords : $iDisplayLength; 
-            $iTotalRecords = $querys->where($conditions)->count();
-            $querys =  $querys->where($conditions)
-                		->skip($iDisplayStart)->take($iDisplayLength)
-                		->OrderBy('customers.id','DESC')
-                		->get();
-            $sEcho = intval($_REQUEST['draw']);
-            $records = array();
-            $records["data"] = array(); 
-            $end = $iDisplayStart + $iDisplayLength;
-            $end = $end > $iTotalRecords ? $iTotalRecords : $end;
-            $i=$iDisplayStart;
-            $querys=json_decode( json_encode($querys), true);
-            foreach($querys as $customer){ 
-                $checked='';
-                if($customer['status']==1){
-                    $checked='on';
-                }
-                else{
-                    $checked='off';
-                }
-                $actionValues='
-                    <a title="Edit" class="btn btn-sm green margin-top-10" href="'.url('/admin/add-edit-customer/'.$customer['id']).'"> <i class="fa fa-edit"></i>
-                    </a>';
-                $num = ++$i;
-                if (isset($customer['dealer']['business_name'])) {
-                    $dealer_name = $customer['dealer']['business_name'];
+            // ── Breakdown counts (respect current filters) ────────
+            $countBase   = $buildQuery();
+            $totalCount  = (clone $countBase)->count();
+            $directCount = (clone $countBase)->where('business_model', 'Direct Customer')->count();
+            $openCount   = (clone $countBase)->where('business_model', 'Open')->count();
+            $hybridCount = (clone $countBase)->where('business_model', 'Hybrid')->count();
+            $dealerCount = (clone $countBase)->whereNotNull('dealer_id')->count();
+
+            // ── Paginated rows ────────────────────────────────────
+            $customers = $buildQuery()
+                ->with(['cities', 'dealer', 'user_customer_shares.user'])
+                ->orderBy('customers.id', 'DESC')
+                ->paginate(25);
+
+            $rows = [];
+            foreach ($customers as $customer) {
+
+                if (!empty($customer->dealer->business_name)) {
+                    $linking = '<span class="badge-linking badge-dealer">' . e($customer->dealer->business_name) . '</span>';
+                } elseif ($customer->business_model === 'Open') {
+                    $linking = '<span class="badge-linking badge-open">Open</span>';
+                } elseif ($customer->business_model === 'Direct Customer') {
+                    $linking = '<span class="badge-linking badge-direct">Direct Customer</span>';
+                } elseif ($customer->business_model === 'Hybrid') {
+                    $linking = '<span class="badge-linking badge-hybrid">Hybrid</span>';
                 } else {
-                    if ($customer['business_model'] == 'Open') {
-                        $dealer_name = '<span style="color: red; font-weight: bold;">(' . $customer['business_model'] . ')</span>';
-                    } elseif ($customer['business_model'] == 'Direct Customer') {
-                        $dealer_name = '<span style="color: green; font-weight: bold;">(' . $customer['business_model'] . ')</span>';
-                    } else {
-                        $dealer_name = '(' . $customer['business_model'] . ')';
-                    }
+                    $linking = '<span class="badge-linking badge-muted">' . e($customer->business_model) . '</span>';
                 }
-                $cities = implode(',',array_column($customer['cities'], 'city_name'));
-                $linkedExecutives = [];
 
-                foreach ($customer['user_customer_shares'] as $share) {
-                    if (isset($share['user']['name'])) {
-                        $linkedExecutives[] = $share['user']['name'];
-                    }
+                $execs = [];
+                foreach ($customer->user_customer_shares as $share) {
+                    if (!empty($share->user->name)) $execs[] = $share->user->name;
                 }
-                $records["data"][] = array(      
-                    $customer['id'],
-                    //$customer['category'],
-                    ucwords($customer['name']),
-                    $cities,
-                    $dealer_name,
-                    implode(', ', $linkedExecutives),
-                    '<div style="text-align:center; font-size: 20px;">' . 
-                        ($customer['email'] != '' 
-                            ? '<span style="color:green;">&#10004;</span>' 
-                            : '<span style="color:red;">&#10006;</span>') . 
-                    '</div>',
-                    '<div style="text-align:center; font-size: 20px;">' . 
-                        (
-                            !empty($customer['business_card']) || !empty($customer['business_card_two']) 
-                                ? '<span style="color:green;">&#10004;</span>' 
-                                : '<span style="color:red;">&#10006;</span>'
-                        ) . 
-                    '</div>',
 
-                    '<div  id="'.$customer['id'].'" rel="customers" class="bootstrap-switch  bootstrap-switch-'.$checked.'  bootstrap-switch-wrapper bootstrap-switch-animate toogle_switch">
-                    <div class="bootstrap-switch-container" ><span class="bootstrap-switch-handle-on bootstrap-switch-primary">&nbsp;Active&nbsp;&nbsp;</span><label class="bootstrap-switch-label">&nbsp;</label><span class="bootstrap-switch-handle-off bootstrap-switch-default">&nbsp;Inactive&nbsp;</span></div></div>',   
-                    $actionValues
-                );
+                $rows[] = [
+                    'id'        => $customer->id,
+                    'name'      => ucwords($customer->name),
+                    'city'      => $customer->cities->pluck('city_name')->implode(', '),
+                    'linking'   => $linking,
+                    'executive' => implode(', ', $execs),
+                    'email'     => $customer->email != '' ? 1 : 0,
+                    'b_card'    => (!empty($customer->business_card) || !empty($customer->business_card_two)) ? 1 : 0,
+                    'status'    => $customer->status == 1 ? 1 : 0,
+                    'edit_url'  => url('/admin/add-edit-customer/' . $customer->id),
+                ];
             }
-            $records["draw"] = $sEcho;
-            $records["recordsTotal"] = $iTotalRecords;
-            $records["recordsFiltered"] = $iTotalRecords;
-            return response()->json($records);
-        }
-        $title = "Customers";
-        
-        $linkedDealers = \App\Dealer::where('status',1)->where('parent_id',NULL)->select('id','business_name')->get();
 
-        $executives = \App\Helpers\EmployeeHelper::getEmployeesWithCustomers(); 
-        return View::make('admin.customers.customers')->with(compact('title','linkedDealers','executives'));
+            return response()->json([
+                'data'         => $rows,
+                'current_page' => $customers->currentPage(),
+                'last_page'    => $customers->lastPage(),
+                'total'        => $customers->total(),
+                'from'         => $customers->firstItem(),
+                'to'           => $customers->lastItem(),
+                'counts'       => [
+                    'total'  => $totalCount,
+                    'direct' => $directCount,
+                    'open'   => $openCount,
+                    'hybrid' => $hybridCount,
+                    'dealer' => $dealerCount,
+                ],
+            ]);
+        }
+
+        $title         = "Customers";
+        $linkedDealers = \App\Dealer::where('status', 1)->whereNull('parent_id')
+                            ->select('id', 'business_name')->orderBy('business_name')->get();
+        $executives    = \App\Helpers\EmployeeHelper::getEmployeesWithCustomers();
+
+        return View::make('admin.customers.customers')->with(compact('title', 'linkedDealers', 'executives'));
     }
 
-    public function addEditCustomer(Request $request,$customerid=NULL){
-        $userids = \DB::table('user_departments')->where('department_id',2)->pluck('user_id')->toArray();
-        $users  = \DB::table('users')->wherein('id',$userids)->get();
-        $users = json_decode(json_encode($users),true);
-        $selCities = array();
-        $customerDiscounts = array();
+    public function toggleStatus(Request $request)
+    {
+        $id     = $request->input('id');
+        $status = (int) $request->input('status'); // 1 = Active, 0 = Inactive
+
+        $customer = Customer::find($id);
+
+        if (!$customer) {
+            return response()->json(['status' => false, 'message' => 'Customer not found'], 404);
+        }
+
+        $customer->status = $status;
+        $customer->save();
+
+        return response()->json([
+            'status'   => true,
+            'message'  => 'Status updated successfully',
+            'new_value'=> $customer->status,
+        ], 200);
+    }
+    
+    /**
+     * ─────────────────────────────────────────────────────────────────────
+     *  CustomerController — UPDATED METHODS for the add/edit revamp
+     *  Replace the corresponding methods in
+     *  app/Http/Controllers/Admin/CustomerController.php with these.
+     *
+     *  Summary of changes:
+     *   • "Products Under Discounts Model" removed — discount_products are no
+     *     longer read or saved; only discount_type = 'net_products' rows are
+     *     touched, so any legacy 'discounts' rows are left intact.
+     *   • New business model 'Hybrid' — requires dealer_id AND uses the
+     *     Products / Payment Term / Freight sections (same as Direct Customer).
+     *   • Payment Terms is now a dropdown (payment_terms() helper) plus
+     *     freight_basis + freight columns on customers.
+     *   • net_products payload is now an indexed array of structured rows
+     *     (see the blade) with a Conditional Special Price/Discount block.
+     *   • fetchProductsByType now returns each product's Standard DP so the
+     *     screen's Viability Check can recalculate live.
+     * ─────────────────────────────────────────────────────────────────────
+     */
+
+    // ── addEditCustomer ──────────────────────────────────────────────────
+    public function addEditCustomer(Request $request, $customerid = NULL)
+    {
+        $userids = \DB::table('user_departments')->where('department_id', 2)->pluck('user_id')->toArray();
+        $users   = \DB::table('users')->wherein('id', $userids)->get();
+        $users   = json_decode(json_encode($users), true);
+
+        $selCities           = array();
         $existingNetProducts = array();
         $requestReceivedFrom = "";
-        $customerCreatedBy ="";
-    	if(!empty($customerid)){
-    		$customerdata = Customer::with(['cities','discounts','employees'=>function($query){
-                $query->where('is_delete',0);
-            },'user_customer_shares','customer_register_request','creator'])->where('id',$customerid)->first();
-            $customerdata = json_decode(json_encode($customerdata),true);
-            $selCities = array_column($customerdata['cities'], 'city_name');
-            $customerDiscounts = CustomerDiscount::where('customer_id',$customerid)->where('discount_type','discounts')->get();
+        $customerCreatedBy   = "";
+
+        if (!empty($customerid)) {
+            $customerdata = Customer::with(['cities', 'employees' => function ($query) {
+                $query->where('is_delete', 0);
+            }, 'user_customer_shares', 'customer_register_request', 'creator'])->where('id', $customerid)->first();
+            $customerdata = json_decode(json_encode($customerdata), true);
+            $selCities    = array_column($customerdata['cities'], 'city_name');
+
+            // "Products" section rows (formerly Net Price Model). Discounts-model rows are no longer loaded.
             $existingNetProducts = CustomerDiscount::where('customer_id', $customerid)
-            ->where('discount_type', 'net_products')
-            ->join('products', 'products.id', '=', 'customer_discounts.product_id') // Assuming the relationship is via product_id
-            ->select('customer_discounts.*', 'products.product_name', 'products.is_trader_product as product_type')
-            ->get();
+                ->where('discount_type', 'net_products')
+                ->join('products', 'products.id', '=', 'customer_discounts.product_id')
+                ->select('customer_discounts.*', 'products.product_name')
+                ->get();
+
             $requestReceivedFrom = $customerdata['customer_register_request']['creator']['name'] ?? '';
-            $customerCreatedBy = $customerdata['creator']['name'] ?? '';
-            //echo "<pre>"; print_r(json_decode(json_encode($customerdata),true)); die;
-    		$title ="Edit Customer";
-    	}else{
-    		$title ="Add Customer";
-	    	$customerdata =array();
-    	}
-        if(isset($_GET['ref'])){
-            $customerdata = RegisterRequest::select('business_name as name','city','name as contact_person_name','email','mobile','city')->where('id',$_GET['ref'])->first();
-            $customerdata = json_decode(json_encode($customerdata),true);
-            $selCities = array(strtoupper($customerdata['city']));
+            $customerCreatedBy   = $customerdata['creator']['name'] ?? '';
+            $title = "Edit Customer";
+        } else {
+            $title        = "Add Customer";
+            $customerdata = array();
         }
-        if(isset($_GET['empref'])){
-            $registerRequestData = CustomerRegisterRequest::with('creator')->where('id',$_GET['empref'])->first();
-            $registerRequestData = json_decode(json_encode($registerRequestData),true);
-            $customerdata['name'] = $registerRequestData['name'];
-            $customerdata['address'] = $registerRequestData['address'];
-            $customerdata['activity'] = $registerRequestData['activity'];
-            $customerdata['contact_person_name'] = $registerRequestData['contact_person_name'];
-            $customerdata['designation'] = $registerRequestData['designation'];
-            $customerdata['mobile'] = $registerRequestData['mobile'];
-            $customerdata['email'] = $registerRequestData['email'];
-            $customerdata['business_model'] = $registerRequestData['business_model'];
+
+        if (isset($_GET['ref'])) {
+            $customerdata = RegisterRequest::select('business_name as name', 'city', 'name as contact_person_name', 'email', 'mobile', 'city')->where('id', $_GET['ref'])->first();
+            $customerdata = json_decode(json_encode($customerdata), true);
+            $selCities    = array(strtoupper($customerdata['city']));
+        }
+        if (isset($_GET['empref'])) {
+            $registerRequestData = CustomerRegisterRequest::with('creator')->where('id', $_GET['empref'])->first();
+            $registerRequestData = json_decode(json_encode($registerRequestData), true);
+            $customerdata['name']                  = $registerRequestData['name'];
+            $customerdata['address']               = $registerRequestData['address'];
+            $customerdata['activity']              = $registerRequestData['activity'];
+            $customerdata['contact_person_name']   = $registerRequestData['contact_person_name'];
+            $customerdata['designation']           = $registerRequestData['designation'];
+            $customerdata['mobile']                = $registerRequestData['mobile'];
+            $customerdata['email']                 = $registerRequestData['email'];
+            $customerdata['business_model']        = $registerRequestData['business_model'];
             $customerdata['customer_product_type'] = $registerRequestData['customer_product_type'];
-            $customerdata['dealer_id'] = $registerRequestData['dealer_id'];
-            $customerdata['linked_executive'] = $registerRequestData['linked_executive'];
-            $customerdata['business_card_url'] = $registerRequestData['business_card_url'];
+            $customerdata['dealer_id']             = $registerRequestData['dealer_id'];
+            $customerdata['linked_executive']      = $registerRequestData['linked_executive'];
+            $customerdata['business_card_url']     = $registerRequestData['business_card_url'];
             $customerdata['business_card_two_url'] = $registerRequestData['business_card_two_url'];
-            $customerdata['created_at'] = date('Y-m-d',strtotime($registerRequestData['created_at']));
-            $selCities = array(strtoupper($registerRequestData['cities']));
+            $customerdata['created_at']            = date('Y-m-d', strtotime($registerRequestData['created_at']));
+            $selCities           = array(strtoupper($registerRequestData['cities']));
             $requestReceivedFrom = $registerRequestData['creator']['name'] ?? '';
         }
 
-    	return view('admin.customers.add-edit-customer')->with(compact('title','customerdata','selCities','users','customerDiscounts','existingNetProducts','requestReceivedFrom','customerCreatedBy'));
+        return view('admin.customers.add-edit-customer')->with(compact(
+            'title', 'customerdata', 'selCities', 'users',
+            'existingNetProducts', 'requestReceivedFrom', 'customerCreatedBy'
+        ));
     }
 
-    public function saveCustomer(Request $request){
-    	try{
-            if($request->ajax()){
+    // ── saveCustomer ─────────────────────────────────────────────────────
+    public function saveCustomer(Request $request)
+    {
+        try {
+            if ($request->ajax()) {
                 $data = $request->all();
-                if($data['customerid']==""){
-                    $type ="add";
-                    $emailunique = "unique:customers,email";
+                if ($data['customerid'] == "") {
+                    $type        = "add";
+                    $emailunique  = "unique:customers,email";
                     $mobileunique = "unique:customers,mobile";
-                    $pwdValidation = "bail|required|min:6";
-                }else{ 
-                    $type ="update";
-                    $emailunique = "unique:customers,email,".$data['customerid'];
-                    $mobileunique = "unique:customers,mobile,".$data['customerid'];
-                    $pwdValidation = "bail|min:6";
+                } else {
+                    $type        = "update";
+                    $emailunique  = "unique:customers,email," . $data['customerid'];
+                    $mobileunique = "unique:customers,mobile," . $data['customerid'];
                 }
+
                 $validator = Validator::make($request->all(), [
-                        'name'   =>  'bail|required',
-                        'email'   => 'bail|nullable|email|'.$emailunique,
-                        /*'password' => $pwdValidation,*/
-                        'mobile'  => 'bail|required|numeric|digits:10|'.$mobileunique,
-                        //'category'  => 'bail|required',
-                        //'address'  => 'bail|required',
-                        'business_model'  => 'bail|required',
-                        'dealer_id' => 'bail|required_if:business_model,==,Dealer|nullable',
-                    ]
-                );
-                if($validator->passes()) {
+                    'name'           => 'bail|required',
+                    'email'          => 'bail|nullable|email|' . $emailunique,
+                    'mobile'         => 'bail|required|numeric|digits:10|' . $mobileunique,
+                    'business_model' => 'bail|required',
+                    // Dealer link is required for both Dealer and the new Hybrid model
+                    'dealer_id'      => 'bail|required_if:business_model,Dealer,Hybrid|nullable',
+                    // Payment terms required whenever the Products section applies
+                    'payment_term'   => 'bail|required_if:business_model,Direct Customer,Hybrid|nullable',
+                    'freight_basis'  => 'bail|required_if:business_model,Direct Customer,Hybrid|nullable',
+                    'net_products.*.product_id'            => 'bail|nullable|exists:products,id',
+                    'net_products.*.customer_selling_price'=> 'bail|nullable|numeric|min:0',
+                ]);
+
+                if ($validator->passes()) {
                     $data = $request->all();
 
-                    // Validate if discount_products and net_products have the same product
-                    $discountProducts = $data['discount_products'] ?? [];
-                    $netProducts = $data['net_products'] ?? [];
-
-                    // Extract product_ids from both arrays
-                    $discountProductIds = array_column($discountProducts, 'product_id');
-                    $netProductIds = array_column($netProducts, 'product_id');
-
-                    // Check for intersection between discount and net products
-                    $commonProductIds = array_intersect($discountProductIds, $netProductIds);
-
-                    if (!empty($commonProductIds)) {
-                        // Fetch product names from the database using the common product IDs
-                        $commonProducts = Product::whereIn('id', $commonProductIds)->pluck('product_name', 'id')->toArray();
-
-                        // Return an error message if there's any duplicate product
+                    // Guard: same product must not appear twice in the Products section
+                    $netProducts = array_values($data['net_products'] ?? []);
+                    $netIds      = array_filter(array_column($netProducts, 'product_id'));
+                    if (count($netIds) !== count(array_unique($netIds))) {
+                        $dupIds   = array_unique(array_diff_assoc($netIds, array_unique($netIds)));
+                        $dupNames = Product::whereIn('id', $dupIds)->pluck('product_name')->toArray();
                         return response()->json([
                             'status' => false,
-                            'errors' => [
-                                'linking_error' => [
-                                    'The following products cannot be in both Discount and Net Price sections: ' . implode(', ', $commonProducts)
-                                ]
-                            ]
+                            'errors' => ['linking_error' => [
+                                'These products are added more than once: ' . implode(', ', $dupNames)
+                            ]],
                         ]);
                     }
-                    //echo "<pre>"; print_r($data); die;
-                    unset($data['_token']);
-                    //DB::beginTransaction();
-                    if($type =="add"){
+
+                    if ($type == "add") {
                         $customer = new Customer;
-                        $customer->created_by = auth()->user()->id; 
-                    }else{
-                        $customer = Customer::find($data['customerid']); 
+                        $customer->created_by = auth()->user()->id;
+                    } else {
+                        $customer = Customer::find($data['customerid']);
                     }
-                    /*if(!empty($data['password'])){
-                        $data['password'] = bcrypt($data['password']);
-                        $customer->password = $data['password'];
-                    }*/
+
                     $customer->customer_product_type = $data['customer_product_type'];
-                    $customer->name = $data['name'];
-                    $customer->contact_person_name = $data['contact_person_name'];
-                    $customer->designation = $data['designation'];
-                    $customer->department = getDepartmentByDesignation($data['designation']);
-                    //$customer->category = $data['category'];
-                    $customer->business_model = $data['business_model'];
-                    $customer->address = $data['address'];
-                    if(isset($data['activity'])){
-                        $customer->activity = implode(',',$data['activity']);
-                    }else{
-                        $customer->activity = "";
+                    $customer->name                  = $data['name'];
+                    $customer->contact_person_name   = $data['contact_person_name'];
+                    $customer->designation           = $data['designation'];
+                    $customer->department            = getDepartmentByDesignation($data['designation']);
+                    $customer->business_model        = $data['business_model'];
+                    $customer->address               = $data['address'];
+                    $customer->activity              = isset($data['activity']) ? implode(',', $data['activity']) : "";
+                    $customer->mobile                = $data['mobile'];
+                    $customer->email                 = $data['email'];
+                    $customer->status                = $data['status'];
+
+                    if (!empty($data['dealer_id'])) {
+                        $customer->dealer_id = $data['dealer_id'];
                     }
-                    $customer->mobile = $data['mobile'];
-                    $customer->email = $data['email'];
-                    $customer->status = $data['status'];
-                    if(!empty($data['dealer_id'])){
-                        $customer->dealer_id =  $data['dealer_id'];
-                    }
-                    $customer->payment_term_type ="";
-                    if($data['business_model'] =="Open"){
+
+                    // ── Business-model specific fields ────────────────────
+                    $customer->payment_term_type = "";
+                    $customer->freight_basis     = null;
+                    $customer->freight           = null;
+
+                    if ($data['business_model'] == "Open") {
                         $customer->dealer_id = NULL;
-                    }elseif($data['business_model'] =="Direct Customer"){
-                        $customer->dealer_id = NULL;
+                    } elseif ($data['business_model'] == "Dealer") {
+                        // dealer_id set above; no direct pricing terms
+                    } elseif (in_array($data['business_model'], ["Direct Customer", "Hybrid"])) {
+                        if ($data['business_model'] == "Direct Customer") {
+                            $customer->dealer_id = NULL; // Hybrid keeps its dealer link
+                        }
                         $customer->payment_term_type = 'On Bill';
-                        $customer->payment_term = $data['direct_customer_payment_term'];
-                        //echo "<pre>"; print_r($data); die;
-                        //$customer->payment_discount = $data['payment_discount'];
+                        $customer->payment_term      = $data['payment_term'] ?? '';
+                        $customer->freight_basis     = $data['freight_basis'] ?? 'Paid by Company';
+                        $customer->freight           = ($customer->freight_basis == 'Paid by Company')
+                            ? ($data['freight'] ?? 0) : 0;
                     }
+
                     $customer->location_address = $data['location_address'];
-                    if($data['location_address'] ==""){
-                        $customer->location_address = NULL; 
-                        $customer->latitude = NULL; 
-                        $customer->longitude = NULL; 
+                    if ($data['location_address'] == "") {
+                        $customer->location_address = NULL;
+                        $customer->latitude  = NULL;
+                        $customer->longitude = NULL;
                     }
-                    //$customer->is_spsod = $data['is_spsod'];
-                    //$customer->is_monthly_turnover_discount = $data['is_monthly_turnover_discount'];
-                    //$customer->custom_spsod_from = $data['custom_spsod_from'];
-                    //$customer->custom_spsod_to = $data['custom_spsod_to'];
-                    //$customer->custom_spsod_discount = $data['custom_spsod_discount'];
-                    $customer->custom_mtod_from = 0;
-                    $customer->custom_mtod_to = 0;
+                    $customer->custom_mtod_from     = 0;
+                    $customer->custom_mtod_to       = 0;
                     $customer->custom_mtod_discount = 0;
-                    /*if($data['is_monthly_turnover_discount'] =="no"){
-                        $customer->custom_mtod_from = $data['custom_mtod_from'];
-                        $customer->custom_mtod_to = $data['custom_mtod_to'];
-                        $customer->custom_mtod_discount = $data['custom_mtod_discount'];
-                    }*/
+
                     $registerRequestInfo = null;
-                    if(isset($data['customer_register_request_id'])){
-                       $registerRequestInfo = CustomerRegisterRequest::where('id',$data['customer_register_request_id'])->first();
+                    if (isset($data['customer_register_request_id'])) {
+                        $registerRequestInfo = CustomerRegisterRequest::where('id', $data['customer_register_request_id'])->first();
                         $customer->customer_register_request_id = $data['customer_register_request_id'];
                     }
 
-                     if ($request->hasFile('business_card')) {
-                        $file = $request->file('business_card');
+                    if ($request->hasFile('business_card')) {
+                        $file     = $request->file('business_card');
                         $filename = time() . '_' . $file->getClientOriginalName();
-                        $path = 'business_cards/' . $filename;
-
+                        $path     = 'business_cards/' . $filename;
                         $file->move(public_path('business_cards'), $filename);
                         $customer->business_card = $path;
-                    }else{
-
-                        if(is_object($registerRequestInfo)){
-                            $customer->business_card = $registerRequestInfo->business_card;
-                        }
+                    } elseif (is_object($registerRequestInfo)) {
+                        $customer->business_card = $registerRequestInfo->business_card;
                     }
                     if ($request->hasFile('business_card_two')) {
-                        $file = $request->file('business_card_two');
+                        $file     = $request->file('business_card_two');
                         $filename = time() . '2_' . $file->getClientOriginalName();
-                        $path = 'business_cards/' . $filename;
-
+                        $path     = 'business_cards/' . $filename;
                         $file->move(public_path('business_cards'), $filename);
                         $customer->business_card_two = $path;
-                    }else{
-                        if(is_object($registerRequestInfo)){
-                            $customer->business_card_two = $registerRequestInfo->business_card_two;
-                        }
+                    } elseif (is_object($registerRequestInfo)) {
+                        $customer->business_card_two = $registerRequestInfo->business_card_two;
                     }
+
                     $customer->save();
-                    DB::table('customer_discounts')->where('customer_id', $customer->id)->delete();
 
-                    if (isset($data['discount_products'])) {
-                        foreach ($data['discount_products'] as $customeDisInfo) {
+                    // ── Products section — replace only net_products rows.
+                    //    (Legacy 'discounts' rows are intentionally left alone.)
+                    DB::table('customer_discounts')
+                        ->where('customer_id', $customer->id)
+                        ->where('discount_type', 'net_products')
+                        ->delete();
+
+                    if (in_array($data['business_model'], ["Direct Customer", "Hybrid"])) {
+                        foreach ($netProducts as $row) {
+                            if (empty($row['product_id'])) continue;
+
+                            $hasSpecial = (($row['has_special'] ?? 'no') === 'yes');
+
                             $custDis = new CustomerDiscount();
-                            $custDis->customer_id = $customer->id;
-                            $custDis->discount_type = 'discounts'; // Set manually or use form field if available
-                            
-                            if (!empty($customeDisInfo['product_id'])) {
-                                $custDis->product_id = $customeDisInfo['product_id'];
-                            }
-                            if (!empty($customeDisInfo['min_qty'])) {
-                                $custDis->min_qty = $customeDisInfo['min_qty']; // min_qty maps to min_qty
-                            }
-                            if (!empty($customeDisInfo['moq'])) {
-                                $custDis->moq = $customeDisInfo['moq']; // min_qty maps to min_qty
-                            }
-                            if (!empty($customeDisInfo['discount'])) {
-                                $custDis->discount = $customeDisInfo['discount'];
-                            }
-                            if (!empty($customeDisInfo['special_discount'])) {
-                                $custDis->special_discount = $customeDisInfo['special_discount'];
+                            $custDis->customer_id   = $customer->id;
+                            $custDis->discount_type = 'net_products';
+                            $custDis->product_id    = $row['product_id'];
+
+                            // renamed fields → existing columns
+                            $custDis->net_price    = $row['customer_selling_price'] ?? 0; // Customer Selling Price
+                            $custDis->moq          = $row['moq'] ?? 0;                    // MOQ (kg)
+                            $custDis->packing_type = $row['packing_size'] ?? 'Standard';  // Packing Size
+
+                            // new columns
+                            $custDis->selling_expense_basis = $row['selling_expense_basis'] ?? '%';
+                            $custDis->selling_expense_value = $row['selling_expense_value'] !== '' ? ($row['selling_expense_value'] ?? null) : null;
+                            $custDis->has_special           = $hasSpecial ? 'yes' : 'no';
+
+                            // Conditional Special Price / Special Discount block
+                            if ($hasSpecial) {
+                                $custDis->for_qty         = $row['special_moq'] ?? null;   // For MOQ (kg)
+                                $custDis->applicable_type = $row['special_basis'] ?? null; // Special Price | Special Discount
+                                $custDis->value           = $row['special_value'] ?? null;
+                                $custDis->special_selling_expense_basis = $row['special_selling_expense_basis'] ?? null;
+                                $custDis->special_selling_expense_value = $row['special_selling_expense_value'] !== '' ? ($row['special_selling_expense_value'] ?? null) : null;
                             }
                             $custDis->save();
                         }
                     }
 
-                    if (isset($data['net_products'])) {
-                        foreach ($data['net_products'] as $netProdInfo) {
-                            $custDis = new CustomerDiscount();
-                            $custDis->customer_id = $customer->id;
-                            $custDis->discount_type = 'net_products'; // Set manually or use form field if available
-                            
-                            if (!empty($netProdInfo['product_id'])) {
-                                $custDis->product_id = $netProdInfo['product_id'];
-                            }
-                            if (!empty($netProdInfo['net_price'])) {
-                                $custDis->net_price = $netProdInfo['net_price'];
-                            }
-                            if (!empty($netProdInfo['moq'])) {
-                                $custDis->moq = $netProdInfo['moq'];
-                            }if (!empty($netProdInfo['for_qty'])) {
-                                $custDis->for_qty = $netProdInfo['for_qty'];
-                            }
-                            if (!empty($netProdInfo['value'])) {
-                                $custDis->value = $netProdInfo['value'];
-                            }
-                            if (!empty($netProdInfo['applicable_type'])) {
-                                $custDis->applicable_type = $netProdInfo['applicable_type'];
-                            }
-                            if (!empty($netProdInfo['packing_type'])) {
-                                $custDis->packing_type = $netProdInfo['packing_type'];
-                            }
-                            $custDis->save();
-                        }
-                    }
-                    DB::table('customer_cities')->where('customer_id',$customer->id)->delete();
-                    foreach($data['cities'] as $cityInfo){
-                        $custCity = new CustomerCity;
+                    // ── Cities ────────────────────────────────────────────
+                    DB::table('customer_cities')->where('customer_id', $customer->id)->delete();
+                    foreach ($data['cities'] as $cityInfo) {
+                        $custCity              = new CustomerCity;
                         $custCity->customer_id = $customer->id;
-                        $custCity->city_name = $cityInfo;
+                        $custCity->city_name   = $cityInfo;
                         $custCity->save();
                     }
-                    /*CustomerEmployee::where('customer_id',$customer->id)->delete();*/
-                    if(isset($data['names'])){
+
+                    // ── Add-on users (unchanged behaviour) ────────────────
+                    if (isset($data['names'])) {
                         foreach ($data['names'] as $nkey => $custEmp) {
-                            if(isset($data['cust_emp_id'][$nkey]) && !empty($data['cust_emp_id'][$nkey])){
+                            if (isset($data['cust_emp_id'][$nkey]) && !empty($data['cust_emp_id'][$nkey])) {
                                 $savecustEmp = CustomerEmployee::find($data['cust_emp_id'][$nkey]);
-                                if(isset($data['is_delete'][$nkey])){
+                                if (isset($data['is_delete'][$nkey])) {
                                     $savecustEmp->is_delete = $data['is_delete'][$nkey];
                                 }
-                            }else{
-                                $savecustEmp = new CustomerEmployee;
+                            } else {
+                                $savecustEmp              = new CustomerEmployee;
                                 $savecustEmp->customer_id = $customer->id;
                             }
-                            $savecustEmp->name = $custEmp;
-                            $savecustEmp->mobile = $data['mobiles'][$nkey];
-                            $savecustEmp->email = $data['emails'][$nkey];
+                            $savecustEmp->name        = $custEmp;
+                            $savecustEmp->mobile      = $data['mobiles'][$nkey];
+                            $savecustEmp->email       = $data['emails'][$nkey];
                             $savecustEmp->designation = $data['designations'][$nkey];
                             $savecustEmp->save();
                         }
                     }
-                    UserCustomerShare::where('customer_id',$customer->id)->delete();
-                    if(isset($data['marketing_user_ids'])){
-                        foreach($data['marketing_user_ids'] as $ukey=> $marketuser){
-                            $user_cust_share = new UserCustomerShare;
-                            $user_cust_share->user_id = $marketuser;
+
+                    // ── Linked executives (unchanged behaviour) ───────────
+                    UserCustomerShare::where('customer_id', $customer->id)->delete();
+                    if (isset($data['marketing_user_ids'])) {
+                        foreach ($data['marketing_user_ids'] as $ukey => $marketuser) {
+                            $user_cust_share              = new UserCustomerShare;
+                            $user_cust_share->user_id     = $marketuser;
                             $user_cust_share->customer_id = $customer->id;
-                            $user_cust_share->share = 100;
-                            $user_cust_share->user_date = $data['user_dates'][$ukey];
-                            //$user_cust_share->average_sales = $data['average_sales'][$ukey];
+                            $user_cust_share->share       = 100;
+                            $user_cust_share->user_date   = $data['user_dates'][$ukey];
                             $user_cust_share->save();
                         }
                     }
-                    if(isset($data['register_request_id'])){
-                        RegisterRequest::where('id',$data['register_request_id'])->delete();
+
+                    if (isset($data['register_request_id'])) {
+                        RegisterRequest::where('id', $data['register_request_id'])->delete();
                     }
 
                     if (isset($data['customer_register_request_id'])) {
                         $customerId = $customer->id;
-
-                        // 1. Update the customer registration request status
                         CustomerRegisterRequest::where('id', $data['customer_register_request_id'])->update(['status' => 'Added']);
-
-                        // 2. Link existing contacts to the new customer ID and set the request ID to NULL
                         \App\CustomerContact::where('customer_register_request_id', $data['customer_register_request_id'])
                             ->update([
-                                'customer_id'                 => $customerId,
-                                'customer_register_request_id' => null
+                                'customer_id'                  => $customerId,
+                                'customer_register_request_id' => null,
+                            ]);
+                        \App\UserScheduler::where('customer_register_request_id', $data['customer_register_request_id'])
+                            ->update([
+                                'customer_id'                  => $customerId,
+                                'customer_register_request_id' => null,
+                            ]);
+                        \App\WorkNote::where('customer_register_request_id', $data['customer_register_request_id'])
+                            ->update([
+                                'customer_id'                  => $customerId,
+                                'customer_register_request_id' => null,
                             ]);
                     }
-                    //DB::commit();
+
                     $redirectTo = url('/admin/customers?s');
-                    return response()->json(['status'=>true,'message'=>'ok','url'=>$redirectTo]);
-                }else{
-                    return response()->json(['status'=>false,'errors'=>$validator->messages()]);
+                    return response()->json(['status' => true, 'message' => 'ok', 'url' => $redirectTo]);
+                } else {
+                    return response()->json(['status' => false, 'errors' => $validator->messages()]);
                 }
             }
-        }catch(\Exception $e){
-            return response()->json(['status'=>false,'message'=>$e->getMessage(),'errors'=>array('value'=>$e->getMessage())]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => false, 'message' => $e->getMessage(), 'errors' => array('value' => $e->getMessage())]);
         }
     }
+
 
     public function appedDiscountDetails(Request $request){
     	if($request->ajax()){

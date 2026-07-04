@@ -8,7 +8,7 @@ use App\AuthToken;
 use App\WorkNote;
 use App\WorkNoteAttachment;
 use Carbon\Carbon;
-
+use App\UserScheduler;
 class WorkNotesController extends Controller
 {
     protected $resp;
@@ -266,7 +266,27 @@ class WorkNotesController extends Controller
         }
 
         $workNote->load(['attachments']);
+        // 🔹 LINK SCHEDULERS TO NEW WORK NOTE
+        $schedulerQuery = UserScheduler::where('user_id', $userId)
+            ->where('scheduler_date', $request->input('date'))
+            ->where('status', '!=', 'Done')
+            ->where(function ($q) use ($workNote) {
+                if (!empty($workNote->customer_id)) {
+                    $q->orWhere('customer_id', $workNote->customer_id);
+                }
+                if (!empty($workNote->customer_register_request_id)) {
+                    $q->orWhere('customer_register_request_id', $workNote->customer_register_request_id);
+                }
+                if (!empty($workNote->dealer_id)) {
+                    $q->orWhere('dealer_id', $workNote->dealer_id);
+                }
+            });
 
+        foreach ($schedulerQuery->get() as $scheduler) {
+            $scheduler->work_note_id = $workNote->id;
+            $scheduler->status       = 'Done';
+            $scheduler->save();
+        }
         $result  = ['work_note' => $workNote];
         $message = "Work note created successfully.";
         return response()->json(apiSuccessResponse($message, $result), 200);

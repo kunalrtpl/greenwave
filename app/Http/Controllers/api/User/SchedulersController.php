@@ -193,7 +193,7 @@ class SchedulersController extends Controller
             'scheduler_date'               => 'required|date_format:Y-m-d',
             'scheduler_time'               => 'required|date_format:H:i',
             'description'                  => 'required|string',
-            'status'                       => 'nullable|string|in:Open,Pending,Done,Cancelled',
+            'status'                       => 'nullable|string',
         ];
 
         $validator = \Validator::make($request->all(), $rules);

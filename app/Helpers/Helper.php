@@ -144,7 +144,7 @@
 
 	function buisnesModels(){
 		/*return array('Dealer','Direct Company','Dealer + Company','Open');*/
-		return array('Dealer','Direct Customer','Open');
+		return array('Dealer','Direct Customer','Open','Hybrid');
 	}
 
 	function dealers(){

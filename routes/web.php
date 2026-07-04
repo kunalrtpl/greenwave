@@ -283,6 +283,7 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 
 		/*Customer Routes Starts*/
 		Route::match(['get', 'post'], '/customers', 'CustomerController@customers');
+		Route::post('customer-status-toggle', 'CustomerController@toggleStatus');
 		Route::match(['get', 'post'], '/add-edit-customer/{id?}', 'CustomerController@addEditCustomer');
 		Route::match(['get', 'post'], '/save-customer', 'CustomerController@saveCustomer');
 		Route::match(['get', 'post'], '/append-discount-details', 'CustomerController@appedDiscountDetails');
