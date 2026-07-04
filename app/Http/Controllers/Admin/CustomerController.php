@@ -277,7 +277,7 @@ class CustomerController extends Controller
                     $mobileunique = "unique:customers,mobile," . $data['customerid'];
                 }
 
-                $validator = Validator::make($request->all(), [
+                $rules = [
                     'name'           => 'bail|required',
                     'email'          => 'bail|nullable|email|' . $emailunique,
                     'mobile'         => 'bail|required|numeric|digits:10|' . $mobileunique,
@@ -289,6 +289,17 @@ class CustomerController extends Controller
                     'freight_basis'  => 'bail|required_if:business_model,Direct Customer,Hybrid|nullable',
                     'net_products.*.product_id'            => 'bail|nullable|exists:products,id',
                     'net_products.*.customer_selling_price'=> 'bail|nullable|numeric|min:0',
+                ];
+
+                // Freight must be > 0 when the company pays it (Direct Customer / Hybrid)
+                if (in_array($request->input('business_model'), ['Direct Customer', 'Hybrid'])
+                    && $request->input('freight_basis') == 'Paid by Company') {
+                    $rules['freight'] = 'bail|required|numeric|gt:0';
+                }
+
+                $validator = Validator::make($request->all(), $rules, [
+                    'freight.required' => 'Freight is required when paid by company.',
+                    'freight.gt'       => 'Freight must be greater than 0 when paid by company.',
                 ]);
 
                 if ($validator->passes()) {
@@ -483,10 +494,10 @@ class CustomerController extends Controller
                                 'customer_register_request_id' => null,
                             ]);
                         \App\UserScheduler::where('customer_register_request_id', $data['customer_register_request_id'])
-                            ->update([
-                                'customer_id'                  => $customerId,
-                                'customer_register_request_id' => null,
-                            ]);
+                                ->update([
+                                    'customer_id'                  => $customerId,
+                                    'customer_register_request_id' => null,
+                                ]);
                         \App\WorkNote::where('customer_register_request_id', $data['customer_register_request_id'])
                             ->update([
                                 'customer_id'                  => $customerId,

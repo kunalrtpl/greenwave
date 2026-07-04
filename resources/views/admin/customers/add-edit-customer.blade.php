@@ -86,6 +86,8 @@ Sections: Business · Primary User · Add-on Users · Model & Linking ·
    #custEdit .prod-body{display:grid;grid-template-columns:1.15fr 1fr;gap:0}
    #custEdit .prod-left{padding:18px 20px;border-right:1px solid var(--line2)}
    #custEdit .prod-left .cpx-grid{grid-template-columns:1fr 1fr;gap:13px 16px}
+   #custEdit .trio{grid-column:1/-1;display:grid;grid-template-columns:1.3fr 1.3fr .75fr;gap:13px 16px}
+   @media(max-width:900px){#custEdit .trio{grid-template-columns:1fr}}
    /* viability info panel */
    #custEdit .via{padding:18px 20px;background:#fbfcfb}
    #custEdit .via .v-title{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--blue);display:flex;align-items:center;gap:7px;margin-bottom:12px}
@@ -352,9 +354,10 @@ Sections: Business · Primary User · Add-on Users · Model & Linking ·
                            <div class="cpx-err" id="Customer-freight_basis"></div>
                         </div>
                         <div class="cpx-f" id="FreightField" style="{{ $freightBasis=='Paid by Company' ? '' : 'display:none' }}">
-                           <label>Freight (Rs./kg)</label>
-                           <div class="cpx-unit"><span class="pre">₹</span><input class="cpx-in data" type="number" step="0.01" name="freight" id="FreightInput" value="{{ $customerdata['freight'] ?? '' }}" placeholder="0.00"></div>
-                           <div class="cpx-hint">To fill only when freight is paid by company.</div>
+                           <label>Freight (Rs./kg) <span class="rq">*</span></label>
+                           <div class="cpx-unit"><span class="pre">₹</span><input class="cpx-in data" type="number" step="0.01" min="0.01" name="freight" id="FreightInput" value="{{ $customerdata['freight'] ?? '' }}" placeholder="0.00"></div>
+                           <div class="cpx-hint">Must be greater than 0 when freight is paid by company.</div>
+                           <div class="cpx-err" id="Customer-freight"></div>
                         </div>
                      </div>
                   </div>
@@ -476,7 +479,7 @@ Sections: Business · Primary User · Add-on Users · Model & Linking ·
    function fmt(v){ return num(v).toFixed(2); }
 
    function seLabel(){
-      return ($('#BusinessModelSel').val() === 'Direct Customer') ? 'ORC' : 'Selling Expense';
+      return ($('#BusinessModelSel').val() === 'Hybrid') ? 'ORC' : 'Selling Expense';
    }
    function globalPremium(){ return PREMIUM[$('#PaymentTermSel').val()] || 0; }
    function globalFreight(){
@@ -506,7 +509,7 @@ Sections: Business · Primary User · Add-on Users · Model & Linking ·
         '<div class="v-row"><div class="k">Base Price<small>automatic (calculated)</small></div><div class="v" data-v="'+prefix+'base">0.00</div></div>' +
         '<div class="v-row"><div class="k">Additional Packing Cost<small>only for 5kg*2 / 1kg*10</small></div><div class="v" data-v="'+prefix+'pack">0.00</div></div>' +
         '<div class="v-row"><div class="k">Freight (Rs./kg)<small>if paid by company</small></div><div class="v" data-v="'+prefix+'freight">0.00</div></div>' +
-        '<div class="v-row"><div class="k"><span class="seLabel">Selling Expense</span>s (Rs./kg)<small>automatic (calculated)</small></div><div class="v" data-v="'+prefix+'exp">0.00</div></div>' +
+        '<div class="v-row"><div class="k"><span class="seLabel">Selling Expense</span> (Rs./kg)<small>automatic (calculated)</small></div><div class="v" data-v="'+prefix+'exp">0.00</div></div>' +
         '<div class="v-row msp"><div class="k"><b>Minimum Selling Price</b></div><div class="v" data-v="'+prefix+'msp">0.00</div></div>' +
         '<div class="v-row real ok" data-v-row="'+prefix+'real"><div class="k"><b>Additional Realization</b></div><div class="v" data-v="'+prefix+'real">0.00</div></div>' +
       '</div>';
@@ -535,13 +538,15 @@ Sections: Business · Primary User · Add-on Users · Model & Linking ·
                 '<div class="cpx-hint pack-hint">Default: Standard (50 kg)</div></div>' +
               '<div class="cpx-f"><label>Customer Selling Price <span class="rq">*</span></label>' +
                 '<div class="cpx-unit"><span class="pre">₹</span><input class="cpx-in data f-csp" type="number" step="0.01" name="net_products['+i+'][customer_selling_price]" placeholder="to fill" required></div></div>' +
-              '<div class="cpx-f"><label>MOQ (kg)</label>' +
-                '<input class="cpx-in data f-moq" type="number" step="0.001" name="net_products['+i+'][moq]" placeholder="to fill (if any)"></div>' +
-              '<div class="cpx-f"><label><span class="seLabel">Selling Expense</span> / Basis <span class="rq">*</span></label>' +
-                '<select class="cpx-in f-seb" name="net_products['+i+'][selling_expense_basis]">' +
-                  '<option value="%">%</option><option value="Rs/kg">Rs/kg</option></select></div>' +
-              '<div class="cpx-f"><label><span class="seLabel">Selling Expense</span> / Value <span class="rq">*</span></label>' +
-                '<input class="cpx-in data f-sev" type="number" step="0.001" name="net_products['+i+'][selling_expense_value]" placeholder="to fill"></div>' +
+              '<div class="trio">' +
+                '<div class="cpx-f"><label>MOQ (kg)</label>' +
+                  '<input class="cpx-in data f-moq" type="number" step="0.001" name="net_products['+i+'][moq]" placeholder="to fill (if any)"></div>' +
+                '<div class="cpx-f"><label><span class="seLabel">Selling Expense</span> Value <span class="rq">*</span></label>' +
+                  '<input class="cpx-in data f-sev" type="number" step="0.001" name="net_products['+i+'][selling_expense_value]" placeholder="to fill"></div>' +
+                '<div class="cpx-f"><label><span class="seLabel">Selling Expense</span> Basis <span class="rq">*</span></label>' +
+                  '<select class="cpx-in f-seb" name="net_products['+i+'][selling_expense_basis]">' +
+                    '<option value="%">%</option><option value="Rs/kg">Rs/kg</option></select></div>' +
+              '</div>' +
             '</div>' +
             '<input type="hidden" name="net_products['+i+'][id]" class="f-rowid">' +
           '</div>' +
@@ -568,12 +573,12 @@ Sections: Business · Primary User · Add-on Users · Model & Linking ·
                   '<input class="cpx-in data f-svalue" type="number" step="0.01" name="net_products['+i+'][special_value]" placeholder="Rs. if Price · % if Discount"></div>' +
                 '<div class="cpx-f"><label>Net Price (after discount)</label>' +
                   '<input class="cpx-in data f-snet" readonly style="background:#fffbe6;font-weight:700" placeholder="automatic (calculated)"></div>' +
-                '<div class="cpx-f"><label><span class="seLabel">Selling Expense</span> / Basis</label>' +
+                '<div class="cpx-f"><label><span class="seLabel">Selling Expense</span> Value</label>' +
+                  '<input class="cpx-in data f-ssev" type="number" step="0.001" name="net_products['+i+'][special_selling_expense_value]">' +
+                  '<div class="cpx-hint">Pre-filled from above (but editable)</div></div>' +
+                '<div class="cpx-f"><label><span class="seLabel">Selling Expense</span> Basis</label>' +
                   '<select class="cpx-in f-sseb" name="net_products['+i+'][special_selling_expense_basis]">' +
                     '<option value="%">%</option><option value="Rs/kg">Rs/kg</option></select>' +
-                  '<div class="cpx-hint">Pre-filled from above (but editable)</div></div>' +
-                '<div class="cpx-f"><label><span class="seLabel">Selling Expense</span> / Value</label>' +
-                  '<input class="cpx-in data f-ssev" type="number" step="0.001" name="net_products['+i+'][special_selling_expense_value]">' +
                   '<div class="cpx-hint">Pre-filled from above (but editable)</div></div>' +
               '</div>' +
             '</div>' +
@@ -825,6 +830,17 @@ Sections: Business · Primary User · Add-on Users · Model & Linking ·
       $('#Customerform').submit(function(e){
          e.preventDefault();
          $('.cpx-err').hide().text('');
+
+         /* freight must be > 0 when paid by company (Direct Customer / Hybrid) */
+         var bm = $('#BusinessModelSel').val();
+         if((bm === 'Direct Customer' || bm === 'Hybrid') &&
+            $('#FreightBasisSel').val() === 'Paid by Company' &&
+            num($('#FreightInput').val()) <= 0){
+            $('#Customer-freight').text('Freight must be greater than 0 when paid by company.').show();
+            $('html,body').animate({ scrollTop: $('#Customer-freight').offset().top - 160 }, 600);
+            return;
+         }
+
          $('.loadingDiv').show();
          var formdata = new FormData(this);
          $.ajax({

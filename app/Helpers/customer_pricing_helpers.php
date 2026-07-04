@@ -70,10 +70,10 @@ if (!function_exists('additional_packing_cost')) {
 }
 
 if (!function_exists('selling_expense_label')) {
-    /** "Selling Expense" when a dealer is involved (Dealer / Hybrid), else "ORC" */
+    /** "ORC" when Business Model is Hybrid; "Selling Expense" for Direct Customer (and everything else) */
     function selling_expense_label($businessModel)
     {
-        return ($businessModel === 'Direct Customer') ? 'ORC' : 'Selling Expense';
+        return ($businessModel === 'Hybrid') ? 'ORC' : 'Selling Expense';
     }
 }
 
