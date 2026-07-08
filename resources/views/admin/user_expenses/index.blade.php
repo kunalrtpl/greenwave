@@ -375,6 +375,15 @@
     overflow: hidden !important;
     white-space: nowrap !important;
 }
+.btn-xls {
+    display: none; align-items: center; gap: 6px;
+    height: 34px; padding: 0 14px; font-size: 12px; font-weight: 700;
+    border-radius: 4px !important; border: 1px solid #38a169;
+    background: #f0fff4; color: #276749; cursor: pointer; text-decoration: none;
+    font-family: 'DM Sans', sans-serif; transition: all .15s;
+}
+.btn-xls:hover { background: #38a169; color: #fff; text-decoration: none; }
+.btn-xls.visible { display: inline-flex; }
 </style>
 
 {{-- Inline SVG symbols --}}
@@ -559,6 +568,9 @@ $currentYear  = date('Y');
                         {{-- PDF button: only visible after Apply is clicked with employee selected --}}
                         <a id="btnExportPdf" href="#" class="btn-pdf" target="_blank" title="Export to PDF">
                             {!! svgico('pdf',12,'style="color:currentColor"') !!} PDF
+                        </a>
+                        <a id="btnExportXls" href="#" class="btn-xls" title="Export to Excel">
+                            {!! svgico('save',12,'style="color:currentColor"') !!} XLS
                         </a>
                     </div>
                 </div>
@@ -1020,6 +1032,13 @@ $currentYear  = date('Y');
                     </svg>
                     Download PDF
                 </button>
+                <button type="button" id="btnDownloadCatXls" style="
+                    display:inline-flex; align-items:center; gap:6px;
+                    background:#276749; color:#fff; border:none;
+                    border-radius:5px; padding:9px 20px; font-size:13px; font-weight:700;
+                    cursor:pointer; font-family:'DM Sans',sans-serif;">
+                    XLS
+                </button>
             </div>
         </div>
     </div>
@@ -1086,39 +1105,52 @@ $(document).ready(function(){
        - Page reload (after form submit) re-evaluates from URL params
     ══════════════════════════════════════════════════════════════ */
     var $pdfBtn = $('#btnExportPdf');
+    var $xlsBtn = $('#btnExportXls');
 
-    function buildPdfUrl() {
+    function buildExportParams() {
+        var p = new URLSearchParams();
         var empVal   = $('#filterEmployee').val();
         var month    = $('#filterMonth').val();
         var year     = $('#filterYear').val();
         var status   = $('#filterStatus').val();
         var verified = $('#filterVerified').val();
 
+        if (empVal)   p.set('employee_id', empVal);
+        if (month)    p.set('month',    month);
+        if (year)     p.set('year',     year);
+        if (status)   p.set('status',   status);
+        if (verified) p.set('verified', verified);
+        return p;
+    }
+
+    function buildExportUrls() {
+        var empVal = $('#filterEmployee').val();
+        var qs     = buildExportParams().toString();
+
+        // XLS: always available (works for all employees too)
+        $xlsBtn.attr('href', '{{ url("admin/user-expenses/export-xls") }}' + (qs ? '?' + qs : ''))
+               .addClass('visible');
+
+        // PDF: only when a single employee is selected (existing behaviour)
         if (empVal && empVal !== '') {
-            var p = new URLSearchParams();
-            p.set('employee_id', empVal);
-            if (month    && month    !== '') p.set('month',    month);
-            if (year     && year     !== '') p.set('year',     year);
-            if (status   && status   !== '') p.set('status',   status);
-            if (verified && verified !== '') p.set('verified', verified);
-            $pdfBtn.attr('href', '{{ url("admin/user-expenses/export-pdf") }}?' + p.toString());
-            $pdfBtn.addClass('visible');
+            $pdfBtn.attr('href', '{{ url("admin/user-expenses/export-pdf") }}?' + qs)
+                   .addClass('visible');
         } else {
             $pdfBtn.removeClass('visible').attr('href', '#');
         }
     }
 
-    /* Hide PDF button the INSTANT any filter changes — user must re-apply */
+    /* Hide export buttons the INSTANT any filter changes — user must re-apply */
     $('#filterEmployee, #filterMonth, #filterYear, #filterStatus, #filterVerified').on('change', function(){
         $pdfBtn.removeClass('visible').attr('href', '#');
+        $xlsBtn.removeClass('visible').attr('href', '#');
     });
 
-    /* On page load: if URL already has employee_id (i.e. filters were just applied),
-       show PDF button matching the current URL state */
+    /* On page load, rebuild from URL state */
     (function(){
         var urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('employee_id')) {
-            buildPdfUrl();
+        if (urlParams.toString()) {
+            buildExportUrls();
         }
     })();
 
@@ -1393,6 +1425,21 @@ $(document).ready(function(){
         $('#catSummaryModal').modal('hide');
     });
 
+
+    $('#btnDownloadCatXls').on('click', function(){
+        var p = new URLSearchParams();
+        var empId = $('#csp_employee').val();
+        var month = $('#csp_month').val();
+        var year  = $('#csp_year').val();
+        if (empId) p.set('employee_id', empId);
+        if (month) p.set('month', month);
+        if (year)  p.set('year', year);
+
+        var url = '{{ url("admin/user-expenses/export-xls") }}';
+        if (p.toString()) url += '?' + p.toString();
+        window.open(url, '_blank');
+        $('#catSummaryModal').modal('hide');
+    });
 });
 </script>
 @endsection

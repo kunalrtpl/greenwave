@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Mpdf\Mpdf;
 use Session;
-
+use Excel;
 class UserExpenseController extends Controller
 {
     /**
@@ -635,4 +635,232 @@ class UserExpenseController extends Controller
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
     }
+
+    /**
+     * Export filtered expenses as XLS (listing only, no category summary).
+     */
+    public function exportXls(Request $request)
+    {
+        $query = DB::table('user_expenses as ue')
+            ->join('expense_categories as ec', 'ue.category_id', '=', 'ec.id')
+            ->leftJoin('users as u',  'ue.user_id',     '=', 'u.id')
+            ->leftJoin('users as vb', 'ue.verified_by', '=', 'vb.id')
+            ->leftJoin('users as ab', 'ue.approved_by', '=', 'ab.id')
+            ->select(
+                'ue.expense_date',
+                'ue.missed_entry',
+                'ue.missed_entry_reason',
+                'ue.requested_amount',
+                'ue.approved_amount',
+                'ue.travel_km',
+                'ue.charge_per_km',
+                'ue.is_intercity',
+                'ue.intercity_route',
+                'ue.remarks',
+                'ue.status',
+                'ue.internal_remarks',
+                'ue.admin_remarks',
+                'ue.verified_by',
+                'ec.name as category_name',
+                'ec.is_travel',
+                'u.name as employee_name',
+                'u.mobile as employee_mobile',
+                'vb.name as verified_by_name',
+                'ab.name as approved_by_name'
+            )
+            ->orderBy('ue.expense_date', 'ASC');
+
+        if ($request->filled('employee_id')) {
+            $query->where('ue.user_id', $request->employee_id);
+        }
+        if ($request->filled('month')) {
+            $query->whereMonth('ue.expense_date', $request->month);
+        }
+        if ($request->filled('year')) {
+            $query->whereYear('ue.expense_date', $request->year);
+        }
+        if ($request->filled('status')) {
+            $query->where('ue.status', $request->status);
+        }
+        if ($request->filled('verified')) {
+            $request->verified === 'yes'
+                ? $query->whereNotNull('ue.verified_by')
+                : $query->whereNull('ue.verified_by');
+        }
+
+        $expenses = $query->get();
+
+        $employee = null;
+        if ($request->filled('employee_id')) {
+            $employee = DB::table('users')->select('id', 'name', 'mobile')
+                ->where('id', $request->employee_id)->first();
+        }
+
+        // ── Build rows (all values cast to string to avoid PHPExcel 7.4 curly-brace bug) ──
+        $rows = [];
+        $sr = 1;
+        foreach ($expenses as $e) {
+            $travel = '';
+            if ($e->is_travel && !empty($e->travel_km)) {
+                $travel = rtrim(rtrim(number_format((float) $e->travel_km, 2, '.', ''), '0'), '.')
+                        . ' km x ' . number_format((float) $e->charge_per_km, 2) . '/km';
+                if ($e->is_intercity && !empty($e->intercity_route)) {
+                    $travel .= ' (' . $e->intercity_route . ')';
+                }
+            }
+
+            $expDate = \Carbon\Carbon::parse($e->expense_date);
+
+            $rows[] = [
+                'Sr No'            => (string) $sr++,
+                'Employee'         => (string) ($e->employee_name ?? 'N/A'),
+                'Mobile'           => (string) ($e->employee_mobile ?? ''),
+                'Date'             => $expDate->format('d-m-Y'),
+                'Day'              => $expDate->format('D'),
+                'Category'         => (string) $e->category_name,
+                'Missed Entry'     => $e->missed_entry ? 'Yes' : 'No',
+                'Missed Reason'    => (string) ($e->missed_entry_reason ?? ''),
+                'Travel Details'   => $travel,
+                'Remarks'          => (string) ($e->remarks ?? ''),
+                'Requested Amount' => number_format((float) $e->requested_amount, 2, '.', ''),
+                'Approved Amount'  => number_format((float) $e->approved_amount, 2, '.', ''),
+                'Status'           => (string) $e->status,
+                'Verified'         => $e->verified_by ? 'Yes' : 'No',
+                'Verified By'      => (string) ($e->verified_by_name ?? ''),
+                'Approved By'      => (string) ($e->approved_by_name ?? ''),
+                'Internal Remarks' => (string) ($e->internal_remarks ?? ''),
+                'Admin Remarks'    => (string) ($e->admin_remarks ?? ''),
+            ];
+        }
+
+        // ── Filename ──
+        $filename = 'expense-report';
+        if ($employee) {
+            $filename .= '-' . \Illuminate\Support\Str::slug($employee->name);
+        }
+        if ($request->filled('month') && $request->filled('year')) {
+            $filename .= '-' . date('M', mktime(0, 0, 0, $request->month, 1)) . '-' . $request->year;
+        } elseif ($request->filled('year')) {
+            $filename .= '-' . $request->year;
+        }
+
+        // ── Header text ──
+        $titleName  = $employee ? $employee->name : 'All Employees';
+        $periodText = 'All Time';
+        if ($request->filled('month') && $request->filled('year')) {
+            $periodText = date('F', mktime(0, 0, 0, $request->month, 1)) . ' ' . $request->year;
+        } elseif ($request->filled('year')) {
+            $periodText = (string) $request->year;
+        }
+
+        $totalReq = (float) $expenses->sum('requested_amount');
+        $totalApr = (float) $expenses->sum('approved_amount');
+        $totalCnt = $expenses->count();
+        $prevLevel = error_reporting();
+        error_reporting($prevLevel & ~E_NOTICE & ~E_WARNING & ~E_DEPRECATED);
+        $response =  Excel::create($filename, function ($excel) use ($rows, $titleName, $periodText, $totalReq, $totalApr, $totalCnt) {
+
+            $excel->setTitle('Expense Report');
+            $excel->setCreator('Greenwave')->setCompany('Greenwave');
+
+            $excel->sheet('Expenses', function ($sheet) use ($rows, $titleName, $periodText, $totalReq, $totalApr, $totalCnt) {
+
+                if (empty($rows)) {
+                    $sheet->row(1, ['No expense records found for the selected filters.']);
+                    return;
+                }
+
+                $headings = array_keys($rows[0]);
+                $colCount = count($headings);
+                $lastCol  = 'R'; // 18 columns: A..R
+
+                // Row 1 — Title
+                $sheet->row(1, ['Expense Report - ' . $titleName]);
+                $sheet->mergeCells("A1:{$lastCol}1");
+                $sheet->cell("A1:{$lastCol}1", function ($cell) {
+                    $cell->setAlignment('center')->setValignment('center');
+                    $cell->setFontSize(14)->setFontWeight('bold');
+                    $cell->setFontColor('#FFFFFF');
+                    $cell->setBackground('#1E293B');
+                });
+                $sheet->setHeight(1, 26);
+
+                // Row 2 — Period + generated
+                $sheet->row(2, ['Period: ' . $periodText . '   |   Generated: ' . now()->format('d/m/Y H:i')]);
+                $sheet->mergeCells("A2:{$lastCol}2");
+                $sheet->cell("A2:{$lastCol}2", function ($cell) {
+                    $cell->setAlignment('center');
+                    $cell->setFontSize(10);
+                    $cell->setFontColor('#334155');
+                    $cell->setBackground('#E2E8F0');
+                });
+
+                // Row 3 — spacer (no row() call, just height)
+                $sheet->setHeight(3, 6);
+
+                // Row 4 — Headings
+                $sheet->row(4, $headings);
+                $sheet->cell("A4:{$lastCol}4", function ($cell) {
+                    $cell->setFontWeight('bold');
+                    $cell->setFontColor('#FFFFFF');
+                    $cell->setBackground('#334155');
+                    $cell->setAlignment('center')->setValignment('center');
+                });
+                $sheet->setHeight(4, 20);
+
+                // Data rows
+                $r = 5;
+                foreach ($rows as $row) {
+                    $sheet->row($r, array_values($row));
+                    $r++;
+                }
+                $lastDataRow = $r - 1;
+
+                // Totals row
+                $totalsRow = array_fill(0, $colCount, '');
+                $totalsRow[0]  = 'TOTAL';
+                $totalsRow[1]  = $totalCnt . ' record(s)';
+                $totalsRow[10] = number_format($totalReq, 2, '.', '');
+                $totalsRow[11] = number_format($totalApr, 2, '.', '');
+                $sheet->row($r, array_values($totalsRow));
+                $sheet->cell("A{$r}:{$lastCol}{$r}", function ($cell) {
+                    $cell->setFontWeight('bold');
+                    $cell->setFontColor('#FFFFFF');
+                    $cell->setBackground('#1E293B');
+                });
+                $totalsRowNum = $r;
+
+                // Number format — scoped to data range only (NOT whole column)
+                $sheet->getStyle("K5:L{$totalsRowNum}")
+                      ->getNumberFormat()
+                      ->setFormatCode('#,##0.00');
+
+                // Borders
+                $sheet->setBorder("A4:{$lastCol}{$totalsRowNum}", 'thin');
+
+                // Wrap + top-align data area
+                $sheet->getStyle("A5:{$lastCol}{$lastDataRow}")
+                      ->getAlignment()
+                      ->setWrapText(true)
+                      ->setVertical('top');
+
+                // Column widths
+                $sheet->setWidth([
+                    'A' => 7,  'B' => 22, 'C' => 14, 'D' => 12, 'E' => 7,
+                    'F' => 20, 'G' => 12, 'H' => 28, 'I' => 30, 'J' => 30,
+                    'K' => 16, 'L' => 16, 'M' => 18, 'N' => 10, 'O' => 18,
+                    'P' => 18, 'Q' => 30, 'R' => 30,
+                ]);
+
+                // Freeze the heading row (row 4) and enable filtering
+                $sheet->setFreeze('A5');
+                $sheet->setAutoFilter("A4:{$lastCol}{$lastDataRow}");
+            });
+
+        })->download('xls');
+
+        error_reporting($prevLevel);
+        return $response;
+    }
+    
 }

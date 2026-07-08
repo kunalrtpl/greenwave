@@ -483,6 +483,7 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 
 	Route::get('user-expenses/export-pdf', 'UserExpenseController@exportPdf');
 	Route::get('user-expenses/export-category-summary', 'UserExpenseController@exportCategorySummaryPdf');
+	Route::get('user-expenses/export-xls', 'UserExpenseController@exportXls');
 
 
 	/*
