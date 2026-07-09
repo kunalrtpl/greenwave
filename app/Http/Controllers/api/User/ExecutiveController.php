@@ -563,6 +563,7 @@ class ExecutiveController extends Controller
                 $spsod = \App\ProductDiscount::get();
                 $result['mtod'] = $mtod;
                 $result['spsod'] = $spsod;
+                $result['customer_pricing_masters'] = customer_pricing_masters();
             }
             $message = "Fetched successfully";
             return response()->json(apiSuccessResponse($message,$result),200);

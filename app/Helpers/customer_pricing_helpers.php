@@ -46,7 +46,7 @@ if (!function_exists('packing_sizes')) {
     function packing_sizes()
     {
         return [
-            'Standard' => 'Standard (50 kg)',
+            'Standard' => 'Standard',
             '5kg*2'    => '5kg*2',
             '1kg*10'   => '1kg*10',
         ];
@@ -74,6 +74,48 @@ if (!function_exists('selling_expense_label')) {
     function selling_expense_label($businessModel)
     {
         return ($businessModel === 'Hybrid') ? 'ORC' : 'Selling Expense';
+    }
+}
+
+if (!function_exists('customer_pricing_masters')) {
+    /**
+     * All static master values for the Customer Pricing screen —
+     * meant to be returned as-is from an API endpoint so the
+     * mobile/frontend can build its dropdowns + do live calculations.
+     */
+    function customer_pricing_masters()
+    {
+        // payment terms with their premium % merged in
+        $paymentTerms = [];
+        foreach (payment_terms() as $term) {
+            $paymentTerms[] = [
+                'value'           => $term,
+                'label'           => $term,
+                'premium_percent' => direct_sales_premium($term),
+            ];
+        }
+
+        // packing sizes with their additional cost merged in
+        $packingSizes = [];
+        foreach (packing_sizes() as $value => $label) {
+            $packingSizes[] = [
+                'value'           => $value,
+                'label'           => $label,
+                'additional_cost' => additional_packing_cost($value), // Rs./kg
+            ];
+        }
+
+        return [
+            'business_models' => buisnesModels(),
+            'payment_terms'   => $paymentTerms,
+            'packing_sizes'   => $packingSizes,
+            'freight_basis'   => ['Paid by Company', 'Paid by Customer'],
+            'expense_basis'   => ['%', 'Rs/kg'],
+            'labels'          => [
+                'Hybrid'          => selling_expense_label('Hybrid'),          // ORC
+                'Direct Customer' => selling_expense_label('Direct Customer'), // Selling Expense
+            ],
+        ];
     }
 }
 
