@@ -42,6 +42,7 @@ class SendDailyWorkReport extends Command
     protected $description = 'Email each employee their previous-day work report (PDF) with today\'s upcoming tasks';
 
     const RETENTION_DAYS = 5;
+    const MARKETING_DEPARTMENT_ID = 2;
 
     public function handle()
     {
@@ -85,9 +86,20 @@ class SendDailyWorkReport extends Command
 
     private function seedTrackingRows(Carbon $reportDate)
     {
+        // Marketing department users only (user_departments.department_id = 2)
+        $marketingUserIds = \DB::table('user_departments')
+            ->where('department_id', self::MARKETING_DEPARTMENT_ID)
+            ->pluck('user_id')
+            ->toArray();
+
+        if (empty($marketingUserIds)) {
+            return; // nobody in the department — nothing to seed
+        }
+
         $userQuery = User::where('status', 1)
             ->where('email', '!=', '')
-            ->whereNotNull('email');
+            ->whereNotNull('email')
+            ->whereIn('id', $marketingUserIds);
 
         if ($this->option('user')) {
             $userQuery->where('id', $this->option('user'));

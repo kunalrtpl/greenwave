@@ -29,7 +29,7 @@ body {
 }
 .hdr-date { font-size: 8px; color: #64748b; }
 
-/* ── EMPLOYEE TAGS (ftag = product-pricing chip) ── */
+/* ── EMPLOYEE TAGS ── */
 .filter-row { margin-bottom: 16px; }
 .ftag-lbl {
     font-size: 7.5px; color: #64748b; font-weight: bold; margin-right: 4px;
@@ -49,14 +49,23 @@ body {
     padding: 10px 6px; border: 1px solid #cbd5e1; background-color: #f8fafc;
 }
 .s-box + .s-box { border-left: none; }
-.s-box-1 { border-top: 3px solid #1e293b; width: 16%; }
-.s-box-2 { border-top: 3px solid #475569; width: 16%; }
-.s-box-3 { border-top: 3px solid #64748b; width: 16%; }
-.s-box-4 { border-top: 3px solid #94a3b8; width: 16%; }
-.s-box-spacer { width: 36%; border: none; background: transparent; }
+.s-box-1 { border-top: 3px solid #1e293b; width: 22%; }
+.s-box-2 { border-top: 3px solid #475569; width: 22%; }
+.s-box-3 { border-top: 3px solid #64748b; width: 22%; }
+
+/* Clean, open typography display for the date */
+.s-box-date-clean { 
+    text-align: right; 
+    padding: 10px 0 10px 15px; 
+    vertical-align: middle;
+}
 
 .s-big { font-size: 18px; font-weight: bold; display: block; line-height: 1; margin-bottom: 2px; color: #0f172a; }
 .s-tag { font-size: 7px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.8px; display: block; color: #475569; }
+
+/* Bigger typography style for the open date element */
+.s-date-large { font-size: 16px; font-weight: bold; color: #1d4ed8; display: block; line-height: 1; margin-bottom: 2px; }
+.s-date-day   { font-size: 8.5px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #475569; display: block; }
 
 /* ── SECTION TITLES ── */
 .sec-title {
@@ -67,7 +76,7 @@ body {
 }
 .sec-sub { font-size: 7.5px; color: #cbd5e1; font-weight: normal; letter-spacing: 0.3px; }
 
-/* ── DATA TABLES (identical to product-pricing) ── */
+/* ── DATA TABLES ── */
 table.data-table { width: 100%; border-collapse: collapse; font-size: 8.5px; }
 table.data-table thead tr { background-color: #e9eff6; }
 table.data-table thead th {
@@ -87,7 +96,7 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
     border: 1px solid #e2e8f0; border-top: none; background: #ffffff; font-size: 8.5px;
 }
 
-/* ── STATUS (typography-based — mPDF renders boxes badly) ── */
+/* ── STATUS ── */
 .status-txt {
     font-size: 8px; font-weight: bold;
     text-transform: uppercase; letter-spacing: 0.6px;
@@ -106,7 +115,7 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
 .inline-list { font-weight: bold; color: #334155; }
 .inline-list .sep { color: #cbd5e1; font-weight: normal; }
 
-/* ═══════════════ DVR VISIT SHEET (corporate card) ═══════════════ */
+/* ═══════════════ DVR VISIT SHEET ═══════════════ */
 .visit-card {
     width: 100%; border-collapse: collapse;
     border: 1px solid #cbd5e1;
@@ -114,7 +123,6 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
     page-break-inside: avoid;
 }
 
-/* header band — same tone as data-table thead */
 .vc-head-num {
     width: 58px; background: #1e293b; color: #ffffff;
     text-align: center; vertical-align: middle;
@@ -133,7 +141,6 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
     font-size: 7px; font-weight: bold; color: #475569;
     text-transform: uppercase; letter-spacing: 0.6px; margin-top: 2px;
 }
-/* compact times at the right of the visit header band */
 .vc-head-meta {
     background: #e9eff6; border-bottom: 1px solid #cbd5e1;
     vertical-align: middle; text-align: right;
@@ -149,7 +156,7 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
 }
 .vcm-val { font-size: 9px; font-weight: bold; color: #0f172a; white-space: nowrap; }
 
-/* section title with right-aligned count */
+/* section title table */
 .sec-title-table { width: 100%; border-collapse: collapse; margin: 20px 0 0 0; background: #1e293b; }
 .sec-title-left {
     color: #ffffff; font-size: 9px; font-weight: bold;
@@ -160,7 +167,7 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
     text-transform: uppercase; letter-spacing: 1px; padding: 7px 10px; text-align: right;
 }
 
-/* ── TODAY section — blue theme so upcoming stands apart from yesterday ── */
+/* ── TODAY section ── */
 .sec-title-today { background: #1d4ed8; }
 .sec-title-today .sec-title-right { color: #bfdbfe; }
 .sec-today-tag {
@@ -173,7 +180,7 @@ table.data-table-today thead th { color: #1e40af; border-color: #bfdbfe; }
 table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
 .empty-cell-today { border-color: #bfdbfe; color: #1e40af; }
 
-/* tick/cross status strip — product-pricing style */
+/* status strip */
 .vc-status { width: 100%; border-collapse: collapse; }
 .vc-status td {
     width: 20%; text-align: center; padding: 7px 4px;
@@ -191,7 +198,7 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
 .icon-tick  { font-size: 9px; font-weight: bold; color: #16a34a; }
 .icon-cross { font-size: 9px; font-weight: bold; color: #dc2626; }
 
-/* check in / out / duration strip */
+/* time strip */
 .vc-time { width: 100%; border-collapse: collapse; }
 .vc-time td {
     width: 33.33%; padding: 9px 12px;
@@ -207,7 +214,7 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
 .vct-in    { color: #16a34a; }
 .vct-out   { color: #dc2626; }
 
-/* detail rows — label column + value column, invoice style */
+/* detail rows */
 .vc-detail { width: 100%; border-collapse: collapse; }
 .vc-detail td { border-bottom: 1px solid #e2e8f0; vertical-align: top; }
 .vc-detail tr.vc-last td { border-bottom: none; }
@@ -221,14 +228,12 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
 
 .contact-name { font-weight: bold; color: #0f172a; font-size: 9px; }
 .contact-sub  { font-size: 7.5px; color: #64748b; }
-
 .next-plan-val { font-weight: bold; color: #0f172a; }
 
-/* trials inside the visit sheet */
 .trial-line  { margin-top: 2px; font-size: 8.5px; color: #334155; line-height: 1.5; }
 .trial-line b { color: #475569; }
 
-/* multiple trials → mini trial sheets */
+/* mini trial sheets */
 .trial-tbl { width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; margin: 2px 0 8px 0; }
 .trial-tbl-last { margin-bottom: 2px; }
 .tt-head {
@@ -298,7 +303,7 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
     @endif
 </div>
 
-{{-- ── KPI BOXES ── --}}
+{{-- ── KPI BOXES & LARGE OPEN DATE ── --}}
 <table class="summary-strip" cellspacing="0" cellpadding="0">
     <tr>
         <td class="s-box s-box-1">
@@ -313,11 +318,10 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
             <span class="s-big">{{ count($notes) }}</span>
             <span class="s-tag"><br>Other Developments</span>
         </td>
-        <!-- <td class="s-box s-box-4">
-            <span class="s-big" style="color:#1d4ed8;">{{ count($tTasks) }}</span>
-            <span class="s-tag"><br>Today's Tasks</span>
-        </td> -->
-        <td class="s-box-spacer"></td>
+        <td class="s-box-date-clean">
+            <span class="s-date-large">{{ $reportDate }}</span>
+            <span class="s-date-day">{{ $reportDay }}</span>
+        </td>
     </tr>
 </table>
 
@@ -434,7 +438,7 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
             </td>
         </tr>
 
-        {{-- Detail rows: label + value --}}
+        {{-- Detail rows --}}
         <tr>
             <td colspan="3" style="padding:0;">
                 <table class="vc-detail" cellspacing="0" cellpadding="0">
@@ -481,7 +485,6 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
                         <td class="vcd-lbl">Trials</td>
                         <td class="vcd-val">
                         @if(count($v['trials']) === 1)
-                            {{-- single trial → clean inline block, no table --}}
                             @php $tr = $v['trials'][0]; @endphp
                             <span class="status-txt" style="color: {{ $tr['status_color'] }};">&#9679; {{ $tr['status'] }}</span>
                             @if($tr['type'])
@@ -502,7 +505,6 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
                                 <div class="trial-line" style="color:#64748b;">{{ $tr['remarks'] }}</div>
                             @endif
                         @else
-                            {{-- multiple trials → one mini trial sheet each --}}
                             @foreach($v['trials'] as $ti => $tr)
                             <table class="trial-tbl {{ $loop->last ? 'trial-tbl-last' : '' }}" cellspacing="0" cellpadding="0">
                                 <tr>
@@ -582,7 +584,7 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
     @endforeach
 @endif
 
-{{-- ═══════════════ 3. OTHER DEVELOPMENTS (WORK NOTES) ═══════════════ --}}
+{{-- ── 3. OTHER DEVELOPMENTS (WORK NOTES) ── --}}
 <table class="sec-title-table" cellspacing="0" cellpadding="0">
     <tr>
         <td class="sec-title-left">3. Other Developments</td>
@@ -634,7 +636,7 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
 </table>
 @endif
 
-{{-- ═══════════════ 4. TODAY'S UPCOMING TASKS ═══════════════ --}}
+{{-- ── 4. TODAY'S UPCOMING TASKS ── --}}
 <table class="sec-title-table sec-title-today" cellspacing="0" cellpadding="0">
     <tr>
         <td class="sec-title-left"><span class="sec-today-tag">&#9654; UPCOMING</span> 4. Scheduled Tasks &mdash; {{ $todayDate }} (Today)</td>
