@@ -1618,6 +1618,9 @@ class DealerController extends Controller
                 $savefeed->feedback_date = $data['feedback_date'];
                 $savefeed->dealer_id = $resp['dealer']['id'];
                 $savefeed->remarks = $data['remarks'];
+                if(isset($data['visit_type'])){
+                    $savefeed->visit_type = $data['visit_type'];
+                }
                 $savefeed->type = $data['type'];
                 if($data['type']=="need sample/trial"){
                     $savefeed->product_id = $data['product_id'];
