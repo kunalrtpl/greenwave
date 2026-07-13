@@ -105,7 +105,7 @@ class SendDailyWorkReport extends Command
                     $query->where('id', $this->option('user'));
                 } else {
                     // Otherwise, exclude test users and restrict to marketing users
-                    $query->whereNotIn('id', [16, 17, 9])
+                    $query->whereNotIn('id', [16, 17, 9, 25])
                           ->whereIn('id', $marketingUserIds);
                 }
             });
