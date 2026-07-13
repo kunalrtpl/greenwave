@@ -39,7 +39,7 @@ class Kernel extends ConsoleKernel
 
         $schedule->command('report:daily-work-email')
             ->everyMinute()
-            ->between('9:00', '14:00')
+            ->between('8:30', '9:15')
             ->timezone('Asia/Kolkata')
             ->withoutOverlapping();
 
