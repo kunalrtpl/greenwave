@@ -43,12 +43,6 @@ class Kernel extends ConsoleKernel
             ->timezone('Asia/Kolkata')
             ->withoutOverlapping();
 
-        // TESTING SETUP: Appending the specific target arguments for 2026-07-12
-        $schedule->command('report:daily-work-email --date=2026-07-12 --limit=2')
-        ->everyMinute()
-        ->between('9:00', '14:00')
-        ->timezone('Asia/Kolkata')
-        ->withoutOverlapping();
 
         //$schedule->command('heartbeat:check')->everyMinute();
     }
