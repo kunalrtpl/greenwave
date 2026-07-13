@@ -37,9 +37,10 @@ class Kernel extends ConsoleKernel
          ->appendOutputTo(storage_path('logs/el-accrual.log'));
 
 
-         $schedule->command('report:daily-work-email')
+        $schedule->command('report:daily-work-email')
             ->everyMinute()
             ->between('9:00', '14:00')
+            ->timezone('Asia/Kolkata')
             ->withoutOverlapping();
 
 
