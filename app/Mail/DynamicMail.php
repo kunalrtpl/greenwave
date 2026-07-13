@@ -42,7 +42,18 @@ class DynamicMail extends Mailable
         }
 
         // ── CC / BCC ───────────────────────────────────────────────────────────
+        // CC = template cc_emails (DB) + dynamic mailData['_cc'] — merged & deduped.
+        // Underscore prefix like '_attachments', so existing calls are untouched.
         $cc = array_values(array_filter((array) ($this->template->cc_emails ?? [])));
+
+        if (!empty($this->mailData['_cc']) && is_array($this->mailData['_cc'])) {
+            $cc = array_merge($cc, $this->mailData['_cc']);
+        }
+
+        $cc = array_values(array_unique(array_filter($cc, function ($e) {
+            return filter_var($e, FILTER_VALIDATE_EMAIL);
+        })));
+
         if (!empty($cc)) {
             $mail->cc($cc);
         }

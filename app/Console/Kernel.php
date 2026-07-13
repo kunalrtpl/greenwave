@@ -16,6 +16,7 @@ class Kernel extends ConsoleKernel
         //
         \App\Console\Commands\EarnedLeaveAccrualCommand::class,
         \App\Console\Commands\ScheduleHeartbeat::class,
+        \App\Console\Commands\SendDailyWorkReport::class,
     ];
 
     /**
@@ -34,6 +35,12 @@ class Kernel extends ConsoleKernel
          ->withoutOverlapping()
          ->runInBackground()
          ->appendOutputTo(storage_path('logs/el-accrual.log'));
+
+
+         $schedule->command('report:daily-work-email')
+            ->everyMinute()
+            ->between('9:00', '14:00')
+            ->withoutOverlapping();
 
 
         //$schedule->command('heartbeat:check')->everyMinute();
