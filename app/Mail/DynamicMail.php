@@ -107,6 +107,14 @@ class DynamicMail extends Mailable
             return strtoupper(substr(trim($dealer->city), 0, 3));
         }
 
+        if ($key === 'employee_name') {
+            $employeeName = isset($this->mailData['employee'])
+                ? $this->mailData['employee']['name']
+                :'';
+
+            return $employeeName;
+        }
+
         return null;
     }
 

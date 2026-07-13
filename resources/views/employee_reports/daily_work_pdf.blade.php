@@ -13,7 +13,7 @@ body {
     line-height: 1.5;
 }
 
-/* ── HEADER (same as product-pricing) ── */
+/* ── HEADER ── */
 .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
 .hdr-left  { vertical-align: top; text-align: left; }
 .hdr-right { vertical-align: top; text-align: right; }
@@ -29,17 +29,16 @@ body {
 }
 .hdr-date { font-size: 8px; color: #64748b; }
 
-/* ── EMPLOYEE TAGS ── */
-.filter-row { margin-bottom: 16px; }
+/* ── EMPLOYEE DETAILS ── */
+.filter-row { margin-bottom: 20px; }
 .ftag-lbl {
-    font-size: 7.5px; color: #64748b; font-weight: bold; margin-right: 4px;
+    font-size: 10px; color: #64748b; font-weight: bold; margin-right: 6px;
     text-transform: uppercase; letter-spacing: 0.5px;
 }
 .ftag {
-    display: inline-block; background: #f1f5f9; color: #334155;
-    border: 1px solid #cbd5e1; border-radius: 3px;
-    padding: 2px 7px; font-size: 7.5px; font-weight: bold;
-    margin-right: 4px; text-transform: uppercase; letter-spacing: 0.3px;
+    display: inline-block; color: #1e293b;
+    font-size: 10px; font-weight: bold;
+    margin-right: 12px; text-transform: uppercase; letter-spacing: 0.5px;
 }
 
 /* ── KPI STRIP ── */
@@ -53,19 +52,22 @@ body {
 .s-box-2 { border-top: 3px solid #475569; width: 22%; }
 .s-box-3 { border-top: 3px solid #64748b; width: 22%; }
 
-/* Clean, open typography display for the date */
+/* Borderless, background-free, and right-aligned date section */
 .s-box-date-clean { 
     text-align: right; 
-    padding: 10px 0 10px 15px; 
     vertical-align: middle;
+    padding: 10px 0; 
+    border: none; 
+    background: transparent;
+    width: 34%;
 }
 
 .s-big { font-size: 18px; font-weight: bold; display: block; line-height: 1; margin-bottom: 2px; color: #0f172a; }
 .s-tag { font-size: 7px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.8px; display: block; color: #475569; }
 
-/* Bigger typography style for the open date element */
-.s-date-large { font-size: 16px; font-weight: bold; color: #1d4ed8; display: block; line-height: 1; margin-bottom: 2px; }
-.s-date-day   { font-size: 8.5px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #475569; display: block; }
+/* Date Typography — Added padding-right so it aligns perfectly with the content edge */
+.s-date-large { font-size: 18px; font-weight: bold; color: #000000; display: block; line-height: 1; padding-right: 4px; }
+.s-date-day   { font-size: 7.5px; font-weight: bold; text-transform: capitalize; letter-spacing: 0.8px; display: block; color: #475569; padding-right: 24px; }
 
 /* ── SECTION TITLES ── */
 .sec-title {
@@ -167,18 +169,19 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
     text-transform: uppercase; letter-spacing: 1px; padding: 7px 10px; text-align: right;
 }
 
-/* ── TODAY section ── */
-.sec-title-today { background: #1d4ed8; }
-.sec-title-today .sec-title-right { color: #bfdbfe; }
+/* ── TODAY section (Updated to Custom Color Accent #A5C552) ── */
+.sec-title-today { background: #A5C552; }
+.sec-title-today .sec-title-left { color: #0f172a; }
+.sec-title-today .sec-title-right { color: #3f4e1c; }
 .sec-today-tag {
-    font-size: 6.5px; font-weight: bold; color: #1d4ed8;
-    background: #ffffff; padding: 1px 6px; border-radius: 3px;
+    font-size: 6.5px; font-weight: bold; color: #ffffff;
+    background: #0f172a; padding: 1px 6px; border-radius: 3px;
     letter-spacing: 1px; margin-right: 8px; vertical-align: middle;
 }
-table.data-table-today thead tr { background-color: #eff6ff; }
-table.data-table-today thead th { color: #1e40af; border-color: #bfdbfe; }
+table.data-table-today thead tr { background-color: #f7fee7; }
+table.data-table-today thead th { color: #4d6215; border-color: #e2f3b6; }
 table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
-.empty-cell-today { border-color: #bfdbfe; color: #1e40af; }
+.empty-cell-today { border-color: #e2f3b6; color: #4d6215; }
 
 /* status strip */
 .vc-status { width: 100%; border-collapse: collapse; }
@@ -291,19 +294,19 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
 <div class="hdr-rule-1"></div>
 <div class="hdr-rule-2"></div>
 
-{{-- ── EMPLOYEE TAGS ── --}}
+{{-- ── EMPLOYEE DETAILS ── --}}
 <div class="filter-row">
     <span class="ftag-lbl">Employee:</span>
-    <span class="ftag">{{ $employee->name }}</span>
+    <span class="ftag">{{ $employee->name }} | </span>
     @if(!empty($employee->designation))
-        <span class="ftag">{{ $employee->designation }}</span>
+        <span class="ftag">{{ $employee->designation }} | </span>
     @endif
     @if(!empty($employee->base_city))
         <span class="ftag">{{ $employee->base_city }}</span>
     @endif
 </div>
 
-{{-- ── KPI BOXES & LARGE OPEN DATE ── --}}
+{{-- ── KPI BOXES & ALIGNED OPEN DATE ── --}}
 <table class="summary-strip" cellspacing="0" cellpadding="0">
     <tr>
         <td class="s-box s-box-1">
@@ -320,7 +323,7 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
         </td>
         <td class="s-box-date-clean">
             <span class="s-date-large">{{ $reportDate }}</span>
-            <span class="s-date-day">{{ $reportDay }}</span>
+            <span class="s-date-day"><br>{{ ucwords(strtolower($reportDay)) }}</span>
         </td>
     </tr>
 </table>
@@ -636,7 +639,7 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
 </table>
 @endif
 
-{{-- ── 4. TODAY'S UPCOMING TASKS ── --}}
+{{-- ── 4. TODAY'S UPCOMING TASKS (Accent Custom Green #A5C552) ── --}}
 <table class="sec-title-table sec-title-today" cellspacing="0" cellpadding="0">
     <tr>
         <td class="sec-title-left"><span class="sec-today-tag">&#9654; UPCOMING</span> 4. Scheduled Tasks &mdash; {{ $todayDate }} (Today)</td>

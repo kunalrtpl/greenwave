@@ -99,11 +99,16 @@ class SendDailyWorkReport extends Command
         $userQuery = User::where('status', 1)
             ->where('email', '!=', '')
             ->whereNotNull('email')
-            ->whereIn('id', $marketingUserIds);
-
-        if ($this->option('user')) {
-            $userQuery->where('id', $this->option('user'));
-        }
+            ->where(function ($query) use ($marketingUserIds) {
+                // If specific user option is passed, run ONLY for that user
+                if ($this->option('user')) {
+                    $query->where('id', $this->option('user'));
+                } else {
+                    // Otherwise, exclude test users and restrict to marketing users
+                    $query->whereNotIn('id', [16, 17, 9])
+                          ->whereIn('id', $marketingUserIds);
+                }
+            });
 
         $now = now();
         $rows = $userQuery->pluck('id')->map(function ($id) use ($reportDate, $now) {
@@ -203,16 +208,16 @@ class SendDailyWorkReport extends Command
                     }
                 }
             }
-            if($user->id == "16"){
+            if($user->id == "16" || $user->id == "17" || $user->id == "9"){
                 // ⚠️ TESTING ONLY — remove this line to send to real employees
                 $user->email = "mkanum786@gmail.com";
                 // ⚠️ TESTING ONLY — real managers must not be CC'd during testing
                 $ccEmails = ['bhupigreenwave@yopmail.com'];   // or ['mkanum786@gmail.com'] to test the CC path itself 
             }else{
-                // ⚠️ TESTING ONLY — remove this line to send to real employees
+                /*// ⚠️ TESTING ONLY — remove this line to send to real employees
                 $user->email = "mkanum786@gmail.com";
                 // ⚠️ TESTING ONLY — real managers must not be CC'd during testing
-                $ccEmails = ['singhania.kamal@gmail.com'];   // or ['mkanum786@gmail.com'] to test the CC path itself
+                $ccEmails = ['mkanum786@gmail.com'];   // or ['mkanum786@gmail.com'] to test the CC path itself*/
             }
 
             EmailService::send('daily_work_report', [
