@@ -1060,6 +1060,29 @@ class ExecutiveController extends Controller
         }
     }
 
+    public function updateQcfsVisitType(Request $request){
+        if($request->isMethod('post')){
+            $resp = $this->resp;
+            if($resp['status'] && isset($resp['user'])){
+                $data = $request->all();
+                $rules = [
+                    "feedback_id"=> "required",
+                    "visit_type"=> "required",
+                ];
+                $customMessages = [];
+                $validator = Validator::make($data,$rules,$customMessages);
+                if ($validator->fails()){
+                    return response()->json(validationResponse($validator),422); 
+                }
+                $feedabck = Feedback::find($data['feedback_id']);
+                $feedabck->visit_type = $data['visit_type'];
+                $feedabck->save();
+                $message = 'Visit type has been updated successfully';
+                return response()->json(apiSuccessResponse($message),200);
+            }
+        }
+    }
+
     public function updateQcfsStatus(Request $request){
         if($request->isMethod('post')){
             $resp = $this->resp;
