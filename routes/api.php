@@ -84,7 +84,7 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::match(['get', 'post'], '/stock-adjustment','DealerController@stockAdjustment');
 			Route::match(['get', 'post'], '/stock-adjustment-logs','DealerController@stockAdjustmentLogs');
 			Route::match(['get', 'post'], '/qcfs','DealerController@qcfs');
-			Route::match(['get', 'post'], '/update-qcfs-visit-type','ExecutiveController@updateQcfsVisitType');
+			Route::match(['get', 'post'], '/update-qcfs-visit-type','DealerController@updateQcfsVisitType');
 			Route::match(['get', 'post'], '/linked-dealers','DealerController@linkedDealers');
 			Route::match(['get', 'post'], '/transfer-stock','DealerController@transferStock');
 			Route::match(['get', 'post'], '/transfer-stock-history','DealerController@transferStockHistory');
