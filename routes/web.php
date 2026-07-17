@@ -584,6 +584,12 @@ Route::post('/email-templates/{id}',    'EmailTemplateController@update')->name(
 		});
 
 
+		// ── Price Requests (Admin) ─────────────────────────────────────────
+		Route::get('/price-requests',                'CustomerPriceRequestController@index');
+		Route::get('/price-requests/{id}',           'CustomerPriceRequestController@show');
+		Route::post('/price-requests/{id}/approve',  'CustomerPriceRequestController@approve');
+		Route::post('/price-requests/{id}/reject',   'CustomerPriceRequestController@reject');
+		
 	});
 });
 Route::match(['get', 'post'], '/send-notifications', 'Admin\NotificationController@sendNotifications');

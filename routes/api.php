@@ -442,6 +442,12 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 	        Route::get('/dealer-evaluations/{id}',                              'NewDealerEvaluationController@show');             // Detail (by evaluation id)
 	        Route::post('/dealer-evaluations/dealer/{dealerId}',                'NewDealerEvaluationController@update');           // Edit (by dealer id)
 	        Route::post('/dealer-evaluations/attachment/{attachmentId}/delete', 'NewDealerEvaluationController@deleteAttachment'); // Delete Attachment
+
+
+	         // Meta MUST come before {id} style routes to avoid being swallowed
+		    Route::get('price-requests/meta',  'PriceRequestController@meta');
+		    Route::get('price-requests',       'PriceRequestController@index');
+		    Route::post('price-requests',      'PriceRequestController@store');
 		});
 	});
 });
