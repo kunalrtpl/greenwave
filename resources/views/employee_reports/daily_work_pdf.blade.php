@@ -407,7 +407,7 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
                         </td>
                         <td>
                             <span class="vcm-lbl">Check Out</span><br>
-                            <span class="vcm-val vct-out">{{ $v['check_out'] ?: '—' }}</span>
+                            <span class="vcm-val vct-in">{{ $v['check_out'] ?: '—' }}</span>
                         </td>
                         <td class="vcm-last">
                             <span class="vcm-lbl">Duration</span><br>
@@ -454,7 +454,12 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
                         </td>
                     </tr>
                     @endif
-
+                    @if(!empty($v['other_purpose']))
+                    <tr>
+                        <td class="vcd-lbl">Other Purpose</td>
+                        <td class="vcd-val">{{ $v['other_purpose'] }}</td>
+                    </tr>
+                    @endif
                     @if(count($v['contacts']) > 0)
                     <tr>
                         <td class="vcd-lbl">Met With</td>
@@ -558,14 +563,6 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
                         <td class="vcd-val">{{ $v['visit_detail'] }}</td>
                     </tr>
                     @endif
-
-                    @if(!empty($v['other_purpose']))
-                    <tr>
-                        <td class="vcd-lbl">Other Purpose</td>
-                        <td class="vcd-val">{{ $v['other_purpose'] }}</td>
-                    </tr>
-                    @endif
-
                     @if(!empty($v['remarks']))
                     <tr>
                         <td class="vcd-lbl">Remarks</td>

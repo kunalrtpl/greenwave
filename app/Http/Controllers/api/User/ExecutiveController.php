@@ -1870,7 +1870,7 @@ class ExecutiveController extends Controller
                 $query->select('id','name');
             },'dealer'=>function($query){
                 $query->select('id','business_name','name');
-            }])->wherein('cities',$cities)->where('status','!=','Added')->get()->toArray();
+            }])->wherein('cities',$cities)->where('status','Pending')->get()->toArray();
 
             $result['registered_customers'] = $customers;
             $result['request_customers'] = $request_customers;
