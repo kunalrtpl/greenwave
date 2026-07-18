@@ -28,7 +28,7 @@ use Mpdf\Mpdf;
  *
  *  PDF contents (in order):
  *    1. Yesterday's Scheduled Tasks   (user_schedulers)
- *    2. Customer Visits — card view   (user_dvrs)
+ *    2. Customer Visits — card view   (user_dvrs)  → now shows CITY + LAST VISIT
  *    3. Other Developments            (work_notes)
  *    4. Today's Upcoming Tasks        (user_schedulers)
  */
@@ -283,18 +283,26 @@ class SendDailyWorkReport extends Command
             ? collect()
             : WorkNote::whereIn('id', $noteIds)->get(['id', 'activity_mode'])->keyBy('id');
 
+        // user_dvrs referenced by schedulers → have_you_met (for "No Meeting" tag)
+        $dvrIds   = $schedulers->pluck('user_dvr_id')->filter()->unique()->values();
+        $dvrMetMap = $dvrIds->isEmpty()
+            ? collect()
+            : UserDvr::whereIn('id', $dvrIds)->get(['id', 'have_you_met'])->keyBy('id');
+
         $byDate = $schedulers->groupBy(fn($s) => Carbon::parse($s->scheduler_date)->toDateString());
 
         $yesterdayTasks = collect($byDate->get($yDate, []))
-            ->map(fn($s) => $this->buildSchedulerRow($s, $noteMap))->values()->toArray();
+            ->map(fn($s) => $this->buildSchedulerRow($s, $noteMap, $dvrMetMap))->values()->toArray();
 
         $todayTasks = collect($byDate->get($tDate, []))
-            ->map(fn($s) => $this->buildSchedulerRow($s, $noteMap))->values()->toArray();
+            ->map(fn($s) => $this->buildSchedulerRow($s, $noteMap, $dvrMetMap))->values()->toArray();
 
         // 2. Customer visits (DVRs) — card view
+        //    NOTE: register-request eager load now includes `cities` for the
+        //    city label; customer city comes from customer_cities (see resolveCity).
         $dvrs = UserDvr::with([
                 'customer:id,name',
-                'customer_register_request:id,name',
+                'customer_register_request:id,name,cities',
                 'customer_contact_info:id,name,designation,mobile_number',
                 'customerContacts.customerContact:id,name,designation,mobile_number',
                 'products.productinfo:id,product_name',
@@ -306,7 +314,7 @@ class SendDailyWorkReport extends Command
             ->orderBy('start_time')
             ->get();
 
-        $visits = $dvrs->map(fn($d) => $this->buildDvrCard($d))->toArray();
+        $visits = $dvrs->map(fn($d) => $this->buildDvrCard($d, $user, $reportDate))->toArray();
 
         // 3. Other developments (work notes)
         $workNotes = WorkNote::with([
@@ -335,7 +343,7 @@ class SendDailyWorkReport extends Command
         ];
     }
 
-    private function buildSchedulerRow(UserScheduler $s, $noteMap): array
+    private function buildSchedulerRow(UserScheduler $s, $noteMap, $dvrMetMap = null): array
     {
         // Related-to display name
         $relatedName = $s->other_customer_name
@@ -345,13 +353,22 @@ class SendDailyWorkReport extends Command
             ?: '—';
 
         // Status sub-label per client spec:
-        //   user_dvr_id present   → "Visit"
+        //   user_dvr_id present   → "Visit"  (+ "(No Meeting)" when have_you_met = 0)
         //   work_note_id present  → work_notes.activity_mode
         $subLabel = null;
         if (!empty($s->user_dvr_id)) {
             $subLabel = 'Visit';
+            // If the linked DVR recorded no meeting (have_you_met = 0), flag it.
+            if ($dvrMetMap && $dvrMetMap->has($s->user_dvr_id)) {
+                $met = $dvrMetMap->get($s->user_dvr_id)->have_you_met;
+                if ((int) $met === 0) {
+                    $subLabel = 'Visit (No Meeting)';
+                }
+            }
         } elseif (!empty($s->work_note_id) && $noteMap->has($s->work_note_id)) {
-            $subLabel = $noteMap->get($s->work_note_id)->activity_mode;
+            $mode = $noteMap->get($s->work_note_id)->activity_mode;
+            // stored uppercase (e.g. "INFORMATION") → "Information"
+            $subLabel = $mode ? ucfirst(strtolower($mode)) : null;
         }
 
         $status = $s->status ?: 'Open';
@@ -389,15 +406,20 @@ class SendDailyWorkReport extends Command
         ];
     }
 
-    private function buildDvrCard(UserDvr $dvr): array
+    /**
+     * Called from gatherReportData like:
+     *   $visits = $dvrs->map(fn($d) => $this->buildDvrCard($d, $user, $reportDate))->toArray();
+     */
+    private function buildDvrCard(UserDvr $dvr, User $user, Carbon $reportDate): array
     {
         $customerName = $dvr->customer
             ? $dvr->customer->name
             : optional($dvr->customer_register_request)->name;
 
-        $customerType = $dvr->customer
-            ? 'Registered Customer'
-            : ($dvr->customer_register_request ? 'Registration Request' : 'Other');
+        // ── CITY instead of the old "customer_type" label ──
+        //   Registered customer  → latest row in customer_cities (by id)
+        //   Register request     → cities column on the request itself
+        $customerCity = $this->resolveCity($dvr);
 
         $checkIn  = $dvr->start_time ? Carbon::parse($dvr->start_time)->format('H:i') : null;
         $checkOut = $dvr->end_time   ? Carbon::parse($dvr->end_time)->format('H:i')   : null;
@@ -471,9 +493,26 @@ class SendDailyWorkReport extends Command
             ['label' => 'Visit Detail', 'value' => $submitted ? 'Added' : 'Pending',                  'ok' => $submitted],
         ];
 
+        // ── LAST VISIT — most recent earlier DVR to the SAME party ──
+        $lastVisit = $this->buildLastVisit($dvr, $user, $reportDate);
+
+        // ── Follow-up action date/time (shown alongside Next Plan) ──
+        //    Only when the DVR flags a further action AND has a date.
+        $nextAction = null;
+        if (!empty($dvr->further_action_required)) {
+            $parts = [];
+            if (!empty($dvr->action_date)) {
+                $parts[] = Carbon::parse($dvr->action_date)->format('d M Y');
+            }
+            if (!empty($dvr->action_time)) {
+                $parts[] = Carbon::parse($dvr->action_time)->format('h:i A');
+            }
+            $nextAction = !empty($parts) ? implode(', ', $parts) : null;
+        }
+
         return [
             'customer_name' => $customerName ?: 'N/A',
-            'customer_type' => $customerType,
+            'customer_city' => $customerCity,          // replaces customer_type
             'check_in'      => $checkIn,
             'check_out'     => $checkOut,
             'duration'      => $duration,
@@ -484,9 +523,114 @@ class SendDailyWorkReport extends Command
             'visit_detail'  => $dvr->visit_detail,
             'remarks'       => $dvr->remarks,
             'next_plan'     => $dvr->next_plan,
+            'next_action'   => $nextAction,            // null when no follow-up date
             'other_purpose' => $dvr->other_purpose,
             'statuses'      => $statuses,
+            'last_visit'    => $lastVisit,             // null when none
         ];
+    }
+
+    /**
+     * Resolve the display city for a DVR's party.
+     *  - Registered customer → newest customer_cities.city_name (by id desc)
+     *  - Register request    → customer_register_requests.cities column
+     */
+    private function resolveCity(UserDvr $dvr): ?string
+    {
+        if ($dvr->customer_id) {
+            $city = DB::table('customer_cities')
+                ->where('customer_id', $dvr->customer_id)
+                ->orderByDesc('id')
+                ->value('city_name');
+            if (!empty($city)) {
+                return $this->titleCity($city);
+            }
+        }
+
+        if ($dvr->customer_register_request) {
+            $city = $dvr->customer_register_request->cities;
+            if (!empty($city)) {
+                // "cities" may be a comma list — show the first
+                $first = trim(explode(',', $city)[0]);
+                return $this->titleCity($first ?: $city);
+            }
+        }
+
+        return null;
+    }
+
+    private function titleCity(string $city): string
+    {
+        // stored uppercase (e.g. "LUDHIANA") → nicer "Ludhiana"
+        return ucwords(strtolower(trim($city)));
+    }
+
+    /**
+     * Find the last visit (before the report date) to the same customer or
+     * register-request, by the same user, and build a compact summary.
+     */
+    private function buildLastVisit(UserDvr $dvr, User $user, Carbon $reportDate): ?array
+    {
+        $q = UserDvr::with([
+                'customerContacts.customerContact:id,name,designation,mobile_number',
+                'customer_contact_info:id,name,designation,mobile_number',
+            ])
+            ->where('user_id', $user->id)
+            ->whereDate('dvr_date', '<', $reportDate->toDateString())
+            ->where('id', '!=', $dvr->id);
+
+        if ($dvr->customer_id) {
+            $q->where('customer_id', $dvr->customer_id);
+        } elseif ($dvr->customer_register_request_id) {
+            $q->where('customer_register_request_id', $dvr->customer_register_request_id);
+        } else {
+            return null; // nothing to match on
+        }
+
+        $prev = $q->orderByDesc('dvr_date')
+                  ->orderByDesc('start_time')
+                  ->orderByDesc('id')
+                  ->first();
+
+        if (!$prev) {
+            return null;
+        }
+
+        $date    = $prev->dvr_date ? Carbon::parse($prev->dvr_date) : null;
+        $daysAgo = $date ? $date->diffInDays($reportDate) : null;
+
+        $purposes = $prev->purpose_of_visit
+            ? array_values(array_filter(array_map('trim', explode(',,,', $prev->purpose_of_visit))))
+            : [];
+
+        // Who was met last time (first contact is enough for a summary line)
+        $metName = null;
+        $firstContact = $prev->customerContacts
+            ->first(fn($cc) => $cc->customerContact !== null);
+        if ($firstContact) {
+            $metName = $firstContact->customerContact->name;
+        } elseif ($prev->customer_contact_info) {
+            $metName = $prev->customer_contact_info->name;
+        }
+
+        return [
+            'date'      => $date ? $date->format('d M Y') : '—',
+            'day'       => $date ? $date->format('l') : null,
+            'days_ago'  => $daysAgo,
+            'met'       => (bool) $prev->have_you_met,
+            'met_name'  => $metName,
+            'purposes'  => array_slice($purposes, 0, 4),   // keep the line short
+            'summary'   => $prev->visit_detail ?: $prev->remarks ?: null,
+            'next_plan' => $prev->next_plan ?: null,
+        ];
+    }
+
+    private function buildDvrCardLegacyType(UserDvr $dvr): string
+    {
+        // (kept intentionally unused — old customer_type logic removed)
+        return $dvr->customer
+            ? 'Registered Customer'
+            : ($dvr->customer_register_request ? 'Registration Request' : 'Other');
     }
 
     private function buildWorkNoteRow(WorkNote $note): array

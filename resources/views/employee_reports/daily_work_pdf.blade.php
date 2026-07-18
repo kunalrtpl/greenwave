@@ -99,15 +99,22 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
 }
 
 /* ── STATUS ── */
+.status-cell { border-collapse: collapse; }
+.status-cell td { padding: 0; vertical-align: top; border: none; background: transparent; }
+.status-dot {
+    width: 12px; font-size: 8px; line-height: 1.4;
+    padding-right: 4px !important; text-align: left;
+}
 .status-txt {
     font-size: 8px; font-weight: bold;
     text-transform: uppercase; letter-spacing: 0.6px;
-    white-space: nowrap;
+    white-space: nowrap; line-height: 1.4;
 }
 .status-sub {
-    font-size: 6.5px; font-weight: bold; color: #94a3b8;
-    text-transform: uppercase; letter-spacing: 1px;
-    white-space: nowrap;
+    margin-top: 1px;
+    font-size: 7px; font-weight: bold; color: #94a3b8;
+    text-transform: none; letter-spacing: 0.3px;
+    white-space: nowrap; line-height: 1.3;
 }
 .mode-txt {
     font-size: 7.5px; font-weight: bold; color: #475569;
@@ -143,6 +150,13 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
     font-size: 7px; font-weight: bold; color: #475569;
     text-transform: uppercase; letter-spacing: 0.6px; margin-top: 2px;
 }
+
+/* ── City inline next to customer name (e.g. "123 test | LUDHIANA") ── */
+.vc-cust-city {
+    font-size: 8.5px; font-weight: bold; color: #475569;
+    text-transform: uppercase; letter-spacing: 0.6px;
+}
+
 .vc-head-meta {
     background: #e9eff6; border-bottom: 1px solid #cbd5e1;
     vertical-align: middle; text-align: right;
@@ -229,9 +243,22 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
 }
 .vcd-val { padding: 7px 12px; font-size: 8.5px; color: #334155; line-height: 1.55; }
 
+/* Last Visit row label — amber accent so it reads as "history" */
+.vcd-lbl-last {
+    color: #b45309 !important;
+    background: #fff7ed !important;
+    border-left: 3px solid #f59e0b;
+}
+
 .contact-name { font-weight: bold; color: #0f172a; font-size: 9px; }
 .contact-sub  { font-size: 7.5px; color: #64748b; }
 .next-plan-val { font-weight: bold; color: #0f172a; }
+.next-action-tag {
+    display: inline-block; margin-left: 8px;
+    font-size: 7.5px; font-weight: bold; color: #b45309;
+    background: #fef3e0; padding: 1px 7px; border-radius: 3px;
+    letter-spacing: 0.3px; vertical-align: 1px;
+}
 
 .trial-line  { margin-top: 2px; font-size: 8.5px; color: #334155; line-height: 1.5; }
 .trial-line b { color: #475569; }
@@ -258,6 +285,67 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
     border-bottom: 1px solid #e2e8f0; line-height: 1.5;
 }
 .trial-tbl tr.tt-last td { border-bottom: none; }
+
+/* ═══════════ LAST VISIT BOX — amber, clearly "history" ═══════════ */
+.last-visit-box {
+    width: 100%; border-collapse: collapse;
+    border: 1px solid #fcd88f; background: #fffdf7;
+}
+.last-visit-box td { vertical-align: top; }
+
+/* Header bar: date + day + days-ago badge, all on one line */
+.lv-head {
+    background: #fef3e0; border-bottom: 1px solid #fcd88f;
+    padding: 6px 10px; vertical-align: middle;
+}
+.lv-date {
+    font-size: 10.5px; font-weight: bold; color: #92400e;
+    letter-spacing: 0.3px;
+}
+.lv-day {
+    font-size: 7.5px; font-weight: bold; color: #b45309;
+    text-transform: uppercase; letter-spacing: 0.8px; margin-left: 8px;
+}
+.lv-ago {
+    display: inline-block; margin-left: 8px;
+    font-size: 6.5px; font-weight: bold; color: #ffffff; background: #ea9315;
+    padding: 1px 7px; border-radius: 3px; letter-spacing: 0.6px; vertical-align: 1px;
+}
+
+/* Detail rows */
+.lv-lbl {
+    width: 22%; padding: 5px 10px;
+    font-size: 6.5px; font-weight: bold; color: #b45309;
+    text-transform: uppercase; letter-spacing: 0.6px;
+    border-bottom: 1px solid #fbe6bf; border-right: 1px solid #fbe6bf;
+    background: #fffaf0; white-space: nowrap;
+}
+.lv-cell {
+    padding: 5px 10px; font-size: 8.5px; color: #334155; line-height: 1.55;
+    border-bottom: 1px solid #fbe6bf;
+}
+.last-visit-box tr.lv-last .lv-lbl,
+.last-visit-box tr.lv-last .lv-cell { border-bottom: none; }
+
+.lv-met-yes  { color: #16a34a; font-weight: bold; }
+.lv-met-no   { color: #dc2626; font-weight: bold; }
+.lv-met-name { color: #0f172a; font-weight: bold; }
+
+/* "Then Planned" — the forward-looking row gets a stronger accent */
+.lv-lbl-plan { color: #1e293b; background: #fef3e0; }
+.lv-plan-val { font-weight: bold; color: #0f172a; }
+
+/* ── Divider between Last Visit (history) and Current Visit (today) ── */
+.cv-divider {
+    text-align: left;
+    background: #f1f5f9;
+    color: #1e293b;
+    font-size: 8.5px; font-weight: bold;
+    text-transform: uppercase; letter-spacing: 3px;
+    padding: 7px 10px;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+}
 
 /* ── FOOTER ── */
 .footer-table {
@@ -361,13 +449,20 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
             <td>{{ $t['subject'] }}</td>
             <td>{{ $t['description'] ?: '—' }}</td>
             <td>
-                <span class="status-txt" style="color: {{ $t['status_color'] }};">&#9679; {{ $t['status'] }}</span>
-                @if(!empty($t['rescheduled_to']))
-                    <br><span class="status-sub" style="color:#d97706;">&#8594; {{ $t['rescheduled_to'] }}</span>
-                @endif
-                @if($t['sub_label'])
-                    <br><span class="status-sub">{{ $t['sub_label'] }}</span>
-                @endif
+                <table class="status-cell" cellspacing="0" cellpadding="0">
+                    <tr>
+                        <td class="status-dot" style="color: {{ $t['status_color'] }};">&#9679;</td>
+                        <td class="status-body">
+                            <span class="status-txt" style="color: {{ $t['status_color'] }};">{{ $t['status'] }}</span>
+                            @if(!empty($t['rescheduled_to']))
+                                <div class="status-sub" style="color:#d97706;">&#8594; {{ $t['rescheduled_to'] }}</div>
+                            @endif
+                            @if($t['sub_label'])
+                                <div class="status-sub">{{ $t['sub_label'] }}</div>
+                            @endif
+                        </td>
+                    </tr>
+                </table>
             </td>
         </tr>
     @endforeach
@@ -395,8 +490,7 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
                 <span class="num">{{ str_pad($i + 1, 2, '0', STR_PAD_LEFT) }}</span>
             </td>
             <td class="vc-head">
-                <div class="vc-cust">{{ $v['customer_name'] }}</div>
-                <div class="vc-cust-type">{{ $v['customer_type'] }}</div>
+                <span class="vc-cust">{{ $v['customer_name'] }}</span>@if(!empty($v['customer_city']))<span class="vc-cust-city"> &nbsp;|&nbsp; {{ $v['customer_city'] }}</span>@endif
             </td>
             <td class="vc-head-meta">
                 <table class="vc-meta-mini" cellspacing="0" cellpadding="0">
@@ -445,6 +539,69 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
         <tr>
             <td colspan="3" style="padding:0;">
                 <table class="vc-detail" cellspacing="0" cellpadding="0">
+
+                    {{-- ── LAST VISIT (first, so it reads before current-visit detail) ── --}}
+                    @if(!empty($v['last_visit']))
+                        @php $lv = $v['last_visit']; @endphp
+                        <tr>
+                            <td class="vcd-lbl vcd-lbl-last">Last Visit</td>
+                            <td class="vcd-val" style="padding:8px 10px;">
+                                <table class="last-visit-box" cellspacing="0" cellpadding="0">
+                                    {{-- Header bar: date • day • days-before badge --}}
+                                    <tr>
+                                        <td class="lv-head" colspan="2">
+                                            <span class="lv-date">{{ $lv['date'] }}</span>
+                                            @if($lv['day'])<span class="lv-day">{{ strtoupper($lv['day']) }}</span>@endif
+                                            @if(!is_null($lv['days_ago']))
+                                                <span class="lv-ago">{{ $lv['days_ago'] }} {{ $lv['days_ago'] == 1 ? 'DAY' : 'DAYS' }} AGO</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+
+                                    @if(count($lv['purposes']) > 0)
+                                    <tr>
+                                        <td class="lv-lbl">Purpose</td>
+                                        <td class="lv-cell">
+                                            <span class="inline-list">@foreach($lv['purposes'] as $p){{ $p }}@if(!$loop->last) <span class="sep">&nbsp;&bull;&nbsp;</span> @endif @endforeach</span>
+                                        </td>
+                                    </tr>
+                                    @endif
+
+                                    <tr>
+                                        <td class="lv-lbl">Met</td>
+                                        <td class="lv-cell">
+                                            @if($lv['met'])
+                                                <span class="lv-met-yes">&#10003; Yes</span>@if($lv['met_name'])<span class="lv-met-name"> &mdash; {{ $lv['met_name'] }}</span>@endif
+                                            @else
+                                                <span class="lv-met-no">&#10007; Not Met</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+
+                                    @if($lv['summary'])
+                                    <tr>
+                                        <td class="lv-lbl">Summary</td>
+                                        <td class="lv-cell">{{ $lv['summary'] }}</td>
+                                    </tr>
+                                    @endif
+
+                                    @if($lv['next_plan'])
+                                    <tr class="lv-last">
+                                        <td class="lv-lbl lv-lbl-plan">Then Planned</td>
+                                        <td class="lv-cell lv-plan-val">{{ $lv['next_plan'] }}</td>
+                                    </tr>
+                                    @endif
+                                </table>
+                            </td>
+                        </tr>
+                    @endif
+
+                    {{-- ── Divider: only shown when a Last Visit precedes it, to separate history from today ── --}}
+                    @if(!empty($v['last_visit']))
+                    <tr>
+                        <td colspan="2" class="cv-divider">Current Visit</td>
+                    </tr>
+                    @endif
 
                     @if(count($v['purposes']) > 0)
                     <tr>
@@ -570,10 +727,15 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
                     </tr>
                     @endif
 
-                    @if(!empty($v['next_plan']))
+                    @if(!empty($v['next_plan']) || !empty($v['next_action']))
                     <tr class="vc-last">
                         <td class="vcd-lbl" style="color:#1e293b;">Next Plan</td>
-                        <td class="vcd-val next-plan-val">{{ $v['next_plan'] }}</td>
+                        <td class="vcd-val next-plan-val">
+                            @if(!empty($v['next_plan'])){{ $v['next_plan'] }}@endif
+                            @if(!empty($v['next_action']))
+                                <span class="next-action-tag">Follow-up: {{ $v['next_action'] }}</span>
+                            @endif
+                        </td>
                     </tr>
                     @endif
 
@@ -669,13 +831,20 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
             <td>{{ $t['subject'] }}</td>
             <td>{{ $t['description'] ?: '—' }}</td>
             <td>
-                <span class="status-txt" style="color: {{ $t['status_color'] }};">&#9679; {{ $t['status'] }}</span>
-                @if(!empty($t['rescheduled_to']))
-                    <br><span class="status-sub" style="color:#d97706;">&#8594; {{ $t['rescheduled_to'] }}</span>
-                @endif
-                @if($t['sub_label'])
-                    <br><span class="status-sub">{{ $t['sub_label'] }}</span>
-                @endif
+                <table class="status-cell" cellspacing="0" cellpadding="0">
+                    <tr>
+                        <td class="status-dot" style="color: {{ $t['status_color'] }};">&#9679;</td>
+                        <td class="status-body">
+                            <span class="status-txt" style="color: {{ $t['status_color'] }};">{{ $t['status'] }}</span>
+                            @if(!empty($t['rescheduled_to']))
+                                <div class="status-sub" style="color:#d97706;">&#8594; {{ $t['rescheduled_to'] }}</div>
+                            @endif
+                            @if($t['sub_label'])
+                                <div class="status-sub">{{ $t['sub_label'] }}</div>
+                            @endif
+                        </td>
+                    </tr>
+                </table>
             </td>
         </tr>
     @endforeach
