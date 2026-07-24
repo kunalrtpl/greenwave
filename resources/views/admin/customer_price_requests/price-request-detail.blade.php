@@ -47,8 +47,16 @@
    #prView .cpx-btn[disabled]{opacity:.5;cursor:not-allowed}
    #prView textarea{width:100%;border:1.4px solid var(--line);border-radius:var(--rs);padding:10px 12px;font-size:13.5px;min-height:70px}
    #prView .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end;padding:16px 22px;border-top:1px solid var(--line2);background:#fbfcfb}
-   @media(max-width:820px){#prView .grid{grid-template-columns:1fr 1fr}}
-   @media(max-width:600px){#prView .grid{grid-template-columns:1fr}}
+   /* ── Request Details rows (like Viability Check) ── */
+   #prView .d-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:8px 0;border-bottom:1px dashed var(--line2);font-size:13px}
+   #prView .d-row:last-child{border-bottom:none}
+   #prView .d-row .dk{color:var(--ink2);font-weight:500;white-space:nowrap;flex:0 0 200px}
+   #prView .d-row .dk small{display:block;color:var(--muted);font-weight:400;font-size:10.5px;margin-top:1px;font-family:'Inter','Segoe UI',system-ui,sans-serif}
+   #prView .d-row .dv{font-family:var(--mono);font-weight:600;font-size:13px;text-align:right;flex:1}
+   #prView .d-row .dv.plain{font-family:'Inter','Segoe UI',system-ui,sans-serif}
+   #prView .d-row .dv select.ein,#prView .d-row .dv input.ein{width:100%;max-width:260px;text-align:left}
+   @media(max-width:820px){#prView .d-row .dk{flex:0 0 140px}}
+   @media(max-width:600px){#prView .grid{grid-template-columns:1fr};#prView .d-row{flex-direction:column;align-items:flex-start;gap:4px};#prView .d-row .dv{text-align:left;width:100%};#prView .d-row .dv select.ein,#prView .d-row .dv input.ein{max-width:100%}}
 </style>
 <div class="page-content-wrapper">
    <div class="page-content">
@@ -98,14 +106,14 @@
                         $fbLocked = trim((string)$customer->freight_basis) !== '';
                         $frLocked = !($customer->freight === null || $customer->freight === '');
                      @endphp
-                     <div class="grid">
-                        <div class="f"><label>Customer</label><div class="v">{{ ucwords($customer->name) }} <small style="color:var(--muted)">(locked)</small></div></div>
-                        <div class="f"><label>Business Model</label><div class="v">{{ $customer->business_model }}</div></div>
-                        <div class="f"><label>Product</label><div class="v">{{ $pr->product->product_name ?? '—' }} <small style="color:var(--muted)">(locked)</small></div></div>
-
-                        <div class="f"><label>Payment Term @if($ptLocked)<small style="color:var(--muted)">(from master)</small>@endif</label>
+                     <div class="d-row"><div class="dk">Customer <small>locked</small></div><div class="dv plain">{{ ucwords($customer->name) }}</div></div>
+                     <div class="d-row"><div class="dk">Business Model</div><div class="dv plain">{{ $customer->business_model }}</div></div>
+                     <div class="d-row"><div class="dk">Product <small>locked</small></div><div class="dv plain">{{ $pr->product->product_name ?? '—' }}</div></div>
+                     <div class="d-row">
+                        <div class="dk">Payment Term @if($ptLocked)<small>from master</small>@endif</div>
+                        <div class="dv">
                            @if($ptLocked)
-                              <div class="v mono">{{ $pr->payment_term }}</div>
+                              {{ $pr->payment_term }}
                               <input type="hidden" name="payment_term" id="e_payment_term" value="{{ $pr->payment_term }}" data-premium="{{ direct_sales_premium($pr->payment_term) }}">
                            @else
                               <select class="ein" name="payment_term" id="e_payment_term">
@@ -115,9 +123,12 @@
                               </select>
                            @endif
                         </div>
-                        <div class="f"><label>Freight Basis @if($fbLocked)<small style="color:var(--muted)">(from master)</small>@endif</label>
+                     </div>
+                     <div class="d-row">
+                        <div class="dk">Freight Basis @if($fbLocked)<small>from master</small>@endif</div>
+                        <div class="dv">
                            @if($fbLocked)
-                              <div class="v mono">{{ $pr->freight_basis }}</div>
+                              {{ $pr->freight_basis }}
                               <input type="hidden" name="freight_basis" id="e_freight_basis" value="{{ $pr->freight_basis }}">
                            @else
                               <select class="ein" name="freight_basis" id="e_freight_basis">
@@ -126,54 +137,62 @@
                               </select>
                            @endif
                         </div>
-                        <div class="f"><label>Freight (Rs./kg) @if($frLocked)<small style="color:var(--muted)">(from master)</small>@endif</label>
+                     </div>
+                     <div class="d-row" id="freight_row">
+                        <div class="dk">Freight (Rs./kg) @if($frLocked)<small>from master</small>@endif</div>
+                        <div class="dv">
                            @if($frLocked)
-                              <div class="v mono">₹ {{ number_format($pr->freight,2) }}</div>
+                              ₹ {{ number_format($pr->freight,2) }}
                               <input type="hidden" name="freight" id="e_freight" value="{{ $pr->freight }}">
                            @else
                               <input class="ein mono" type="number" step="0.01" min="0" name="freight" id="e_freight" value="{{ $pr->freight }}">
                            @endif
                         </div>
-
-                        <div class="f"><label>Packing Size</label>
+                     </div>
+                     <div class="d-row">
+                        <div class="dk">Packing Size</div>
+                        <div class="dv">
                            <select class="ein" name="packing_size" id="e_packing_size">
                               @foreach(packing_sizes() as $pk => $pklbl)
                               <option value="{{ $pk }}" {{ $pr->packing_size==$pk ? 'selected':'' }}>{{ $pklbl }}</option>
                               @endforeach
                            </select>
                         </div>
-                        <div class="f"><label>Final Customer Price (Rs./kg)</label>
-                           <input class="ein mono" type="number" step="0.01" min="0" name="final_customer_price" id="e_final_customer_price" value="{{ $pr->final_customer_price }}">
-                        </div>
-                        <div class="f"><label>{{ $seLabel }} Basis</label>
+                     </div>
+                     <div class="d-row">
+                        <div class="dk">Final Customer Price (Rs./kg)</div>
+                        <div class="dv"><input class="ein mono" type="number" step="0.01" min="0" name="final_customer_price" id="e_final_customer_price" value="{{ $pr->final_customer_price }}"></div>
+                     </div>
+                     <div class="d-row">
+                        <div class="dk">{{ $seLabel }} Basis</div>
+                        <div class="dv">
                            <select class="ein" name="selling_expense_basis" id="e_selling_expense_basis">
                               <option value="%" {{ $pr->selling_expense_basis=='%' ? 'selected':'' }}>%</option>
                               <option value="Rs/kg" {{ $pr->selling_expense_basis=='Rs/kg' ? 'selected':'' }}>Rs/kg</option>
                            </select>
                         </div>
-                        <div class="f"><label>{{ $seLabel }} Value</label>
-                           <input class="ein mono" type="number" step="0.001" min="0" name="selling_expense_value" id="e_selling_expense_value" value="{{ rtrim(rtrim(number_format($pr->selling_expense_value,3,'.',''),'0'),'.') }}">
-                        </div>
+                     </div>
+                     <div class="d-row">
+                        <div class="dk">{{ $seLabel }} Value</div>
+                        <div class="dv"><input class="ein mono" type="number" step="0.001" min="0" name="selling_expense_value" id="e_selling_expense_value" value="{{ rtrim(rtrim(number_format($pr->selling_expense_value,3,'.',''),'0'),'.') }}"></div>
                      </div>
                      {{-- final_msp / selling_expenses / additional_realization are recomputed & posted as hidden --}}
                      <input type="hidden" name="final_msp" id="e_final_msp" value="{{ $pr->final_msp }}">
                      <input type="hidden" name="selling_expenses" id="e_selling_expenses" value="{{ $pr->selling_expenses }}">
                      <input type="hidden" name="additional_realization" id="e_additional_realization" value="{{ $pr->additional_realization }}">
                      @else
-                     <div class="grid">
-                        <div class="f"><label>Customer</label><div class="v">{{ ucwords($customer->name) }}</div></div>
-                        <div class="f"><label>Business Model</label><div class="v">{{ $customer->business_model }}</div></div>
-                        <div class="f"><label>Product</label><div class="v">{{ $pr->product->product_name ?? '—' }}</div></div>
-                        <div class="f"><label>Payment Term</label><div class="v mono">{{ $pr->payment_term }}</div></div>
-                        <div class="f"><label>Freight Basis</label><div class="v mono">{{ $pr->freight_basis }}</div></div>
-                        <div class="f"><label>Freight (Rs./kg)</label><div class="v mono">₹ {{ number_format($pr->freight,2) }}</div></div>
-                        <div class="f"><label>Packing Size</label><div class="v mono">{{ $pr->packing_size }}</div></div>
-                        <div class="f"><label>Final Customer Price (Rs./kg)</label><div class="v mono">₹ {{ number_format($pr->final_customer_price,2) }}</div></div>
-                        <div class="f"><label>Final MSP (Rs./kg)</label><div class="v mono">₹ {{ number_format($pr->final_msp,2) }}</div></div>
-                        <div class="f"><label>{{ selling_expense_label($customer->business_model) }} ({{ $pr->selling_expense_basis }})</label><div class="v mono">{{ rtrim(rtrim(number_format($pr->selling_expense_value,3,'.',''), '0'),'.') }}</div></div>
-                        <div class="f"><label>Selling Expenses (Rs./kg)</label><div class="v mono">{{ rtrim(rtrim(number_format($pr->selling_expenses,3,'.',''), '0'),'.') }}</div></div>
-                        <div class="f"><label>Additional Realization (Rs./kg)</label><div class="v mono" style="color:{{ $pr->additional_realization < 0 ? 'var(--red)':'var(--gd)' }}">{{ number_format($pr->additional_realization,2) }}</div></div>
-                     </div>
+                     <div class="d-row"><div class="dk">Customer</div><div class="dv plain">{{ ucwords($customer->name) }}</div></div>
+                     <div class="d-row"><div class="dk">Business Model</div><div class="dv plain">{{ $customer->business_model }}</div></div>
+                     <div class="d-row"><div class="dk">Product</div><div class="dv plain">{{ $pr->product->product_name ?? '—' }}</div></div>
+                     <div class="d-row"><div class="dk">Payment Term</div><div class="dv">{{ $pr->payment_term }}</div></div>
+                     <div class="d-row"><div class="dk">Freight Basis</div><div class="dv">{{ $pr->freight_basis }}</div></div>
+                     <div class="d-row"><div class="dk">Freight (Rs./kg)</div><div class="dv">₹ {{ number_format($pr->freight,2) }}</div></div>
+                     <div class="d-row"><div class="dk">Packing Size</div><div class="dv">{{ $pr->packing_size }}</div></div>
+                     <div class="d-row"><div class="dk">Final Customer Price (Rs./kg)</div><div class="dv">₹ {{ number_format($pr->final_customer_price,2) }}</div></div>
+                     <div class="d-row"><div class="dk">Final MSP (Rs./kg)</div><div class="dv">₹ {{ number_format($pr->final_msp,2) }}</div></div>
+                     <div class="d-row"><div class="dk">{{ selling_expense_label($customer->business_model) }} ({{ $pr->selling_expense_basis }})</div><div class="dv">{{ rtrim(rtrim(number_format($pr->selling_expense_value,3,'.',''), '0'),'.') }}</div></div>
+                     <div class="d-row"><div class="dk">Selling Expenses (Rs./kg)</div><div class="dv">{{ rtrim(rtrim(number_format($pr->selling_expenses,3,'.',''), '0'),'.') }}</div></div>
+                     <div class="d-row"><div class="dk">Additional Realization (Rs./kg)</div><div class="dv" style="color:{{ $pr->additional_realization < 0 ? 'var(--red)':'var(--gd)' }}">{{ number_format($pr->additional_realization,2) }}</div></div>
                      @endif
                      @if($existing)
                      <div class="banner" style="background:var(--amberS);color:var(--amber);border:1px solid #f2e3c8;margin:16px 0 0"><i class="fa fa-exclamation-triangle" style="margin-top:2px"></i><div>An existing price for this product is on file (₹ {{ number_format($existing->net_price,2) }}, {{ $existing->packing_type }}). Approving will <b>replace</b> it.</div></div>
@@ -299,10 +318,10 @@
       $('#e_selling_expenses').val(num(expenses).toFixed(3));
       $('#e_additional_realization').val(real.toFixed(2));
 
-      /* freight field visibility — only when freight is editable (not master-locked) */
+      /* freight row visibility — only when freight is editable (not master-locked) */
       var $fr = $('#e_freight');
       if($fr.hasClass('ein')){
-         $fr.closest('.f').toggle(fbasis === 'Paid by Company');
+         $('#freight_row').toggle(fbasis === 'Paid by Company');
       }
 
       updateMasterCheck(pt, fbasis, freight);

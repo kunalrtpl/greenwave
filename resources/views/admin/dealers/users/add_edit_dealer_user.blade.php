@@ -62,7 +62,7 @@
                                 <div class="form-group">
                                     <label class="col-md-3 control-label">Email</label>
                                     <div class="col-md-4">
-                                        <input  type="text" placeholder="Email" name="email" style="color:gray" class="form-control" value="{{(!empty($dealerdata['email']))?$dealerdata['email']: '' }}"/>
+                                        <input  type="text" placeholder="Email" name="email" id="dealerEmailInput" style="color:gray" class="form-control" value="{{(!empty($dealerdata['email']))?$dealerdata['email']: '' }}"/>
                                         <h4 class="text-center text-danger pt-3" style="display: none;" id="Dealer-email"></h4>
                                     </div>
                                 </div>
@@ -131,9 +131,9 @@
                                     </div>
                                 </div>
 
-                                {{-- ===== EMAIL TEMPLATES SECTION (NEW) ===== --}}
+                                {{-- ===== EMAIL TEMPLATES SECTION ===== --}}
                                 @if(!empty($dealerEmailTemplates) && count($dealerEmailTemplates) > 0)
-                                <div class="form-group">
+                                <div class="form-group" id="emailNotificationsSection" style="display:none;">
                                     <label class="col-md-3 control-label">
                                         Email Notifications
                                         <b class="red">({{ count($selEmailTemplates) }})</b>
@@ -238,15 +238,10 @@
 
     function updateEmailTemplateCount() {
         var checked = document.querySelectorAll('.email-template-checkbox:checked').length;
-        // Update the badge next to the label
-        var badge = document.querySelector('label[for="email-notifications-label"] b.red');
-        // Update label count text (find it by proximity)
         var labels = document.querySelectorAll('.control-label b.red');
-        // Update the last b.red that is inside the email group label
         if (labels.length >= 2) {
             labels[labels.length - 1].textContent = '(' + checked + ')';
         }
-        // Highlight selected rows
         document.querySelectorAll('.email-template-row').forEach(function(row) {
             var cb = row.querySelector('.email-template-checkbox');
             if (cb && cb.checked) {
@@ -269,9 +264,32 @@
         updateEmailTemplateCount();
     });
 
+    // ===== Show/Hide Email Notifications based on email field =====
+    function isValidEmail(email) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+    }
+
+    function toggleEmailNotificationsSection() {
+        var emailVal = $('#dealerEmailInput').val();
+        if (isValidEmail(emailVal)) {
+            $('#emailNotificationsSection').slideDown(200);
+        } else {
+            $('#emailNotificationsSection').slideUp(200);
+        }
+    }
+
     // ===== Form Submit =====
     $(document).ready(function(){
         updateEmailTemplateCount();
+
+        // Check on page load (handles edit mode where email is already filled)
+        toggleEmailNotificationsSection();
+
+        // Check on every keystroke / paste / autofill
+        $('#dealerEmailInput').on('input keyup change paste', function() {
+            // Small delay to allow paste to complete
+            setTimeout(toggleEmailNotificationsSection, 100);
+        });
 
         $("#DealerForm").submit(function(e){
             $('.loadingDiv').show();
@@ -326,7 +344,7 @@
     .panel-heading .accordion-toggle:after { color:#fff; }
     .panel-title>a:hover { color:#fff; }
 
-    /* ===== Email templates table styles (NEW) ===== */
+    /* ===== Email templates table styles ===== */
     .email-template-row:hover {
         background-color: #f0f7ff !important;
     }

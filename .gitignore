@@ -32,6 +32,10 @@
 /public/work_notes
 public/app_manuals
 public/uploads
+teams-test
+teams
+dealers
+dealers-test
 .env
 .phpunit.result.cache
 Homestead.json

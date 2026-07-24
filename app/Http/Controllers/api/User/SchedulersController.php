@@ -134,7 +134,7 @@ class SchedulersController extends Controller
             $query->where('scheduler_date', $data['date'])
                   ->orderBy('scheduler_time', 'ASC');
         } else {
-            $query->whereNull('scheduler_date');
+            //$query->whereNull('scheduler_date');
         }
 
         // ── Optional filters ──────────────────────────────────────────────────
