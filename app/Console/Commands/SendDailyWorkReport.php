@@ -28,9 +28,14 @@ use Mpdf\Mpdf;
  *
  *  PDF contents (in order):
  *    1. Yesterday's Scheduled Tasks   (user_schedulers)
- *    2. Customer Visits — card view   (user_dvrs)  → now shows CITY + LAST VISIT
+ *       → Task Status Stats strip (Done / Pending / Rescheduled / Closed / Cancelled)
+ *    2. Customer Visits — card view   (user_dvrs)  → shows CITY + LAST VISIT
  *    3. Other Developments            (work_notes)
  *    4. Today's Upcoming Tasks        (user_schedulers)
+ *
+ *  Bug fixes included:
+ *    - buildLastVisit: now also finds earlier visits on the SAME report date
+ *      (fixes: second visit to same customer on same day showed wrong last-visit)
  */
 class SendDailyWorkReport extends Command
 {
@@ -212,10 +217,10 @@ class SendDailyWorkReport extends Command
                 // ⚠️ TESTING ONLY — remove this line to send to real employees
                 $user->email = "mkanum786@gmail.com";
                 // ⚠️ TESTING ONLY — real managers must not be CC'd during testing
-                $ccEmails = ['bhupigreenwave@yopmail.com'];   // or ['mkanum786@gmail.com'] to test the CC path itself 
+                $ccEmails = ['bhupigreenwave@yopmail.com'];   // or ['mkanum786@gmail.com'] to test the CC path itself
             }else{
-                /*// ⚠️ TESTING ONLY — remove this line to send to real employees
-                $user->email = "mkanum786@gmail.com";
+                // ⚠️ TESTING ONLY — remove this line to send to real employees
+                /*$user->email = "mkanum786@gmail.com";
                 // ⚠️ TESTING ONLY — real managers must not be CC'd during testing
                 $ccEmails = ['mkanum786@gmail.com'];   // or ['mkanum786@gmail.com'] to test the CC path itself*/
             }
@@ -355,6 +360,11 @@ class SendDailyWorkReport extends Command
         // Status sub-label per client spec:
         //   user_dvr_id present   → "Visit"  (+ "(No Meeting)" when have_you_met = 0)
         //   work_note_id present  → work_notes.activity_mode
+        //
+        // NOTE: sub_label is also read in the Blade template to drive the
+        //       Task Stats strip (V: / OD: counts).
+        //   Visit bucket  → sub_label starts with "Visit"
+        //   OD bucket     → sub_label set but does NOT start with "Visit"
         $subLabel = null;
         if (!empty($s->user_dvr_id)) {
             $subLabel = 'Visit';
@@ -368,6 +378,8 @@ class SendDailyWorkReport extends Command
         } elseif (!empty($s->work_note_id) && $noteMap->has($s->work_note_id)) {
             $mode = $noteMap->get($s->work_note_id)->activity_mode;
             // stored uppercase (e.g. "INFORMATION") → "Information"
+            // activity_mode = "VISIT" is also possible for work-note-linked tasks;
+            // keep the raw value so the Blade stats logic can detect it.
             $subLabel = $mode ? ucfirst(strtolower($mode)) : null;
         }
 
@@ -394,14 +406,14 @@ class SendDailyWorkReport extends Command
         ];
 
         return [
-            'time'         => $s->scheduler_time ? Carbon::parse($s->scheduler_time)->format('h:i A') : '—',
-            'related_to'   => ucfirst(str_replace('_', ' ', (string) $s->related_to)),
-            'name'         => $relatedName,
-            'subject'      => $s->subject ?: '—',
-            'description'  => $s->description,
-            'status'       => $status,
-            'status_color' => $statusColors[$status] ?? '#475569',
-            'sub_label'    => $subLabel,
+            'time'           => $s->scheduler_time ? Carbon::parse($s->scheduler_time)->format('h:i A') : '—',
+            'related_to'     => ucfirst(str_replace('_', ' ', (string) $s->related_to)),
+            'name'           => $relatedName,
+            'subject'        => $s->subject ?: '—',
+            'description'    => $s->description,
+            'status'         => $status,
+            'status_color'   => $statusColors[$status] ?? '#475569',
+            'sub_label'      => $subLabel,
             'rescheduled_to' => $rescheduledTo,
         ];
     }
@@ -486,14 +498,17 @@ class SendDailyWorkReport extends Command
         $submitted = (bool) $dvr->is_submitted;
 
         $statuses = [
-            ['label' => 'Visit Type',   'value' => $dvr->visit_type ?: 'Official',                    'ok' => true],
-            ['label' => 'Entry',        'value' => $isReal ? 'Real Time' : 'Post Visit',              'ok' => $isReal],
-            ['label' => 'Site',         'value' => $dvr->site_type ?: '—',                            'ok' => ($dvr->site_type === 'On Site')],
-            ['label' => 'Customer Met', 'value' => $met ? 'Yes' : 'No',                               'ok' => $met],
-            ['label' => 'Visit Detail', 'value' => $submitted ? 'Added' : 'Pending',                  'ok' => $submitted],
+            ['label' => 'Visit Type',   'value' => $dvr->visit_type ?: 'Official',               'ok' => true],
+            ['label' => 'Entry',        'value' => $isReal ? 'Real Time' : 'Post Visit',         'ok' => $isReal],
+            ['label' => 'Site',         'value' => $dvr->site_type ?: '—',                       'ok' => ($dvr->site_type === 'On Site')],
+            ['label' => 'Customer Met', 'value' => $met ? 'Yes' : 'No',                          'ok' => $met],
+            ['label' => 'Visit Detail', 'value' => $submitted ? 'Added' : 'Pending',             'ok' => $submitted],
         ];
 
         // ── LAST VISIT — most recent earlier DVR to the SAME party ──
+        // FIX: also considers earlier visits on the SAME report date (lower id)
+        // so that a second visit to the same customer on the same day correctly
+        // shows the first visit as "Last Visit".
         $lastVisit = $this->buildLastVisit($dvr, $user, $reportDate);
 
         // ── Follow-up action date/time (shown alongside Next Plan) ──
@@ -512,7 +527,7 @@ class SendDailyWorkReport extends Command
 
         return [
             'customer_name' => $customerName ?: 'N/A',
-            'customer_city' => $customerCity,          // replaces customer_type
+            'customer_city' => $customerCity,
             'check_in'      => $checkIn,
             'check_out'     => $checkOut,
             'duration'      => $duration,
@@ -523,10 +538,10 @@ class SendDailyWorkReport extends Command
             'visit_detail'  => $dvr->visit_detail,
             'remarks'       => $dvr->remarks,
             'next_plan'     => $dvr->next_plan,
-            'next_action'   => $nextAction,            // null when no follow-up date
+            'next_action'   => $nextAction,
             'other_purpose' => $dvr->other_purpose,
             'statuses'      => $statuses,
-            'last_visit'    => $lastVisit,             // null when none
+            'last_visit'    => $lastVisit,
         ];
     }
 
@@ -566,8 +581,12 @@ class SendDailyWorkReport extends Command
     }
 
     /**
-     * Find the last visit (before the report date) to the same customer or
-     * register-request, by the same user, and build a compact summary.
+     * Find the last visit (before OR earlier on the report date) to the same
+     * customer / register-request, by the same user, and build a compact summary.
+     *
+     * FIX applied here: the original query used `whereDate('dvr_date', '<', ...)`,
+     * which excluded same-day earlier visits. The fix adds an OR branch that
+     * captures same-date rows with a lower primary key (i.e. created earlier).
      */
     private function buildLastVisit(UserDvr $dvr, User $user, Carbon $reportDate): ?array
     {
@@ -576,7 +595,16 @@ class SendDailyWorkReport extends Command
                 'customer_contact_info:id,name,designation,mobile_number',
             ])
             ->where('user_id', $user->id)
-            ->whereDate('dvr_date', '<', $reportDate->toDateString())
+            ->where(function ($query) use ($dvr, $reportDate) {
+                $query
+                    // Any visit on a PREVIOUS day
+                    ->whereDate('dvr_date', '<', $reportDate->toDateString())
+                    // OR a visit on the SAME day but inserted earlier (lower PK)
+                    ->orWhere(function ($q2) use ($dvr, $reportDate) {
+                        $q2->whereDate('dvr_date', '=', $reportDate->toDateString())
+                           ->where('id', '<', $dvr->id);
+                    });
+            })
             ->where('id', '!=', $dvr->id);
 
         if ($dvr->customer_id) {
@@ -616,10 +644,10 @@ class SendDailyWorkReport extends Command
         return [
             'date'      => $date ? $date->format('d M Y') : '—',
             'day'       => $date ? $date->format('l') : null,
-            'days_ago'  => $daysAgo,
+            'days_ago'  => $daysAgo,   // 0 = earlier today
             'met'       => (bool) $prev->have_you_met,
             'met_name'  => $metName,
-            'purposes'  => array_slice($purposes, 0, 4),   // keep the line short
+            'purposes'  => array_slice($purposes, 0, 4),
             'summary'   => $prev->visit_detail ?: $prev->remarks ?: null,
             'next_plan' => $prev->next_plan ?: null,
         ];

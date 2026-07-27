@@ -19,7 +19,6 @@ body {
 .hdr-right { vertical-align: top; text-align: right; }
 .logo-img  { width: 150px; height: auto; margin-bottom: 10px; }
 
-/* double rule under header — engraved corporate look */
 .hdr-rule-1 { border-top: 2px solid #1e293b; margin-top: 6px; }
 .hdr-rule-2 { border-top: 1px solid #cbd5e1; margin-top: 2px; margin-bottom: 14px; }
 
@@ -52,12 +51,11 @@ body {
 .s-box-2 { border-top: 3px solid #475569; width: 22%; }
 .s-box-3 { border-top: 3px solid #64748b; width: 22%; }
 
-/* Borderless, background-free, and right-aligned date section */
-.s-box-date-clean { 
-    text-align: right; 
+.s-box-date-clean {
+    text-align: right;
     vertical-align: middle;
-    padding: 10px 0; 
-    border: none; 
+    padding: 10px 0;
+    border: none;
     background: transparent;
     width: 34%;
 }
@@ -65,7 +63,6 @@ body {
 .s-big { font-size: 18px; font-weight: bold; display: block; line-height: 1; margin-bottom: 2px; color: #0f172a; }
 .s-tag { font-size: 7px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.8px; display: block; color: #475569; }
 
-/* Date Typography — Added padding-right so it aligns perfectly with the content edge */
 .s-date-large { font-size: 18px; font-weight: bold; color: #000000; display: block; line-height: 1; padding-right: 4px; }
 .s-date-day   { font-size: 7.5px; font-weight: bold; text-transform: capitalize; letter-spacing: 0.8px; display: block; color: #475569; padding-right: 24px; }
 
@@ -124,6 +121,83 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
 .inline-list { font-weight: bold; color: #334155; }
 .inline-list .sep { color: #cbd5e1; font-weight: normal; }
 
+/* ══════════════════════════════════════════════════════
+   TASK STATS STRIP — sits between section header & table
+   ══════════════════════════════════════════════════════ */
+.task-stats-wrap {
+    border: 1px solid #e2e8f0;
+    border-top: none;
+    background: #f8fafc;
+    padding: 0;
+    margin-bottom: 0;
+}
+.task-stats-strip {
+    width: 100%;
+    border-collapse: collapse;
+}
+/* Each stat cell */
+.ts-cell {
+    text-align: center;
+    vertical-align: middle;
+    padding: 8px 4px 7px 4px;
+    border-right: 1px solid #e2e8f0;
+}
+.ts-cell.ts-last { border-right: none; }
+
+/* Total tasks — slightly darker bg to anchor left */
+.ts-cell-total {
+    background: #f1f5f9;
+    width: 14%;
+    border-right: 2px solid #cbd5e1;
+}
+.ts-total-num {
+    font-size: 17px; font-weight: bold; color: #0f172a;
+    display: block; line-height: 1;
+}
+.ts-total-lbl {
+    font-size: 6.5px; font-weight: bold; color: #475569;
+    text-transform: uppercase; letter-spacing: 0.8px;
+    display: block; margin-top: 2px;
+}
+
+/* Individual status cells */
+.ts-num {
+    font-size: 15px; font-weight: bold;
+    display: block; line-height: 1; margin-bottom: 2px;
+}
+.ts-lbl {
+    font-size: 6.5px; font-weight: bold;
+    text-transform: uppercase; letter-spacing: 0.7px;
+    display: block;
+}
+/* Sub-counts (V: x  OD: x) */
+.ts-sub {
+    margin-top: 3px;
+}
+.ts-sub-item {
+    display: inline-block;
+    font-size: 6px; font-weight: bold;
+    background: #e2e8f0; color: #334155;
+    border-radius: 3px; padding: 1px 5px;
+    margin: 1px 1px 0 1px;
+    letter-spacing: 0.4px;
+}
+
+/* Status-specific colours */
+.ts-done        { color: #16a34a; }
+.ts-rescheduled { color: #d97706; }
+.ts-closed      { color: #2563eb; }
+.ts-cancelled   { color: #dc2626; }
+.ts-pending     { color: #dc2626; }
+.ts-open        { color: #2563eb; }
+
+/* Sub-badge tints per status */
+.ts-sub-done        { background: #dcfce7; color: #15803d; }
+.ts-sub-pending     { background: #fee2e2; color: #b91c1c; }
+.ts-sub-rescheduled { background: #fef3c7; color: #b45309; }
+.ts-sub-closed      { background: #dbeafe; color: #1d4ed8; }
+.ts-sub-cancelled   { background: #fee2e2; color: #b91c1c; }
+
 /* ═══════════════ DVR VISIT SHEET ═══════════════ */
 .visit-card {
     width: 100%; border-collapse: collapse;
@@ -146,12 +220,6 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
     border-bottom: 1px solid #cbd5e1; vertical-align: middle;
 }
 .vc-cust      { font-size: 11px; font-weight: bold; color: #0f172a; }
-.vc-cust-type {
-    font-size: 7px; font-weight: bold; color: #475569;
-    text-transform: uppercase; letter-spacing: 0.6px; margin-top: 2px;
-}
-
-/* ── City inline next to customer name (e.g. "123 test | LUDHIANA") ── */
 .vc-cust-city {
     font-size: 8.5px; font-weight: bold; color: #475569;
     text-transform: uppercase; letter-spacing: 0.6px;
@@ -183,7 +251,7 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
     text-transform: uppercase; letter-spacing: 1px; padding: 7px 10px; text-align: right;
 }
 
-/* ── TODAY section (Updated to Custom Color Accent #A5C552) ── */
+/* ── TODAY section ── */
 .sec-title-today { background: #A5C552; }
 .sec-title-today .sec-title-left { color: #0f172a; }
 .sec-title-today .sec-title-right { color: #3f4e1c; }
@@ -243,7 +311,6 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
 }
 .vcd-val { padding: 7px 12px; font-size: 8.5px; color: #334155; line-height: 1.55; }
 
-/* Last Visit row label — amber accent so it reads as "history" */
 .vcd-lbl-last {
     color: #b45309 !important;
     background: #fff7ed !important;
@@ -263,7 +330,6 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
 .trial-line  { margin-top: 2px; font-size: 8.5px; color: #334155; line-height: 1.5; }
 .trial-line b { color: #475569; }
 
-/* mini trial sheets */
 .trial-tbl { width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; margin: 2px 0 8px 0; }
 .trial-tbl-last { margin-bottom: 2px; }
 .tt-head {
@@ -286,14 +352,13 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
 }
 .trial-tbl tr.tt-last td { border-bottom: none; }
 
-/* ═══════════ LAST VISIT BOX — amber, clearly "history" ═══════════ */
+/* ═══════════ LAST VISIT BOX ═══════════ */
 .last-visit-box {
     width: 100%; border-collapse: collapse;
     border: 1px solid #fcd88f; background: #fffdf7;
 }
 .last-visit-box td { vertical-align: top; }
 
-/* Header bar: date + day + days-ago badge, all on one line */
 .lv-head {
     background: #fef3e0; border-bottom: 1px solid #fcd88f;
     padding: 6px 10px; vertical-align: middle;
@@ -312,7 +377,6 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
     padding: 1px 7px; border-radius: 3px; letter-spacing: 0.6px; vertical-align: 1px;
 }
 
-/* Detail rows */
 .lv-lbl {
     width: 22%; padding: 5px 10px;
     font-size: 6.5px; font-weight: bold; color: #b45309;
@@ -331,11 +395,9 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
 .lv-met-no   { color: #dc2626; font-weight: bold; }
 .lv-met-name { color: #0f172a; font-weight: bold; }
 
-/* "Then Planned" — the forward-looking row gets a stronger accent */
 .lv-lbl-plan { color: #1e293b; background: #fef3e0; }
 .lv-plan-val { font-weight: bold; color: #0f172a; }
 
-/* ── Divider between Last Visit (history) and Current Visit (today) ── */
 .cv-divider {
     text-align: left;
     background: #f1f5f9;
@@ -364,6 +426,43 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
     $visits = $data['visits'];
     $notes  = $data['workNotes'];
     $tTasks = $data['todayTasks'];
+
+    /* ── Task Stats Calculation ── */
+    $statsDone        = 0; $statsDoneV = 0;  $statsDoneOD = 0;
+    $statsRescheduled = 0;
+    $statsClosed      = 0;
+    $statsCancelled   = 0;
+    $statsPending     = 0; $statsPendingV = 0; $statsPendingOD = 0;
+    $statsOpen        = 0; $statsOpenV = 0;    $statsOpenOD = 0;
+
+    foreach ($yTasks as $t) {
+        $s = $t['status'] ?? 'Open';
+
+        // Is this task a Visit (has user_dvr_id) or OD (work_note_id where sub_label != 'Visit')?
+        // sub_label == 'Visit' or 'Visit (No Meeting)' → Visit bucket
+        // sub_label set but not Visit → OD bucket
+        $isVisit = isset($t['sub_label']) && $t['sub_label'] !== null
+                   && (str_starts_with((string)$t['sub_label'], 'Visit'));
+        $isOD    = isset($t['sub_label']) && $t['sub_label'] !== null && !$isVisit;
+
+        if (in_array($s, ['Done', 'Completed'])) {
+            $statsDone++;
+            if ($isVisit) $statsDoneV++;
+            elseif ($isOD) $statsDoneOD++;
+        } elseif ($s === 'Rescheduled') {
+            $statsRescheduled++;
+        } elseif ($s === 'Closed') {
+            $statsClosed++;
+        } elseif ($s === 'Cancelled') {
+            $statsCancelled++;
+        } else {
+            // Pending / Open
+            $statsPending++;
+            if ($isVisit) $statsPendingV++;
+            elseif ($isOD) $statsPendingOD++;
+        }
+    }
+    $statsTotal = count($yTasks);
 @endphp
 
 {{-- ── HEADER ── --}}
@@ -423,6 +522,63 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
         <td class="sec-title-right">{{ count($yTasks) }} {{ count($yTasks) === 1 ? 'Task' : 'Tasks' }}</td>
     </tr>
 </table>
+
+{{-- ── TASK STATUS STATS STRIP (always shown, even when 0 tasks) ── --}}
+<div class="task-stats-wrap">
+    <table class="task-stats-strip" cellspacing="0" cellpadding="0">
+        <tr>
+            {{-- Total --}}
+            <td class="ts-cell ts-cell-total">
+                <span class="ts-total-num">{{ $statsTotal }}</span>
+                <span class="ts-total-lbl">Tasks</span>
+            </td>
+
+            {{-- Done --}}
+            <td class="ts-cell" style="width:21%;">
+                <span class="ts-num ts-done">{{ $statsDone }}</span>
+                <span class="ts-lbl ts-done">Done</span>
+                @if($statsDone > 0)
+                <div class="ts-sub">
+                    <span class="ts-sub-item ts-sub-done">CV: {{ $statsDoneV }}</span>
+                    <span class="ts-sub-item ts-sub-done">OD: {{ $statsDoneOD }}</span>
+                </div>
+                @endif
+            </td>
+
+            
+
+            {{-- Rescheduled --}}
+            <td class="ts-cell" style="width:15%;">
+                <span class="ts-num ts-rescheduled">{{ $statsRescheduled }}</span>
+                <span class="ts-lbl ts-rescheduled">Rescheduled</span>
+            </td>
+
+            {{-- Closed --}}
+            <td class="ts-cell" style="width:15%;">
+                <span class="ts-num ts-closed">{{ $statsClosed }}</span>
+                <span class="ts-lbl ts-closed">Closed</span>
+            </td>
+
+            {{-- Cancelled --}}
+            <!-- <td class="ts-cell ts-last" style="width:14%;">
+                <span class="ts-num ts-cancelled">{{ $statsCancelled }}</span>
+                <span class="ts-lbl ts-cancelled">Cancelled</span>
+            </td> -->
+            {{-- Pending / Open --}}
+            <td class="ts-cell" style="width:21%;">
+                <span class="ts-num ts-pending">{{ $statsPending }}</span>
+                <span class="ts-lbl ts-pending">Pending</span>
+                @if($statsPending > 0)
+                <div class="ts-sub">
+                    <span class="ts-sub-item ts-sub-pending">CV: {{ $statsPendingV }}</span>
+                    <span class="ts-sub-item ts-sub-pending">OD: {{ $statsPendingOD }}</span>
+                </div>
+                @endif
+            </td>
+        </tr>
+    </table>
+</div>
+
 @if(count($yTasks) === 0)
     <div class="empty-cell">No tasks were scheduled for this day.</div>
 @else
@@ -540,20 +696,23 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
             <td colspan="3" style="padding:0;">
                 <table class="vc-detail" cellspacing="0" cellpadding="0">
 
-                    {{-- ── LAST VISIT (first, so it reads before current-visit detail) ── --}}
+                    {{-- ── LAST VISIT ── --}}
                     @if(!empty($v['last_visit']))
                         @php $lv = $v['last_visit']; @endphp
                         <tr>
                             <td class="vcd-lbl vcd-lbl-last">Last Visit</td>
                             <td class="vcd-val" style="padding:8px 10px;">
                                 <table class="last-visit-box" cellspacing="0" cellpadding="0">
-                                    {{-- Header bar: date • day • days-before badge --}}
                                     <tr>
                                         <td class="lv-head" colspan="2">
                                             <span class="lv-date">{{ $lv['date'] }}</span>
                                             @if($lv['day'])<span class="lv-day">{{ strtoupper($lv['day']) }}</span>@endif
                                             @if(!is_null($lv['days_ago']))
-                                                <span class="lv-ago">{{ $lv['days_ago'] }} {{ $lv['days_ago'] == 1 ? 'DAY' : 'DAYS' }} AGO</span>
+                                                @if($lv['days_ago'] === 0)
+                                                    <span class="lv-ago">EARLIER TODAY</span>
+                                                @else
+                                                    <span class="lv-ago">{{ $lv['days_ago'] }} {{ $lv['days_ago'] == 1 ? 'DAY' : 'DAYS' }} AGO</span>
+                                                @endif
                                             @endif
                                         </td>
                                     </tr>
@@ -596,7 +755,6 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
                         </tr>
                     @endif
 
-                    {{-- ── Divider: only shown when a Last Visit precedes it, to separate history from today ── --}}
                     @if(!empty($v['last_visit']))
                     <tr>
                         <td colspan="2" class="cv-divider">Current Visit</td>
@@ -798,7 +956,7 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
 </table>
 @endif
 
-{{-- ── 4. TODAY'S UPCOMING TASKS (Accent Custom Green #A5C552) ── --}}
+{{-- ── 4. TODAY'S UPCOMING TASKS ── --}}
 <table class="sec-title-table sec-title-today" cellspacing="0" cellpadding="0">
     <tr>
         <td class="sec-title-left"><span class="sec-today-tag">&#9654; UPCOMING</span> 4. Scheduled Tasks &mdash; {{ $todayDate }} (Today)</td>

@@ -629,12 +629,18 @@ class SendWeeklyWorkReport extends Command
     private function buildLastVisit(UserDvr $dvr, User $user, Carbon $beforeDate): ?array
     {
         $q = UserDvr::with([
-                'customerContacts.customerContact:id,name,designation,mobile_number',
-                'customer_contact_info:id,name,designation,mobile_number',
-            ])
-            ->where('user_id', $user->id)
-            ->whereDate('dvr_date', '<', $beforeDate->toDateString())
-            ->where('id', '!=', $dvr->id);
+            'customerContacts.customerContact:id,name,designation,mobile_number',
+            'customer_contact_info:id,name,designation,mobile_number',
+        ])
+        ->where('user_id', $user->id)
+        ->where(function ($query) use ($dvr, $beforeDate) {
+            $query->whereDate('dvr_date', '<', $beforeDate->toDateString())
+                  ->orWhere(function ($q2) use ($dvr, $beforeDate) {
+                      $q2->whereDate('dvr_date', '=', $beforeDate->toDateString())
+                         ->where('id', '<', $dvr->id);
+                  });
+        })
+        ->where('id', '!=', $dvr->id);
 
         if ($dvr->customer_id) {
             $q->where('customer_id', $dvr->customer_id);
