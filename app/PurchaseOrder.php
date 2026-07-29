@@ -24,6 +24,11 @@ class PurchaseOrder extends Model
         return $this->belongsTo('App\Dealer');
     }
 
+    public function sourceDealer()
+    {
+        return $this->belongsTo('App\Dealer', 'source_dealer_id');
+    }
+
     public function customer_employee(){
         return $this->belongsTo('App\CustomerEmployee');
     }
@@ -72,11 +77,13 @@ class PurchaseOrder extends Model
         }
         if($data['action'] == 'dealer_customer'){
             $parentDealerId = \App\Dealer::getParentDealer($resp['dealer']);
+            $createpo->source_dealer_id   =  $resp['dealer']['id'];
             $resp['dealer']['id'] = $parentDealerId;
             $createpo->dealer_id   =  $resp['dealer']['id'];
             $createpo->customer_id =  $data['customer_id'];
         }elseif($data['action'] == 'dealer'){
             $parentDealerId = \App\Dealer::getParentDealer($resp['dealer']);
+            $createpo->source_dealer_id   =  $resp['dealer']['id'];
             $resp['dealer']['id'] = $parentDealerId;
             $createpo->dealer_id = $resp['dealer']['id'];
 

@@ -249,7 +249,13 @@
                         <td></td>
                         <td class="items-footer-right">{{ $po->orderitems->sum('qty') }} kg</td>
                     </tr>
-
+                    @if($po->sourceDealer->name)
+                        <tr class="items-footer">
+                            <td colspan="2" class="items-footer-left">Submitted By: {{ $po->sourceDealer->name }}</td>
+                            <td></td>
+                            <td class="items-footer-right"></td>
+                        </tr>
+                    @endif
                 </table>
             </td>
         </tr>

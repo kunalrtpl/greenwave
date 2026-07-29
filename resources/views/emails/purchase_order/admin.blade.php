@@ -222,6 +222,12 @@
                         <td class="info-row-value">{{ $po->customer->name }}</td>
                     </tr>
                     @endif
+                    @if($po->sourceDealer->name)
+                        <tr class="info-row-border">
+                            <td class="info-row-label">Submitted By</td>
+                            <td class="info-row-value">{{ $po->sourceDealer->name }}</td>
+                        </tr>
+                    @endif
 
                     {{-- Remarks --}}
                     @if(!empty($po->remarks))
