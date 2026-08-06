@@ -537,7 +537,7 @@ class SendDailyWorkReport extends Command
             'trials'        => $trials,
             'visit_detail'  => $dvr->visit_detail,
             'remarks'       => $dvr->remarks,
-            'next_plan'     => $dvr->next_plan,
+            'next_plan'     => $dvr->action_remarks,
             'next_action'   => $nextAction,
             'other_purpose' => $dvr->other_purpose,
             'statuses'      => $statuses,
@@ -641,6 +641,19 @@ class SendDailyWorkReport extends Command
             $metName = $prev->customer_contact_info->name;
         }
 
+        // ── Same tick/cross strip as the current visit, but for the PREVIOUS DVR ──
+        $prevIsReal    = ($prev->visit_recorded === 'On Site');
+        $prevMet       = (bool) $prev->have_you_met;
+        $prevSubmitted = (bool) $prev->is_submitted;
+
+        $prevStatuses = [
+            ['label' => 'Visit Type',   'value' => $prev->visit_type ?: 'Official',            'ok' => true],
+            ['label' => 'Entry',        'value' => $prevIsReal ? 'Real Time' : 'Post Visit',   'ok' => $prevIsReal],
+            ['label' => 'Site',         'value' => $prev->site_type ?: '—',                    'ok' => ($prev->site_type === 'On Site')],
+            ['label' => 'Customer Met', 'value' => $prevMet ? 'Yes' : 'No',                    'ok' => $prevMet],
+            ['label' => 'Visit Detail', 'value' => $prevSubmitted ? 'Added' : 'Pending',       'ok' => $prevSubmitted],
+        ];
+
         return [
             'date'      => $date ? $date->format('d M Y') : '—',
             'day'       => $date ? $date->format('l') : null,
@@ -649,7 +662,8 @@ class SendDailyWorkReport extends Command
             'met_name'  => $metName,
             'purposes'  => array_slice($purposes, 0, 4),
             'summary'   => $prev->visit_detail ?: $prev->remarks ?: null,
-            'next_plan' => $prev->next_plan ?: null,
+            'next_plan' => $prev->action_remarks ?: null,
+            'statuses'  => $prevStatuses,   // ← NEW: drives the Last Visit tick strip
         ];
     }
 

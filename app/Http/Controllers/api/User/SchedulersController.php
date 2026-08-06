@@ -331,13 +331,13 @@ class SchedulersController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $resp = $this->resp;
-
         if (!$resp['status']) {
             return response()->json(apiErrorResponse("Unauthorized. Please try again after sometime."), 422);
         }
 
         $validator = \Validator::make($request->all(), [
-            'status' => 'required|string',
+            'status'       => 'required|string',
+            'close_reason' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -352,7 +352,13 @@ class SchedulersController extends Controller
             return response()->json(apiErrorResponse("Scheduler not found."), 422);
         }
 
-        $scheduler->update(['status' => $request->input('status')]);
+        $updateData = ['status' => $request->input('status')];
+
+        if ($request->filled('close_reason')) {
+            $updateData['close_reason'] = $request->input('close_reason');
+        }
+
+        $scheduler->update($updateData);
 
         $message = "Scheduler status updated successfully.";
         return response()->json(apiSuccessResponse($message, []), 200);
