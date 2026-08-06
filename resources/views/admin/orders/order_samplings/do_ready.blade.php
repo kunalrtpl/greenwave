@@ -76,7 +76,10 @@
             @foreach($doinvoice['invoice_items'] as $invItem)
             <?php $totalQty += $invItem['qty'] ?>
             <tr>
-                <td>{{$invItem['productinfo']['product_name']}}</td>
+                <td>{{$invItem['productinfo']['product_name']}}
+                    <br>
+                    <i><small>({{$invItem['productinfo']['product_code']}})</small></i>
+                </td>
                 <td>{{$invItem['qty']}} kg</td>
                 <td>{{$invItem['batch_no']}}</td>
                 @if($key==0) 
