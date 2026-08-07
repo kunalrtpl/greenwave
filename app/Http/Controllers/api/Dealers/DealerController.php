@@ -622,7 +622,7 @@ class DealerController extends Controller
             'physical_form','is_trader_product','moq','shelf_life','stage',
             'show_class','show_weightage','gots_certification','zdhc_certification',
             'zdhc_pid','oekotex_certified','packing_size_id','packing_type_id',
-            'technical_literature','msds','additional_information','status',
+            'technical_literature','msds','focus_product','not_available','discontinued','product_status_type','additional_information','status',
             'product_detail_id','product_detail_info'
         )
         ->where('status', 1);
