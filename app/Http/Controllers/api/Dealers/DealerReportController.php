@@ -7,7 +7,7 @@ use App\Http\Controllers\Controller;
 use App\AuthToken;
 use App\Services\Report\ReportContext;
 use App\Services\Report\PendingPoReportService;
-use PDF;
+use Mpdf\Mpdf;
 
 /**
  * DealerReportController
@@ -128,9 +128,37 @@ class DealerReportController extends Controller
             @unlink($old);
         }
 
-        PDF::loadView($view, compact('data'))
-            ->setPaper('a4', 'portrait')
-            ->save($path);
+        $html = view($view, compact('data'))->render();
+
+        $mpdf = new Mpdf([
+            'mode'              => 'utf-8',
+            'format'            => 'A4',
+            'orientation'       => 'P',
+            'margin_top'        => 12,
+            'margin_bottom'     => 14,
+            'margin_left'       => 10,
+            'margin_right'      => 10,
+            'default_font'      => 'dejavusans',
+            'default_font_size' => 9,
+            'tempDir'           => storage_path('app/mpdf-temp'),
+        ]);
+
+        $mpdf->SetTitle($ctx->reportType);
+        $mpdf->SetAuthor('Greenwave');
+
+        // Repeating footer on every page — page numbers included
+        $mpdf->SetHTMLFooter(
+            '<table width="100%" style="border-top:1px solid #cbd5e1; font-size:7px; color:#64748b;">
+                <tr>
+                    <td style="font-weight:bold; color:#334155;">Greenwave &bull; Dealer Report</td>
+                    <td align="center">Confidential &mdash; Internal Use Only</td>
+                    <td align="right">Page {PAGENO} of {nbpg} &nbsp;&bull;&nbsp; ' . now()->format('d M Y') . '</td>
+                </tr>
+            </table>'
+        );
+
+        $mpdf->WriteHTML($html);
+        $mpdf->Output($path, 'F');
 
         return response()->json(apiSuccessResponse("PDF generated", [
             'pdf_url' => url('DealerReports/' . $file),

@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8">
+@include('reports._pdf_style')
+</head>
+<body>
 @include('reports._pdf_header', [
   'title' => 'Pending PO – Date Wise' . ($data['ctx']->withPrice ? ' with Price' : '')
 ])
-</head>
-<body>
 
 @php $grandQty = 0; $grandVal = 0; @endphp
 
@@ -86,7 +87,6 @@
 <table class="footer-table">
   <tr>
     <td>Auto-generated. Pending qty is real-time at time of generation.</td>
-    <td class="r">Greenwave — Confidential</td>
   </tr>
 </table>
 

@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8">
-@include('reports._pdf_header', ['title' => 'Pending Customer Orders – Product Wise (Consolidated)'])
+@include('reports._pdf_style')
 </head>
 <body>
+@include('reports._pdf_header', ['title' => 'Pending Customer Orders – Product Wise (Consolidated)'])
 
 <table class="rpt">
   <thead>
@@ -30,12 +31,12 @@
   </tbody>
 </table>
 
-<table style="width:100%;border-collapse:collapse;margin-top:2px;">
+<table class="callout-total">
   <tr>
-    <td style="width:80%;"></td>
-    <td style="width:20%;background:#2d2d2d;border:1px solid #1a1a1a;padding:7px 10px;text-align:right;">
-      <span style="font-size:9px;color:#B1D83C;text-transform:uppercase;letter-spacing:0.3px;">Total Qty</span><br>
-      <strong style="font-size:13px;color:#fff;">{{ number_format($data['reportData']['total_qty']) }} kg</strong>
+    <td class="spacer"></td>
+    <td class="box">
+      <span class="ct-lbl">Total Qty</span><br>
+      <span class="ct-val">{{ number_format($data['reportData']['total_qty']) }} kg</span>
     </td>
   </tr>
 </table>
@@ -43,7 +44,6 @@
 <table class="footer-table">
   <tr>
     <td>Auto-generated. Pending qty is real-time at time of generation.</td>
-    <td class="r">Greenwave — Confidential</td>
   </tr>
 </table>
 </body>

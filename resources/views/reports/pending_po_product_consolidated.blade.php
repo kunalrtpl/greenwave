@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8">
-@include('reports._pdf_header', ['title' => 'Pending PO – Product Wise (Consolidated)'])
+@include('reports._pdf_style')
 </head>
 <body>
+@include('reports._pdf_header', ['title' => 'Pending PO – Product Wise (Consolidated)'])
 
 <table class="rpt">
   <thead>
@@ -51,7 +52,6 @@
 <table class="footer-table">
   <tr>
     <td>Auto-generated report. Pending qty is real-time at time of generation.</td>
-    <td class="r">Greenwave — Confidential</td>
   </tr>
 </table>
 

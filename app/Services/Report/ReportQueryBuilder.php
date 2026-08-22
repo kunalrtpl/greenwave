@@ -174,8 +174,9 @@ class ReportQueryBuilder
             ->join('sale_invoice_items as sii',      'sii.sale_invoice_id',      '=', 'si.id')
             ->join('products as p',                  'p.id',                     '=', 'sii.product_id')
             ->join('purchase_orders as po',          'po.id',                    '=', 'si.purchase_order_id')
-            ->leftJoin('packing_sizes as ps',        'ps.id',                    '=', 'sii.packing_size_id')
             ->leftJoin('purchase_order_items as poi','poi.id',                   '=', 'sii.purchase_order_item_id')
+            // packing_size_id lives on purchase_order_items (and products), not on sale_invoice_items
+            ->leftJoin('packing_sizes as ps',        'ps.id',                    '=', 'poi.packing_size_id')
 
             ->whereNotNull('si.dealer_invoice_no')
             ->where('si.dealer_invoice_no', '!=', '')
