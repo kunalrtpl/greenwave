@@ -49,8 +49,8 @@
       <td class="r">{{ number_format($line['ordered_qty']) }}</td>
       <td class="r"><strong>{{ number_format($line['pending_qty']) }}</strong></td>
       @if($data['ctx']->withPrice)
-      <td class="r">{{ number_format($line['unit_price'] ?? 0, 2) }}</td>
-      <td class="r">{{ number_format($line['line_value'] ?? 0, 2) }}</td>
+      <td class="r">{{ format_indian_number($line['unit_price'] ?? 0) }}</td>
+      <td class="r">{{ format_indian_number($line['line_value'] ?? 0) }}</td>
       @endif
       <td class="c">({{ $daysLabel }})</td>
     </tr>
@@ -60,7 +60,7 @@
       <td class="r">{{ number_format($dateGroup['date_qty']) }} kg</td>
       @if($data['ctx']->withPrice)
       <td></td>
-      <td class="r">&#8377;&nbsp;{{ number_format($dateGroup['date_value'], 2) }}</td>
+      <td class="r">&#8377;&nbsp;{{ format_indian_number($dateGroup['date_value']) }}</td>
       @endif
       <td></td>
     </tr>
@@ -79,7 +79,7 @@
       <span class="summary-qty">{{ number_format($grandQty) }} kg</span>
       <hr class="summary-divider">
       <span class="summary-label">Total Value</span>
-      <span class="summary-value">&#8377;&nbsp;{{ number_format($grandVal, 2) }}</span>
+      <span class="summary-value">&#8377;&nbsp;{{ format_indian_number($grandVal) }}</span>
     </td>
   </tr>
 </table>

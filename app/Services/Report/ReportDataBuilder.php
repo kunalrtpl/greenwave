@@ -137,6 +137,13 @@ class ReportDataBuilder
             $pendingQty = max(0, $orderedQty - $invoicedSoFar);
             $unitPrice  = isset($item->unit_price) ? (float) $item->unit_price : 0.0;
 
+            // Skip PO lines that are already fully invoiced — they have
+            // nothing left pending and must not appear in any report,
+            // even inside a group whose other lines still have pending qty.
+            if ($pendingQty <= 0) {
+                continue;
+            }
+
             $poDate  = Carbon::parse($item->po_date);
             $ageDays = (int) $poDate->diffInDays(Carbon::now());
 

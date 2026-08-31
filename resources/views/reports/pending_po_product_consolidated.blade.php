@@ -44,7 +44,7 @@
       <span class="summary-qty">{{ number_format($data['reportData']['total_qty']) }} kg</span>
       <hr class="summary-divider">
       <span class="summary-label">Total Value</span>
-      <span class="summary-value">&#8377;&nbsp;{{ number_format($data['reportData']['total_value'], 2) }}</span>
+      <span class="summary-value">&#8377;&nbsp;{{ format_indian_number($data['reportData']['total_value']) }}</span>
     </td>
   </tr>
 </table>

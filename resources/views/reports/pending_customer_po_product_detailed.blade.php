@@ -27,11 +27,11 @@
 <table class="rpt" style="margin-bottom:14px;border-top:none;">
   <thead>
     <tr class="sub-hdr">
-      <th style="width:82px">Date</th>
-      <th style="width:140px">Customer</th>
-      <th class="r" style="width:82px">Order Qty</th>
-      <th class="r" style="width:88px">Pending Qty</th>
-      <th class="c" style="width:62px">Age</th>
+      <th style="width:15%">Date</th>
+      <th style="width:32%">Customer</th>
+      <th class="r" style="width:16%">Order Qty</th>
+      <th class="r" style="width:18%">Pending Qty</th>
+      <th class="c" style="width:19%">Age</th>
     </tr>
   </thead>
   <tbody>

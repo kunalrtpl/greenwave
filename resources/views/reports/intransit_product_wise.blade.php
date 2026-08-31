@@ -27,11 +27,11 @@
 <table class="rpt" style="margin-bottom:14px;border-top:none;">
   <thead>
     <tr class="sub-hdr">
-      <th style="width:82px">Date</th>
-      <th style="width:130px">Invoice No.</th>
-      <th class="r" style="width:82px">Qty (kg)</th>
-      <th style="width:82px">LR Date</th>
-      <th>LR No.</th>
+      <th style="width:18%">Date</th>
+      <th style="width:28%">Invoice No.</th>
+      <th class="r" style="width:18%">Qty (kg)</th>
+      <th style="width:18%">LR Date</th>
+      <th style="width:18%">LR No.</th>
     </tr>
   </thead>
   <tbody>

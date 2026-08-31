@@ -68,7 +68,12 @@
     border-top:1px solid #dde3ea; border-right:1px solid #dde3ea; border-bottom:1px solid #dde3ea;
   }
   /* ── Tables ── */
-  table.rpt { width:100%; border-collapse:collapse; margin-bottom:12px; border:1px solid #d4d4d8; }
+  /* table-layout:fixed makes every <th> width= (set on the header row of each
+     table) authoritative, so no column can absorb leftover space as blank
+     gap — long values wrap instead. Keeps every row's full width visible
+     without side-scrolling on narrow/mobile PDF viewers. */
+  table.rpt { width:100%; table-layout:fixed; border-collapse:collapse; margin-bottom:12px; border:1px solid #d4d4d8; }
+  table.rpt th, table.rpt td { word-wrap:break-word; overflow-wrap:break-word; }
 
   table.rpt thead tr { background:#eef1f5; }
   table.rpt thead th {

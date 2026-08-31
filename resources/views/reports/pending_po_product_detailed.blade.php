@@ -23,7 +23,7 @@
         <span class="prod-pack">({{ $product['packing_size'] }})</span>
       </th>
       <th class="r" style="width:100px">{{ number_format($product['total_pending_qty']) }} kg</th>
-      <th class="r" style="width:120px">&#8377;&nbsp;{{ number_format($product['total_value'], 2) }}</th>
+      <th class="r" style="width:120px">&#8377;&nbsp;{{ format_indian_number($product['total_value']) }}</th>
     </tr>
   </thead>
 </table>
@@ -32,15 +32,21 @@
 <table class="rpt" style="margin-bottom:16px;">
   <thead>
     <tr class="sub-hdr">
-      <th style="width:82px">PO Date</th>
-      <th>PO Ref No.</th>
-      <th class="r" style="width:82px">Order Qty</th>
-      <th class="r" style="width:88px">Pending Qty</th>
       @if($data['ctx']->withPrice)
-      <th class="r" style="width:78px">Price (&#8377;)</th>
-      <th class="r" style="width:90px">Value (&#8377;)</th>
+      <th style="width:12%">PO Date</th>
+      <th style="width:22%">PO Ref No.</th>
+      <th class="r" style="width:12%">Order Qty</th>
+      <th class="r" style="width:14%">Pending Qty</th>
+      <th class="r" style="width:13%">Price (&#8377;)</th>
+      <th class="r" style="width:15%">Value (&#8377;)</th>
+      <th class="c" style="width:12%">Days</th>
+      @else
+      <th style="width:15%">PO Date</th>
+      <th style="width:30%">PO Ref No.</th>
+      <th class="r" style="width:15%">Order Qty</th>
+      <th class="r" style="width:18%">Pending Qty</th>
+      <th class="c" style="width:22%">Days</th>
       @endif
-      <th class="c" style="width:72px">Days</th>
     </tr>
   </thead>
   <tbody>
@@ -57,8 +63,8 @@
       <td class="r">{{ number_format($order['ordered_qty']) }}</td>
       <td class="r"><strong>{{ number_format($order['pending_qty']) }}</strong></td>
       @if($data['ctx']->withPrice)
-      <td class="r">{{ number_format($order['unit_price'] ?? 0, 2) }}</td>
-      <td class="r">{{ number_format($order['line_value'] ?? 0, 2) }}</td>
+      <td class="r">{{ format_indian_number($order['unit_price'] ?? 0) }}</td>
+      <td class="r">{{ format_indian_number($order['line_value'] ?? 0) }}</td>
       @endif
       <td class="c">({{ $daysLabel }})</td>
     </tr>
@@ -79,7 +85,7 @@
       <span class="summary-qty">{{ number_format($grandQty) }} kg</span>
       <hr class="summary-divider">
       <span class="summary-label">Total Value</span>
-      <span class="summary-value">&#8377;&nbsp;{{ number_format($grandVal, 2) }}</span>
+      <span class="summary-value">&#8377;&nbsp;{{ format_indian_number($grandVal) }}</span>
     </td>
   </tr>
 </table>

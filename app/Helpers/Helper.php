@@ -716,3 +716,16 @@
 	    return array_values(array_unique(array_filter($emails)));
 	}
 
+	if (!function_exists('format_indian_number')) {
+		/**
+		 * Formats a number using the Indian numbering system (lakh/crore grouping),
+		 * e.g. 10440846.4 -> "1,04,40,846.40". No currency symbol is included.
+		 */
+		function format_indian_number($value, int $decimals = 2): string {
+			$formatter = new \NumberFormatter('en_IN', \NumberFormatter::DECIMAL);
+			$formatter->setAttribute(\NumberFormatter::MIN_FRACTION_DIGITS, $decimals);
+			$formatter->setAttribute(\NumberFormatter::MAX_FRACTION_DIGITS, $decimals);
+			return $formatter->format((float) $value);
+		}
+	}
+
