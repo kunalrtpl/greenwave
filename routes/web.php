@@ -463,6 +463,10 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 		Route::get('/attendance-report', 'AttendanceReportController@index')->name('attendance.form');
 		Route::post('/attendance-report/generate', 'AttendanceReportController@generate')->name('attendance.generate');
 
+		Route::get('/pending-orders-report', 'AdminPendingOrdersReportController@index')->name('admin.pending-orders-report.index');
+		Route::post('/pending-orders-report/generate', 'AdminPendingOrdersReportController@generate')->name('admin.pending-orders-report.generate');
+		Route::get('/pending-orders-report/download-pdf', 'AdminPendingOrdersReportController@downloadPdf')->name('admin.pending-orders-report.pdf');
+
 		// Attendance screen view + filter
 	    Route::get('attendance/view','AttendanceViewController@index');
 	    Route::post('attendance/update-status','AttendanceViewController@updateStatus');

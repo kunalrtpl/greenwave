@@ -368,6 +368,12 @@ class ReportQueryBuilder
         if ($ctx->filterCustomerId) {
             $query->where('po.customer_id', $ctx->filterCustomerId);
         }
+        if (!empty($ctx->filterDealerIds)) {
+            $query->whereIn('po.dealer_id', $ctx->filterDealerIds);
+        }
+        if (!empty($ctx->filterCustomerIds)) {
+            $query->whereIn('po.customer_id', $ctx->filterCustomerIds);
+        }
         if ($ctx->dateFrom) {
             $query->whereDate('po.created_at', '>=', $ctx->dateFrom);
         }
@@ -432,6 +438,12 @@ class ReportQueryBuilder
         }
         if ($ctx->filterCustomerId) {
             $query->where('po.customer_id', $ctx->filterCustomerId);
+        }
+        if (!empty($ctx->filterDealerIds)) {
+            $query->whereIn('po.dealer_id', $ctx->filterDealerIds);
+        }
+        if (!empty($ctx->filterCustomerIds)) {
+            $query->whereIn('po.customer_id', $ctx->filterCustomerIds);
         }
         if (!empty($ctx->productIds)) {
             $query->whereIn('sii.product_id', $ctx->productIds);

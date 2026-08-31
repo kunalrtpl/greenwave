@@ -72,6 +72,12 @@ class ReportContext
     /** @var int|null  dealer/admin single-customer drill */
     public $filterCustomerId;
 
+    /** @var int[]  admin multi-dealer filter (empty = all) */
+    public $filterDealerIds = [];
+
+    /** @var int[]  admin multi-customer filter (empty = all) */
+    public $filterCustomerIds = [];
+
     // ── Output ────────────────────────────────────────────────────────────────
     /** @var string  'pdf' | 'json' */
     public $output = 'pdf';
@@ -117,6 +123,8 @@ class ReportContext
         $ctx->customerIds  = array_map('intval', $customerIds);
         $ctx->filterDealerId   = isset($p['filter_dealer_id'])   ? (int) $p['filter_dealer_id']   : null;
         $ctx->filterCustomerId = isset($p['filter_customer_id']) ? (int) $p['filter_customer_id'] : null;
+        $ctx->filterDealerIds   = self::normaliseIds(isset($p['filter_dealer_ids'])   ? $p['filter_dealer_ids']   : []);
+        $ctx->filterCustomerIds = self::normaliseIds(isset($p['filter_customer_ids']) ? $p['filter_customer_ids'] : []);
         return $ctx;
     }
 
