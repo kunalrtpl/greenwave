@@ -34,9 +34,10 @@ class UserDvrController extends Controller
         $statusFilters = self::STATUS_FILTERS;
         $title         = 'Daily Visit Reports';
 
-        // ── Default to current month + year ────────────────
-        $currentMonth = $request->filled('month') ? (int)$request->month : (int)date('m');
-        $currentYear  = $request->filled('year')  ? (int)$request->year  : (int)date('Y');
+        // ── Default to current month(s) + year ──────────────
+        $currentMonths = $this->resolveMonths($request);
+        $currentYear   = $request->filled('year')  ? (int)$request->year  : (int)date('Y');
+        $monthLabel    = $this->buildMonthLabel($currentMonths);
 
         if (!$request->filled('user_id')) {
             return view('admin.dvrs.index', compact('users', 'statusFilters', 'title'))
@@ -45,8 +46,9 @@ class UserDvrController extends Controller
                 ->with('summaryStats', null)
                 ->with('customerStats', collect())
                 ->with('attendanceMap', collect())
-                ->with('currentMonth', $currentMonth)
-                ->with('currentYear', $currentYear);
+                ->with('currentMonths', $currentMonths)
+                ->with('currentYear', $currentYear)
+                ->with('monthLabel', $monthLabel);
         }
 
         // ── Build Eloquent query ────────────────────────────
@@ -64,10 +66,17 @@ class UserDvrController extends Controller
         ])
         ->withCount('trials')
         ->where('user_id', $request->user_id)
-        ->whereMonth('dvr_date', $currentMonth)
-        ->whereYear('dvr_date', $currentYear)
-        ->orderBy('dvr_date', 'desc')
-        ->orderBy('id', 'desc');
+        ->where(function ($q) use ($currentMonths) {
+            foreach ($currentMonths as $m) {
+                $q->orWhereMonth('dvr_date', $m);
+            }
+        })
+        ->whereYear('dvr_date', $currentYear);
+
+        // Single month: most recent day first (unchanged). Multiple months:
+        // chronological so June's data appears before July/August, not after.
+        $dateSort = count($currentMonths) > 1 ? 'asc' : 'desc';
+        $query->orderBy('dvr_date', $dateSort)->orderBy('id', $dateSort);
 
         $allDvrs  = $query->get();
         $dvrDates = $allDvrs->pluck('dvr_date')->unique()->values();
@@ -124,7 +133,7 @@ class UserDvrController extends Controller
         return view('admin.dvrs.index', compact(
             'groupedDvrs', 'paginator', 'users',
             'summaryStats', 'statusFilters', 'attendanceMap',
-            'customerStats', 'title', 'currentMonth', 'currentYear'
+            'customerStats', 'title', 'currentMonths', 'currentYear', 'monthLabel'
         ));
     }
 
@@ -160,8 +169,8 @@ class UserDvrController extends Controller
             return redirect()->back()->with('error', 'Please select an employee.');
         }
 
-        $currentMonth = $request->filled('month') ? (int)$request->month : (int)date('m');
-        $currentYear  = $request->filled('year')  ? (int)$request->year  : (int)date('Y');
+        $currentMonths = $this->resolveMonths($request);
+        $currentYear   = $request->filled('year')  ? (int)$request->year  : (int)date('Y');
 
         $query = UserDvr::with([
             'user:id,name',
@@ -175,10 +184,15 @@ class UserDvrController extends Controller
         ])
         ->withCount('trials')
         ->where('user_id', $request->user_id)
-        ->whereMonth('dvr_date', $currentMonth)
-        ->whereYear('dvr_date', $currentYear)
-        ->orderBy('dvr_date', 'desc')
-        ->orderBy('id', 'desc');
+        ->where(function ($q) use ($currentMonths) {
+            foreach ($currentMonths as $m) {
+                $q->orWhereMonth('dvr_date', $m);
+            }
+        })
+        ->whereYear('dvr_date', $currentYear);
+
+        $dateSort = count($currentMonths) > 1 ? 'asc' : 'desc';
+        $query->orderBy('dvr_date', $dateSort)->orderBy('id', $dateSort);
 
         $allDvrs       = $query->get();
         $dvrDates      = $allDvrs->pluck('dvr_date')->unique()->values();
@@ -245,7 +259,8 @@ class UserDvrController extends Controller
         $filterLabel = !empty($filterParts) ? implode(' | ', $filterParts) : null;
 
         $selectedUser = User::find($request->user_id);
-        $monthName    = date('F', mktime(0, 0, 0, $currentMonth, 1));
+        $monthName    = $this->buildMonthLabel($currentMonths);
+        $monthSlug    = implode('-', array_map(fn($m) => date('M', mktime(0, 0, 0, $m, 1)), $currentMonths));
 
         $html = view('admin.dvrs.pdf', compact(
             'groupedDvrs', 'summaryStats', 'customerStats',
@@ -265,13 +280,39 @@ class UserDvrController extends Controller
                 'debugKeepTemp'        => false,
             ]);
 
-        $filename = 'DVR_' . ($selectedUser->name ?? 'export') . '_' . $monthName . '_' . $currentYear . $filterSuffix . '.pdf';
+        $filename = 'DVR_' . ($selectedUser->name ?? 'export') . '_' . $monthSlug . '_' . $currentYear . $filterSuffix . '.pdf';
         return $pdf->download($filename);
     }
 
     /* ═══════════════════════════════════════════════
      *  PRIVATE HELPERS
      * ═══════════════════════════════════════════════ */
+
+    /**
+     * Resolve the selected month(s) from the request — supports the classic
+     * single `month` value as well as a multi-select `month[]` array.
+     * Defaults to the current month when nothing valid was submitted.
+     */
+    private function resolveMonths(Request $request): array
+    {
+        $raw    = $request->input('month');
+        $values = is_array($raw) ? $raw : ($raw !== null && $raw !== '' ? [$raw] : []);
+
+        $months = collect($values)
+            ->map(fn($m) => (int)$m)
+            ->filter(fn($m) => $m >= 1 && $m <= 12)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        return $months ?: [(int)date('m')];
+    }
+
+    private function buildMonthLabel(array $months): string
+    {
+        return implode(', ', array_map(fn($m) => date('F', mktime(0, 0, 0, $m, 1)), $months));
+    }
 
     private function getEmployeeList()
     {

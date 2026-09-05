@@ -237,9 +237,9 @@
             </div>
             <div class="col-md-2 col-sm-4" style="margin-bottom:8px;">
                 <label><i class="fa fa-calendar"></i> Month</label>
-                <select name="month" class="form-control">
+                <select name="month[]" class="form-control select2" id="sel_month" multiple="multiple">
                     @for($m=1;$m<=12;$m++)
-                    <option value="{{ $m }}" {{ $currentMonth==$m?'selected':'' }}>{{ date('F',mktime(0,0,0,$m,1)) }}</option>
+                    <option value="{{ $m }}" {{ in_array($m, $currentMonths)?'selected':'' }}>{{ date('F',mktime(0,0,0,$m,1)) }}</option>
                     @endfor
                 </select>
             </div>
@@ -344,7 +344,7 @@
         <div class="csp-name">{{ $selCs['name'] }}</div>
         <div class="csp-sub">
             Customer performance for
-            {{ date('F', mktime(0,0,0,$currentMonth,1)) }} {{ $currentYear }}
+            {{ $monthLabel }} {{ $currentYear }}
         </div>
     </div>
     <div class="csp-divider"></div>
@@ -604,6 +604,15 @@
 $(function(){
     // Select2 employee
     if($.fn.select2){ $('#sel_user').select2({placeholder:'— Select Employee —',allowClear:true}); }
+    // Select2 month (multi-select)
+    if($.fn.select2){ $('#sel_month').select2({placeholder:'Select Month(s)',width:'100%'}); }
+
+    // Changing employee invalidates any customer/status filter picked for the
+    // previous employee — clear them so they don't silently carry over.
+    $('#sel_user').on('change', function(){
+        $('input[name="customer_filter"]').val('');
+        $('input[name="status_filter"]').val('');
+    });
 
     // Status tabs
     $(document).on('click','.stab[data-t="s"]',function(e){
