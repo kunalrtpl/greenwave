@@ -504,10 +504,31 @@ class DvrController extends Controller
         $fromDate = Carbon::today()->subDays($days - 1)->startOfDay();
 
         // 🔍 Fetch trials
-        $trials = Trial::with(['products','attachments','complaint_info','other_team_member_info'])->where('user_id', $userId)
+        $trials = Trial::with([
+                'products',
+                'attachments',
+                'complaint_info',
+                'other_team_member_info',
+                // Customer info comes from the linked DVR (a trial can be jointly
+                // linked to up to 2 DVRs — ordered by link id so "first" is stable)
+                'dvrs' => function ($q) {
+                    $q->orderBy('user_dvr_trial_links.id')
+                      ->with(['customer', 'customer_register_request']);
+                },
+            ])
+            ->where('user_id', $userId)
             ->whereBetween('created_at', [$fromDate, $toDate])
             ->orderBy('created_at', 'desc')
             ->get();
+
+        // 🔗 Attach customer / customer_register_request from the first linked DVR
+        // (already eager loaded above, so this does not trigger extra queries)
+        $trials->each(function ($trial) {
+            $firstDvr = $trial->dvrs->first();
+            $trial->setAttribute('customer', $firstDvr->customer ?? null);
+            $trial->setAttribute('customer_register_request', $firstDvr->customer_register_request ?? null);
+            $trial->makeHidden('dvrs');
+        });
 
         return response()->json(
             apiSuccessResponse(
