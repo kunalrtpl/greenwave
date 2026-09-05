@@ -17,6 +17,7 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\EarnedLeaveAccrualCommand::class,
         \App\Console\Commands\ScheduleHeartbeat::class,
         \App\Console\Commands\SendDailyWorkReport::class,
+        \App\Console\Commands\SendMonthlyCustomerVisitAnalysis::class,
     ];
 
     /**
@@ -41,6 +42,16 @@ class Kernel extends ConsoleKernel
             ->everyMinute()
             ->between('8:30', '9:15')
             ->timezone('Asia/Kolkata')
+            ->withoutOverlapping();
+
+        // Runs only on the 1st of every month — reports on the PREVIOUS month
+        // (e.g. runs 1 Sep, reports August). The ->when() gate is a safety net
+        // in case the window ever spans a month boundary.
+        $schedule->command('report:monthly-customer-visit-analysis')
+            ->everyMinute()
+            ->between('6:00', '7:30')
+            ->timezone('Asia/Kolkata')
+            ->when(fn () => now('Asia/Kolkata')->day === 1)
             ->withoutOverlapping();
 
 

@@ -42,7 +42,18 @@ class EmailTemplateSeeder extends Seeder
                 'cc_emails'  => null,
                 'bcc_emails' => null,
                 'is_active'  => true,
-            ]
+            ],
+            [
+                'event_key'  => 'monthly_customer_visit_analysis',
+                'template_for' => 'employee',
+                'name'       => 'Monthly Customer Visit Analysis to Employee',
+                'subject'    => 'Monthly Customer Visit Analysis | {employee_name} | {monthLabel}',
+                'blade_view' => 'emails.monthly_customer_visit_analysis.employee',
+                'to_emails'  => null,    // employee email passed dynamically
+                'cc_emails'  => null,
+                'bcc_emails' => null,
+                'is_active'  => true,
+            ],
         ];
 
         foreach ($templates as $t) {
