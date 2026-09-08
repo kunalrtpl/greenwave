@@ -115,6 +115,48 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
     $dateWise     = $data['dateWise'];
     $customerWise = $data['customerWise'];
     $trialDetails = $data['trialDetails'];
+
+    /* ── Zero is rendered as a muted dash, never as "0" — a screen full of
+       zeros reads as noise; a dash reads as "nothing to report". Applies to
+       the Date-Wise and Customer-Wise tables (client request). Every colour
+       is inline: mPDF does not reliably resolve nested class selectors. ── */
+    $bigNum = function ($n) {
+        return $n > 0
+            ? '<span class="brk-num">' . $n . '</span>'
+            : '<span class="brk-num" style="color:#94a3b8;">&mdash;</span>';
+    };
+
+    $totalNum = function ($n) {
+        return $n > 0
+            ? '<span style="color:#ffffff; font-size:11px; font-weight:bold;">' . $n . '</span>'
+            : '<span style="color:#94a3b8; font-size:11px; font-weight:bold;">&mdash;</span>';
+    };
+
+    /* Inline sub-line figure inside a TOTAL row, e.g. "Met: 12" / "Met: —". */
+    $totalSub = function ($label, $n, $color) {
+        return '<span style="color:' . $color . '; font-weight:bold;">' . $label . ': '
+             . ($n > 0 ? $n : '&mdash;') . '</span>';
+    };
+
+    /* ── "Visit Detail Pending" sub-line — ONE definition, used by both the
+       Date-Wise and Customer-Wise tables. It sits next to "Not Met: 2" and
+       "Report Pending: 1", so it is styled exactly like them (plain text,
+       same size, no box, no icon) and reads as the same kind of note; only
+       the colour differs — amber, because unfilled notes are a reminder, not
+       a failed visit like the red items. ── */
+    $vdpLine = function ($n) {
+        return $n > 0
+            ? '<div class="brk-sub"><span style="color:#b45309; font-weight:bold;">Visit Detail Pending: ' . $n . '</span></div>'
+            : '';
+    };
+
+    /* Same line inside the dark navy TOTAL band — amber lightened to stay
+       legible on #1e293b. */
+    $vdpTotalLine = function ($n) {
+        return $n > 0
+            ? '<div style="font-size:7.3px; margin-top:2px;"><span style="color:#fbbf24; font-weight:bold;">Visit Detail Pending: ' . $n . '</span></div>'
+            : '';
+    };
 @endphp
 
 {{-- ── HEADER ── --}}
@@ -209,17 +251,6 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
     </tr>
 </table>
 
-{{-- ── VISIT DETAIL PENDING — action banner, only shown when it needs attention ── --}}
-@if($overall['visit_detail_pending'] > 0)
-<table style="width:100%; border-collapse:collapse; margin-top:10px;">
-    <tr>
-        <td style="background-color:#fff7e6; border:1px solid #fcd88f; border-left:4px solid #f59e0b; padding:9px 14px; font-size:9px; font-weight:bold; color:#92400e;">
-            &#9888; {{ $overall['visit_detail_pending'] }} Visit Detail{{ $overall['visit_detail_pending'] == 1 ? '' : 's' }} Pending
-            <span style="font-weight:normal; color:#78350f;">&mdash; out of {{ $overall['total_visits'] }} visits this month, {{ $overall['visit_detail_pending'] }} still need{{ $overall['visit_detail_pending'] == 1 ? 's' : '' }} the visit-detail notes filled in.</span>
-        </td>
-    </tr>
-</table>
-@endif
 
 {{-- ═══════════════ 1. DATE-WISE ANALYSIS ═══════════════ --}}
 <table class="sec-title-table" cellspacing="0" cellpadding="0">
@@ -249,16 +280,14 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
                 <span style="font-size:7px; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">{{ $dw['day'] }}</span>
             </td>
             <td class="center">
-                <span class="brk-num">{{ $dw['visits'] }}</span>
+                {!! $bigNum($dw['visits']) !!}
                 @if($dw['not_met'] > 0)
                 <div class="brk-sub"><span style="color:#dc2626; font-weight:bold;">Not Met: {{ $dw['not_met'] }}</span></div>
                 @endif
-                @if($dw['visit_detail_pending'] > 0)
-                <div class="brk-sub"><span style="color:#dc2626; font-weight:bold;">&#9888; {{ $dw['visit_detail_pending'] }} Visit Detail Pending</span></div>
-                @endif
+                {!! $vdpLine($dw['visit_detail_pending']) !!}
             </td>
             <td class="center">
-                <span class="brk-num">{{ $dw['trials'] }}</span>
+                {!! $bigNum($dw['trials']) !!}
                 @if($dw['trials_not_attached'] > 0)
                 <div class="brk-sub"><span style="color:#dc2626; font-weight:bold;">Report Pending: {{ $dw['trials_not_attached'] }}</span></div>
                 @endif
@@ -269,21 +298,30 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
         <tr class="totals-row">
             <td colspan="2" style="{{ $tdBg }} text-align:right;">TOTAL</td>
             <td class="center" style="{{ $tdBg }}">
-                <span style="color:#ffffff; font-size:11px; font-weight:bold;">{{ $overall['total_visits'] }}</span>
-                <div style="font-size:7.3px; margin-top:2px;"><span style="color:#4ade80; font-weight:bold;">Met: {{ $overall['met'] }}</span> &nbsp;|&nbsp; <span style="color:#fca5a5; font-weight:bold;">Not Met: {{ $overall['not_met'] }}</span></div>
-                @if($overall['visit_detail_pending'] > 0)
-                <div style="font-size:7.3px; margin-top:2px;"><span style="color:#fca5a5; font-weight:bold;">&#9888; {{ $overall['visit_detail_pending'] }} Visit Detail Pending</span></div>
-                @endif
+                {!! $totalNum($overall['total_visits']) !!}
+                <div style="font-size:7.3px; margin-top:2px;">{!! $totalSub('Met', $overall['met'], '#4ade80') !!} &nbsp;|&nbsp; {!! $totalSub('Not Met', $overall['not_met'], '#fca5a5') !!}</div>
+                {!! $vdpTotalLine($overall['visit_detail_pending']) !!}
             </td>
             <td class="center" style="{{ $tdBg }}">
-                <span style="color:#ffffff; font-size:11px; font-weight:bold;">{{ $overall['total_trials'] }}</span>
-                <div style="font-size:7.3px; margin-top:2px;"><span style="color:#4ade80; font-weight:bold;">Attached: {{ $overall['trials_attached'] }}</span> &nbsp;|&nbsp; <span style="color:#fca5a5; font-weight:bold;">Pending: {{ $overall['trials_pending'] }}</span></div>
+                {!! $totalNum($overall['total_trials']) !!}
+                <div style="font-size:7.3px; margin-top:2px;">{!! $totalSub('Attached', $overall['trials_attached'], '#4ade80') !!} &nbsp;|&nbsp; {!! $totalSub('Pending', $overall['trials_pending'], '#fca5a5') !!}</div>
             </td>
         </tr>
     </tbody>
 </table>
 @endif
 
+{{-- ── VISIT DETAIL PENDING — action banner, only shown when it needs attention ── --}}
+@if($overall['visit_detail_pending'] > 0)
+<table style="width:100%; border-collapse:collapse; margin-top:10px;">
+    <tr>
+        <td style="background-color:#fff7e6; border:1px solid #fcd88f; border-left:4px solid #f59e0b; padding:9px 14px; font-size:9px; font-weight:bold; color:#92400e;">
+            {{ $overall['visit_detail_pending'] }} Visit Detail{{ $overall['visit_detail_pending'] == 1 ? '' : 's' }} Pending
+            <span style="font-weight:normal; color:#78350f;">&mdash; out of {{ $overall['total_visits'] }} visits this month, {{ $overall['visit_detail_pending'] }} still need{{ $overall['visit_detail_pending'] == 1 ? 's' : '' }} the visit-detail notes filled in.</span>
+        </td>
+    </tr>
+</table>
+@endif
 {{-- ═══════════════ 2. CUSTOMER-WISE ANALYSIS ═══════════════ --}}
 <table class="sec-title-table" cellspacing="0" cellpadding="0">
     <tr>
@@ -312,16 +350,14 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
                 <span style="font-size:7px; color:#64748b;">Business Linking: {{ !empty($cw['dealer_name']) ? $cw['dealer_name'] : $cw['business_type'] }}</span>
             </td>
             <td class="center">
-                <span class="brk-num">{{ $cw['total_visits'] }}</span>
+                {!! $bigNum($cw['total_visits']) !!}
                 @if($cw['not_met'] > 0)
                 <div class="brk-sub"><span style="color:#dc2626; font-weight:bold;">Not Met: {{ $cw['not_met'] }}</span></div>
                 @endif
-                @if($cw['visit_detail_pending'] > 0)
-                <div class="brk-sub"><span style="color:#dc2626; font-weight:bold;">&#9888; {{ $cw['visit_detail_pending'] }} Visit Detail Pending</span></div>
-                @endif
+                {!! $vdpLine($cw['visit_detail_pending']) !!}
             </td>
             <td class="center">
-                <span class="brk-num">{{ $cw['trials'] }}</span>
+                {!! $bigNum($cw['trials']) !!}
                 @if($cw['trials_pending'] > 0)
                 <div class="brk-sub"><span style="color:#dc2626; font-weight:bold;">Report Pending: {{ $cw['trials_pending'] }}</span></div>
                 @endif
@@ -332,15 +368,13 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
         <tr class="totals-row">
             <td colspan="2" style="{{ $tdBg2 }} text-align:right;">TOTAL</td>
             <td class="center" style="{{ $tdBg2 }}">
-                <span style="color:#ffffff; font-size:11px; font-weight:bold;">{{ $overall['total_visits'] }}</span>
-                <div style="font-size:7.3px; margin-top:2px;"><span style="color:#4ade80; font-weight:bold;">Met: {{ $overall['met'] }}</span> &nbsp;|&nbsp; <span style="color:#fca5a5; font-weight:bold;">Not Met: {{ $overall['not_met'] }}</span></div>
-                @if($overall['visit_detail_pending'] > 0)
-                <div style="font-size:7.3px; margin-top:2px;"><span style="color:#fca5a5; font-weight:bold;">&#9888; {{ $overall['visit_detail_pending'] }} Visit Detail Pending</span></div>
-                @endif
+                {!! $totalNum($overall['total_visits']) !!}
+                <div style="font-size:7.3px; margin-top:2px;">{!! $totalSub('Met', $overall['met'], '#4ade80') !!} &nbsp;|&nbsp; {!! $totalSub('Not Met', $overall['not_met'], '#fca5a5') !!}</div>
+                {!! $vdpTotalLine($overall['visit_detail_pending']) !!}
             </td>
             <td class="center" style="{{ $tdBg2 }}">
-                <span style="color:#ffffff; font-size:11px; font-weight:bold;">{{ $overall['total_trials'] }}</span>
-                <div style="font-size:7.3px; margin-top:2px;"><span style="color:#4ade80; font-weight:bold;">Attached: {{ $overall['trials_attached'] }}</span> &nbsp;|&nbsp; <span style="color:#fca5a5; font-weight:bold;">Pending: {{ $overall['trials_pending'] }}</span></div>
+                {!! $totalNum($overall['total_trials']) !!}
+                <div style="font-size:7.3px; margin-top:2px;">{!! $totalSub('Attached', $overall['trials_attached'], '#4ade80') !!} &nbsp;|&nbsp; {!! $totalSub('Pending', $overall['trials_pending'], '#fca5a5') !!}</div>
             </td>
         </tr>
     </tbody>
