@@ -10,6 +10,7 @@ use App\UserDvr;
 use App\UserDvrProduct;
 use App\Trial;
 use App\UserDvrTrialLink;
+use App\UserDvrAdditionalTrialLink;
 use App\UserDvrCustomerContact;
 use App\UserDvrAttachment;
 use App\FreeSamplingStock;
@@ -62,8 +63,62 @@ class DvrController extends Controller
             'sample_submission',
             'user_scheduler',
             'customer_contact_info',
-            'query_info'
+            'query_info',
+            'additional_trials'
         ]);
+    }
+
+    /**
+     * 🔁 Normalise the `additional_trials` payload of saveDvr().
+     *
+     * Accepts either a map grouped by type
+     *   { "trial_feedback": [1, 2], "trial_report_submission_discussion": [3] }
+     * or a flat list of objects
+     *   [ { "type": "trial_feedback", "trial_id": 1 }, ... ]
+     * and always returns a flat list of ['trial_id' => .., 'type' => ..],
+     * de-duplicated on that pair.
+     *
+     * @param  mixed $additionalTrials
+     * @return array
+     */
+    protected function normaliseAdditionalTrials($additionalTrials)
+    {
+        $normalised = [];
+        $seen       = [];
+
+        $push = function ($trialId, $type) use (&$normalised, &$seen) {
+            if (empty($trialId) || empty($type)) {
+                return;
+            }
+
+            $key = $type . '-' . $trialId;
+            if (isset($seen[$key])) {
+                return;
+            }
+
+            $seen[$key]   = true;
+            $normalised[] = ['trial_id' => $trialId, 'type' => $type];
+        };
+
+        foreach ((array) $additionalTrials as $key => $value) {
+            if (is_array($value) && !isset($value['type'])) {
+                // Grouped shape: the key is the type, the value a list of ids
+                foreach ($value as $trialId) {
+                    $push($trialId, $key);
+                }
+            } elseif (is_array($value)) {
+                // Object shape: { type, trial_id } or { type, trial_ids: [] }
+                if (isset($value['trial_ids']) && is_array($value['trial_ids'])) {
+                    foreach ($value['trial_ids'] as $trialId) {
+                        $push($trialId, $value['type']);
+                    }
+                } else {
+                    $push(isset($value['trial_id']) ? $value['trial_id'] : null, $value['type']);
+                }
+            }
+        }
+
+        return $normalised;
     }
 
 	/**
@@ -196,15 +251,30 @@ class DvrController extends Controller
 
         $data = $request->all();
 
+        // 🔁 Optional: trials attached to this DVR for a secondary purpose
+        $hasAdditionalTrials = array_key_exists('additional_trials', $data);
+        $additionalTrials    = $hasAdditionalTrials
+            ? $this->normaliseAdditionalTrials($data['additional_trials'])
+            : [];
+
         $rules = [
             'dvr_date'   => 'required|date',
             'trial_ids'  => 'nullable|array',
             'trial_ids.*'=> 'integer|exists:trials,id',
             'products'   => 'nullable|array',
-            'products.*' => 'integer|exists:products,id'
+            'products.*' => 'integer|exists:products,id',
+            'additional_trials'            => 'nullable|array',
+            'additional_trials.*.trial_id' => 'required|integer|exists:trials,id',
+            'additional_trials.*.type'     => 'required|in:' . implode(',', UserDvrAdditionalTrialLink::types()),
         ];
 
-        $validator = Validator::make($data, $rules);
+        // Validate the normalised shape so both accepted payload forms are covered
+        $validator = Validator::make(
+            $hasAdditionalTrials
+                ? array_merge($data, ['additional_trials' => $additionalTrials])
+                : $data,
+            $rules
+        );
         if ($validator->fails()) {
             return response()->json(validationResponse($validator), 422);
         }
@@ -229,7 +299,7 @@ class DvrController extends Controller
             }
 
             // 🔹 SAVE DVR
-            $dvr->fill($request->except(['products','trial_ids','id','checkout_button_pressed','customer_contact_ids']));
+            $dvr->fill($request->except(['products','trial_ids','id','checkout_button_pressed','customer_contact_ids','additional_trials']));
             $dvr->user_id = $userId;
             $dvr->save();
 
@@ -245,6 +315,32 @@ class DvrController extends Controller
                         'user_dvr_id' => $dvr->id,
                         'product_id'  => $productId
                     ]);
+                }
+            }
+
+            // 🔹 ADDITIONAL TRIALS (FULL RESYNC — ADD & EDIT)
+            // Only touched when the key is sent, so existing callers that never
+            // pass `additional_trials` keep their links untouched. An empty
+            // array is a valid way to clear them.
+            if ($hasAdditionalTrials) {
+
+                UserDvrAdditionalTrialLink::where('user_dvr_id', $dvr->id)->delete();
+
+                $additionalRows = [];
+
+                foreach ($additionalTrials as $additionalTrial) {
+                    $additionalRows[] = [
+                        'user_dvr_id' => $dvr->id,
+                        'user_id'     => $userId,
+                        'trial_id'    => $additionalTrial['trial_id'],
+                        'type'        => $additionalTrial['type'],
+                        'created_at'  => now(),
+                        'updated_at'  => now(),
+                    ];
+                }
+
+                if (!empty($additionalRows)) {
+                    DB::table('user_dvr_additional_trial_links')->insert($additionalRows);
                 }
             }
 
@@ -319,7 +415,7 @@ class DvrController extends Controller
             return response()->json(
                 apiSuccessResponse(
                     $isNew ? 'DVR created successfully' : 'DVR updated successfully',
-                    ['dvr' => $dvr->load('trials')]
+                    ['dvr' => $dvr->load('trials', 'additional_trials')]
                 ),
                 200
             );
@@ -911,6 +1007,7 @@ class DvrController extends Controller
             // 🧹 Manual cleanup (safe even if cascade exists)
             UserDvrProduct::where('user_dvr_id', $dvr->id)->delete();
             UserDvrTrialLink::where('user_dvr_id', $dvr->id)->delete();
+            UserDvrAdditionalTrialLink::where('user_dvr_id', $dvr->id)->delete();
             UserDvrCustomerContact::where('user_dvr_id', $dvr->id)->delete();
             UserDvrAttachment::where('user_dvr_id', $dvr->id)->delete();
 
@@ -1160,6 +1257,7 @@ class DvrController extends Controller
             // (Recommended even if you have ON DELETE CASCADE)
             UserDvrProduct::where('trial_id', $trial->id)->delete();
             UserDvrTrialLink::where('trial_id', $trial->id)->delete();
+            UserDvrAdditionalTrialLink::where('trial_id', $trial->id)->delete();
             UserDvrAttachment::where('trial_id', $trial->id)->delete();
 
             // 7. Delete the Trial record itself

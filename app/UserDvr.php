@@ -32,6 +32,16 @@ class UserDvr extends Model
     }
 
 
+    /**
+     * Trials attached to this DVR for a secondary purpose, grouped by `type`
+     * ('trial_feedback' / 'trial_report_submission_discussion').
+     */
+    public function additional_trials()
+    {
+        return $this->hasMany(UserDvrAdditionalTrialLink::class, 'user_dvr_id')
+            ->with('trial_info');
+    }
+
     public function attachments()
     {
         return $this->hasMany(UserDvrAttachment::class);
