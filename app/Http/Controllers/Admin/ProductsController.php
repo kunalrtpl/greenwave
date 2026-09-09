@@ -109,11 +109,11 @@ class ProductsController extends Controller
                 }
                 $actionValues = '<a title="Edit Product" class="btn btn-xs '.$basic_btn.' margin-top-10" href="'.url('/admin/add-edit-product/'.$product['id']).'">Basic</a>';
 
-                
-                $actionValues .= '<a title="Product QC" class="btn btn-xs '.$qc_btn.' margin-top-10" href="'.url('/admin/product-qc/'.$product['id']).'">QC</a>';
-                
+                if(($product['product_status_type'] ?? null) !== 'sampling'){
+                    $actionValues .= '<a title="Product QC" class="btn btn-xs '.$qc_btn.' margin-top-10" href="'.url('/admin/product-qc/'.$product['id']).'">QC</a>';
 
-                $actionValues .= '<a title="Product Costing" class="btn btn-xs '.$costing_btn.' margin-top-10" href="'.url('/admin/product-costing/'.$product['id']).'">Costing</a>';
+                    $actionValues .= '<a title="Product Costing" class="btn btn-xs '.$costing_btn.' margin-top-10" href="'.url('/admin/product-costing/'.$product['id']).'">Costing</a>';
+                }
                 
                 $num = ++$i;
                 $product_types = product_types();
