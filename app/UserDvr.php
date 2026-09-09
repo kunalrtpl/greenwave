@@ -42,6 +42,17 @@ class UserDvr extends Model
             ->with('trial_info');
     }
 
+    /**
+     * Sample submissions attached to this DVR. Replaces the legacy single
+     * `sample_submission_id` column / `sample_submission()` relation below,
+     * which are kept only for historical rows.
+     */
+    public function sample_submissions()
+    {
+        return $this->hasMany(UserDvrSampleSubmissionLink::class, 'user_dvr_id')
+            ->with('sample_submission_info');
+    }
+
     public function attachments()
     {
         return $this->hasMany(UserDvrAttachment::class);
@@ -65,6 +76,7 @@ class UserDvr extends Model
         return $this->belongsto('App\MarketSample','market_sample_id','id');
     }
 
+    /** @deprecated Not used anymore — see sample_submissions() */
     public function sample_submission(){
         return $this->belongsto('App\SampleSubmission','sample_submission_id','id')->with('product');
     }

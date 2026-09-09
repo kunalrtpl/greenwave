@@ -11,6 +11,7 @@ use App\UserDvrProduct;
 use App\Trial;
 use App\UserDvrTrialLink;
 use App\UserDvrAdditionalTrialLink;
+use App\UserDvrSampleSubmissionLink;
 use App\UserDvrCustomerContact;
 use App\UserDvrAttachment;
 use App\FreeSamplingStock;
@@ -64,7 +65,8 @@ class DvrController extends Controller
             'user_scheduler',
             'customer_contact_info',
             'query_info',
-            'additional_trials'
+            'additional_trials',
+            'sample_submissions'
         ]);
     }
 
@@ -257,6 +259,32 @@ class DvrController extends Controller
             ? $this->normaliseAdditionalTrials($data['additional_trials'])
             : [];
 
+        // 🔁 Optional: multiple sample submissions (replaces sample_submission_id)
+        $hasSampleSubmissions = array_key_exists('sample_submission_ids', $data);
+        $sampleSubmissionIds  = $hasSampleSubmissions
+            ? array_values(array_unique(array_filter((array) $data['sample_submission_ids'])))
+            : [];
+
+        // 🔙 Backward compatibility: older app builds still send the single
+        // `sample_submission_id`, so mirror it into the links table too — both
+        // API versions then produce the same data. `sample_submission_ids`
+        // always wins when a newer build sends both keys. The id is checked
+        // against sample_submissions here rather than in the rules, so a stale
+        // id from an old build keeps saving the DVR (as it always did) instead
+        // of starting to fail validation or breaking the foreign key.
+        if (!$hasSampleSubmissions && array_key_exists('sample_submission_id', $data)) {
+
+            $hasSampleSubmissions = true;
+            $legacyIds            = array_values(array_filter([$data['sample_submission_id']]));
+
+            $sampleSubmissionIds = empty($legacyIds)
+                ? []
+                : DB::table('sample_submissions')
+                    ->whereIn('id', $legacyIds)
+                    ->pluck('id')
+                    ->toArray();
+        }
+
         $rules = [
             'dvr_date'   => 'required|date',
             'trial_ids'  => 'nullable|array',
@@ -266,15 +294,20 @@ class DvrController extends Controller
             'additional_trials'            => 'nullable|array',
             'additional_trials.*.trial_id' => 'required|integer|exists:trials,id',
             'additional_trials.*.type'     => 'required|in:' . implode(',', UserDvrAdditionalTrialLink::types()),
+            'sample_submission_ids'   => 'nullable|array',
+            'sample_submission_ids.*' => 'integer|exists:sample_submissions,id',
         ];
 
         // Validate the normalised shape so both accepted payload forms are covered
-        $validator = Validator::make(
-            $hasAdditionalTrials
-                ? array_merge($data, ['additional_trials' => $additionalTrials])
-                : $data,
-            $rules
-        );
+        $validationData = $data;
+        if ($hasAdditionalTrials) {
+            $validationData['additional_trials'] = $additionalTrials;
+        }
+        if ($hasSampleSubmissions) {
+            $validationData['sample_submission_ids'] = $sampleSubmissionIds;
+        }
+
+        $validator = Validator::make($validationData, $rules);
         if ($validator->fails()) {
             return response()->json(validationResponse($validator), 422);
         }
@@ -299,7 +332,7 @@ class DvrController extends Controller
             }
 
             // 🔹 SAVE DVR
-            $dvr->fill($request->except(['products','trial_ids','id','checkout_button_pressed','customer_contact_ids','additional_trials']));
+            $dvr->fill($request->except(['products','trial_ids','id','checkout_button_pressed','customer_contact_ids','additional_trials','sample_submission_ids']));
             $dvr->user_id = $userId;
             $dvr->save();
 
@@ -341,6 +374,31 @@ class DvrController extends Controller
 
                 if (!empty($additionalRows)) {
                     DB::table('user_dvr_additional_trial_links')->insert($additionalRows);
+                }
+            }
+
+            // 🔹 SAMPLE SUBMISSIONS (FULL RESYNC — ADD & EDIT)
+            // Replaces the legacy single user_dvrs.sample_submission_id column.
+            // Same guard as above: untouched unless the key is actually sent,
+            // and an empty array clears every link.
+            if ($hasSampleSubmissions) {
+
+                UserDvrSampleSubmissionLink::where('user_dvr_id', $dvr->id)->delete();
+
+                $sampleRows = [];
+
+                foreach ($sampleSubmissionIds as $sampleSubmissionId) {
+                    $sampleRows[] = [
+                        'user_dvr_id'          => $dvr->id,
+                        'user_id'              => $userId,
+                        'sample_submission_id' => $sampleSubmissionId,
+                        'created_at'           => now(),
+                        'updated_at'           => now(),
+                    ];
+                }
+
+                if (!empty($sampleRows)) {
+                    DB::table('user_dvr_sample_submission_links')->insert($sampleRows);
                 }
             }
 
@@ -415,7 +473,7 @@ class DvrController extends Controller
             return response()->json(
                 apiSuccessResponse(
                     $isNew ? 'DVR created successfully' : 'DVR updated successfully',
-                    ['dvr' => $dvr->load('trials', 'additional_trials')]
+                    ['dvr' => $dvr->load('trials', 'additional_trials', 'sample_submissions')]
                 ),
                 200
             );
@@ -1008,6 +1066,7 @@ class DvrController extends Controller
             UserDvrProduct::where('user_dvr_id', $dvr->id)->delete();
             UserDvrTrialLink::where('user_dvr_id', $dvr->id)->delete();
             UserDvrAdditionalTrialLink::where('user_dvr_id', $dvr->id)->delete();
+            UserDvrSampleSubmissionLink::where('user_dvr_id', $dvr->id)->delete();
             UserDvrCustomerContact::where('user_dvr_id', $dvr->id)->delete();
             UserDvrAttachment::where('user_dvr_id', $dvr->id)->delete();
 
