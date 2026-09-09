@@ -348,6 +348,15 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 	        Route::post('roles/get', 'AppRoleAssignmentController@getUserAppRoles');
 	        Route::post('roles/save', 'AppRoleAssignmentController@saveAppRoles');
 			
+			Route::group(['prefix' => 'v3'], function () {
+
+			    // Same payload as v2 dvr/trial/add, but every `products` entry is
+			    // an object: { product_id, qty, own_stock }. own_stock = 1 deducts
+			    // the qty from the user's free_sampling_stocks row.
+			    Route::post('dvr/trial/add', 'DvrController@addTrialV3');
+
+			});
+
 			Route::group(['prefix' => 'v2'], function () {
 
 			    Route::get('dvrs', 'DvrController@dvrs');

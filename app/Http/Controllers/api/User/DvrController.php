@@ -12,6 +12,7 @@ use App\Trial;
 use App\UserDvrTrialLink;
 use App\UserDvrCustomerContact;
 use App\UserDvrAttachment;
+use App\FreeSamplingStock;
 use App\UserScheduler;
 use Validator;
 use DB;
@@ -394,6 +395,184 @@ class DvrController extends Controller
                     'trial_id'    => $trial->id,
                     'product_id'  => $productId
                 ]);
+            }
+
+            DB::commit();
+
+            return response()->json(
+                apiSuccessResponse('Trial added successfully', $trial),
+                200
+            );
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(apiErrorResponse($e->getMessage()), 500);
+        }
+    }
+
+    /**
+     * 🔁 Normalise the products payload used by the V3 trial APIs.
+     *
+     * Accepts either the legacy flat list of product ids ([1, 2, 3]) or the V3
+     * shape ([['product_id' => 1, 'qty' => 2.5, 'own_stock' => 1], ...]) and
+     * always returns the V3 shape so the callers can stay simple.
+     *
+     * @param  array $products
+     * @return array
+     */
+    protected function normaliseTrialProducts($products)
+    {
+        $normalised = [];
+
+        foreach ((array) $products as $product) {
+            if (is_array($product)) {
+                $productId = isset($product['product_id']) ? $product['product_id'] : null;
+                $qty       = isset($product['qty']) ? $product['qty'] : 0;
+                $ownStock  = isset($product['own_stock']) ? $product['own_stock'] : 0;
+            } else {
+                $productId = $product;
+                $qty       = 0;
+                $ownStock  = 0;
+            }
+
+            $normalised[] = [
+                'product_id' => $productId,
+                'qty'        => (float) $qty,
+                'own_stock'  => filter_var($ownStock, FILTER_VALIDATE_BOOLEAN) ? 1 : 0,
+            ];
+        }
+
+        return $normalised;
+    }
+
+    /**
+     * 📦 Apply a delta to the user's free sampling stock for a product.
+     *
+     * A negative $delta consumes stock (trial created), a positive $delta gives
+     * it back (trial deleted). The row is created when the user does not have
+     * one yet for that product.
+     *
+     * The row is a per-user ledger keyed by user_id + product_id only — the
+     * customer columns are deliberately left untouched, since nothing looks the
+     * stock up by customer and user_dvrs holds those ids without a foreign key
+     * (copying a stale one in here breaks the FK on free_sampling_stocks).
+     *
+     * @param  int        $userId
+     * @param  int        $productId
+     * @param  float      $delta
+     * @return void
+     */
+    protected function adjustFreeSamplingStock($userId, $productId, $delta)
+    {
+        if (empty($productId) || (float) $delta == 0) {
+            return;
+        }
+
+        $freeSamplingStock = DB::table('free_sampling_stocks')
+            ->where('user_id', $userId)
+            ->where('product_id', $productId)
+            ->first();
+
+        if (is_object($freeSamplingStock)) {
+            $stock = FreeSamplingStock::find($freeSamplingStock->id);
+            $stock->stock_in_hand = $stock->stock_in_hand + $delta;
+        } else {
+            $stock = new FreeSamplingStock;
+            $stock->user_id                 = $userId;
+            $stock->product_id              = $productId;
+            $stock->stock_in_hand           = $delta;
+            $stock->in_transit              = 0;
+            $stock->pending_orders          = 0;
+            $stock->pending_customer_orders = 0;
+        }
+
+        $stock->save();
+    }
+
+    /**
+     * 4️⃣.V3 ADD SINGLE TRIAL WITH PRODUCTS (qty + own stock aware)
+     * POST /api/user/v3/dvr/trial/add
+     *
+     * Same contract as addTrial(), except every entry of `products` is an
+     * object: { product_id, qty, own_stock }. When own_stock is truthy the qty
+     * is deducted from the user's free_sampling_stocks row for that product
+     * (the row is created when missing).
+     */
+    public function addTrialV3(Request $request)
+    {
+        if (!$this->resp['status'] || !isset($this->resp['user'])) {
+            return response()->json(apiErrorResponse('Unauthorized'), 401);
+        }
+
+        // Normalise first so the validation rules can target a single shape
+        $products = $this->normaliseTrialProducts($request->products ?? []);
+
+        $rules = [
+            'user_dvr_id' => 'required|integer|exists:user_dvrs,id',
+            'products'    => 'nullable|array',
+            'products.*.product_id' => 'required|integer|exists:products,id',
+            'products.*.qty'        => 'nullable|numeric|min:0',
+            'products.*.own_stock'  => 'nullable|boolean',
+            'customer_id' => 'nullable|integer|exists:customers,id',
+            'customer_register_request_id' => 'nullable|integer|exists:customer_register_requests,id',
+        ];
+
+        $validator = Validator::make(
+            array_merge($request->all(), ['products' => $products]),
+            $rules
+        );
+        if ($validator->fails()) {
+            return response()->json(validationResponse($validator), 422);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $userId = $this->resp['user']['id'];
+
+            // 🔢 Get next trial number for this user
+            $lastTrialNumber = Trial::where('user_id', $userId)->max('trial_number');
+            $nextTrialNumber = ($lastTrialNumber ?? 0) + 1;
+
+            // 1️⃣ Create Trial
+            $trial = Trial::create(
+                array_merge(
+                    $request->except(['products', 'user_dvr_id']),
+                    [
+                        'user_id'      => $userId,
+                        'trial_number' => $nextTrialNumber,
+                        'created_by'   => $userId,
+                        'customer_id'  => $request->customer_id ?? null,
+                        'customer_register_request_id' => $request->customer_register_request_id ?? null,
+                    ]
+                )
+            );
+
+            // 2️⃣ Link DVR ↔ Trial
+            DB::table('user_dvr_trial_links')->insert([
+                'user_dvr_id' => $request->user_dvr_id,
+                'trial_id'    => $trial->id,
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ]);
+
+            // 3️⃣ Attach products + consume own stock where asked for
+            foreach ($products as $product) {
+                UserDvrProduct::create([
+                    'user_dvr_id' => null,
+                    'trial_id'    => $trial->id,
+                    'product_id'  => $product['product_id'],
+                    'qty'         => $product['qty'],
+                    'own_stock'   => $product['own_stock'],
+                ]);
+
+                if ($product['own_stock']) {
+                    $this->adjustFreeSamplingStock(
+                        $userId,
+                        $product['product_id'],
+                        -1 * $product['qty']
+                    );
+                }
             }
 
             DB::commit();
@@ -963,13 +1142,27 @@ class DvrController extends Controller
                 }
             }
 
-            // 5. Manual Cleanup of related table records
+            // 5. Give back the free sampling stock consumed by this trial
+            // (V3 trials only — products saved with own_stock = 1 and a qty)
+            $trialProducts = UserDvrProduct::where('trial_id', $trial->id)
+                ->where('own_stock', 1)
+                ->get();
+
+            foreach ($trialProducts as $trialProduct) {
+                $this->adjustFreeSamplingStock(
+                    $trial->user_id,
+                    $trialProduct->product_id,
+                    (float) $trialProduct->qty
+                );
+            }
+
+            // 6. Manual Cleanup of related table records
             // (Recommended even if you have ON DELETE CASCADE)
             UserDvrProduct::where('trial_id', $trial->id)->delete();
             UserDvrTrialLink::where('trial_id', $trial->id)->delete();
             UserDvrAttachment::where('trial_id', $trial->id)->delete();
 
-            // 6. Delete the Trial record itself
+            // 7. Delete the Trial record itself
             $trial->delete();
 
             DB::commit();
