@@ -751,9 +751,9 @@ class ProductsController extends Controller
             $iDisplayLength = $iDisplayLength < 0 ? $iTotalRecords : $iDisplayLength; 
             $iTotalRecords = $querys->where($conditions)->count();
             $querys =  $querys->where($conditions)
-                		->skip($iDisplayStart)->take($iDisplayLength)
-                		->OrderBy('raw_materials.id','DESC')
-                		->get();
+                        ->skip($iDisplayStart)->take($iDisplayLength)
+                        ->OrderBy('raw_materials.id','DESC')
+                        ->get();
             $sEcho = intval($_REQUEST['draw']);
             $records = array();
             $records["data"] = array(); 
@@ -796,18 +796,18 @@ class ProductsController extends Controller
     }
 
     public function addEditRawMaterial(Request $request,$rawmaterialid=NULL){
-    	if(!empty($rawmaterialid)){
-    		$rawmaterialdata = RawMaterial::where('id',$rawmaterialid)->first();
-    		$title ="Edit Raw Material";
-    	}else{
-    		$title ="Add Raw Material";
-	    	$rawmaterialdata =array();
-    	}
-    	return view('admin.products.add-edit-raw-material')->with(compact('title','rawmaterialdata'));
+        if(!empty($rawmaterialid)){
+            $rawmaterialdata = RawMaterial::where('id',$rawmaterialid)->first();
+            $title ="Edit Raw Material";
+        }else{
+            $title ="Add Raw Material";
+            $rawmaterialdata =array();
+        }
+        return view('admin.products.add-edit-raw-material')->with(compact('title','rawmaterialdata'));
     }
 
     public function saveRawMaterial(Request $request){
-    	try{
+        try{
             if($request->ajax()){
                 $data = $request->all();
                 if($data['rawmaterialid']==""){
@@ -907,9 +907,9 @@ class ProductsController extends Controller
             $iDisplayLength = $iDisplayLength < 0 ? $iTotalRecords : $iDisplayLength; 
             $iTotalRecords = $querys->where($conditions)->count();
             $querys =  $querys->where($conditions)
-                		->skip($iDisplayStart)->take($iDisplayLength)
-                		->OrderBy('packing_sizes.id','DESC')
-                		->get();
+                        ->skip($iDisplayStart)->take($iDisplayLength)
+                        ->OrderBy('packing_sizes.id','DESC')
+                        ->get();
             $sEcho = intval($_REQUEST['draw']);
             $records = array();
             $records["data"] = array(); 
@@ -949,18 +949,18 @@ class ProductsController extends Controller
     }
 
     public function addEditPckingSize(Request $request,$packingsizeid=NULL){
-    	if(!empty($packingsizeid)){
-    		$sizedata = PackingSize::where('id',$packingsizeid)->first();
-    		$title ="Edit Order Size";
-    	}else{
-    		$title ="Add Order Size";
-	    	$sizedata =array();
-    	}
-    	return view('admin.products.add-edit-packing-size')->with(compact('title','sizedata'));
+        if(!empty($packingsizeid)){
+            $sizedata = PackingSize::where('id',$packingsizeid)->first();
+            $title ="Edit Order Size";
+        }else{
+            $title ="Add Order Size";
+            $sizedata =array();
+        }
+        return view('admin.products.add-edit-packing-size')->with(compact('title','sizedata'));
     }
 
     public function savePackingSize(Request $request){
-    	try{
+        try{
             if($request->ajax()){
                 $data = $request->all();
                 if($data['packingsizeid']==""){
