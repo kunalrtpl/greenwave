@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Monthly Customer Visit Analysis</title>
+    <title>Monthly Visit Analysis</title>
     <style>
 
         /* ── Reset ── */
@@ -89,7 +89,7 @@
                     <img src="https://g2app.in/images/greenwave-logo-1-275-sl.jpg" alt="Greenwave" width="180">
                 </div>
                 <div class="header-divider"></div>
-                <div class="header-title">Monthly Customer Visit Analysis</div>
+                <div class="header-title">Monthly Visit Analysis</div>
                 <div class="header-date">{{ $monthLabel }}</div>
             </td>
         </tr>
@@ -119,12 +119,12 @@
                     <div class="greeting-name">Hi {{ $employee['name'] }},</div>
                     <div class="greeting-body">
                         @if($hasActivity)
-                            Here's your <strong>Monthly Customer Visit Analysis for {{ $monthLabel }}</strong>, attached with
+                            Here's your <strong>Monthly Visit Analysis for {{ $monthLabel }}</strong>, attached with
                             this email. It brings together your entire month at a glance — total customer visits,
                             how many customers you met, unique customers covered, and the status of every trial you
                             ran — along with a day-by-day breakdown for the month.
                         @else
-                            Please find attached your <strong>Monthly Customer Visit Analysis for {{ $monthLabel }}</strong>.
+                            Please find attached your <strong>Monthly Visit Analysis for {{ $monthLabel }}</strong>.
                             No visits were recorded against your account this month.
                         @endif
                     </div>
@@ -221,7 +221,7 @@
                     </div>
                     <div class="footer-divider"></div>
                     <div class="footer-text">
-                        Greenwave System — Monthly Customer Visit Analysis<br>
+                        Greenwave System — Monthly Visit Analysis<br>
                         Generated automatically from your Daily Visit Reports (DVRs) and trials.
                     </div>
                     <div class="footer-note">This is an automated email. Please do not reply.</div>

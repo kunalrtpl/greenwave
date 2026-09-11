@@ -4,9 +4,9 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 
-class MonthlyCustomerVisitAnalysisLog extends Model
+class MonthlyVisitAnalysisLog extends Model
 {
-    protected $table = 'monthly_customer_visit_analysis_logs';
+    protected $table = 'monthly_visit_analysis_logs';
 
     protected $guarded = [];
 

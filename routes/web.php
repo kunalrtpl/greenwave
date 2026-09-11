@@ -467,10 +467,10 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 		Route::post('/pending-orders-report/generate', 'AdminPendingOrdersReportController@generate')->name('admin.pending-orders-report.generate');
 		Route::get('/pending-orders-report/download-pdf', 'AdminPendingOrdersReportController@downloadPdf')->name('admin.pending-orders-report.pdf');
 
-		// Monthly Customer Visit Analysis — admin-side generation of the PDF
-		// that report:monthly-customer-visit-analysis emails every month.
-		Route::get('/monthly-customer-visit-analysis', 'MonthlyCustomerVisitAnalysisController@index')->name('admin.monthly-customer-visit-analysis.index');
-		Route::get('/monthly-customer-visit-analysis/download-pdf', 'MonthlyCustomerVisitAnalysisController@downloadPdf')->name('admin.monthly-customer-visit-analysis.pdf');
+		// Monthly Visit Analysis — admin-side generation of the PDF
+		// that report:monthly-visit-analysis emails every month.
+		Route::get('/monthly-visit-analysis', 'MonthlyVisitAnalysisController@index')->name('admin.monthly-visit-analysis.index');
+		Route::get('/monthly-visit-analysis/download-pdf', 'MonthlyVisitAnalysisController@downloadPdf')->name('admin.monthly-visit-analysis.pdf');
 
 		// Attendance screen view + filter
 	    Route::get('attendance/view','AttendanceViewController@index');

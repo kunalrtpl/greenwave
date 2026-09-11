@@ -2,6 +2,7 @@
 
 namespace App\Services\Report;
 
+use App\HolidayList;
 use App\User;
 use App\UserDvr;
 use Carbon\Carbon;
@@ -12,14 +13,14 @@ use Mpdf\Mpdf;
 
 /**
  * ─────────────────────────────────────────────────────────────────────
- *  MONTHLY CUSTOMER VISIT ANALYSIS — SHARED REPORT ENGINE
+ *  MONTHLY VISIT ANALYSIS — SHARED REPORT ENGINE
  * ─────────────────────────────────────────────────────────────────────
- *  Single source of truth for the monthly Customer Visit Analysis report.
+ *  Single source of truth for the monthly Visit Analysis report.
  *
  *  Used by BOTH:
- *    - App\Console\Commands\SendMonthlyCustomerVisitAnalysis (emails the
+ *    - App\Console\Commands\SendMonthlyVisitAnalysis (emails the
  *      PDF to each marketing employee on the 1st of every month), and
- *    - App\Http\Controllers\Admin\MonthlyCustomerVisitAnalysisController
+ *    - App\Http\Controllers\Admin\MonthlyVisitAnalysisController
  *      (admin panel screen — pick an employee + month, download the PDF).
  *
  *  Keeping the gathering/rendering here guarantees the admin download is
@@ -27,11 +28,16 @@ use Mpdf\Mpdf;
  *
  *  Report contents:
  *    - Overall totals: visits, met, not met, unique customers, trials
- *    - Date-wise analysis table (visits/met/not-met, trials)
+ *    - Days-worked totals: days with a visit vs. working days in the month
+ *      (Sundays/holidays excluded from "working days" unless the employee
+ *      actually visited on one — then it counts)
+ *    - Date-wise analysis table — one row per calendar day; days with no
+ *      visit show "HOL"/"SUN" (from the holidays table's is_recurring
+ *      holidays) or a dash for a plain missed working day
  *    - Customer-wise analysis table (visits, trials, business linking)
  *    - Trial details table (per-trial status + report-attached flag)
  */
-class MonthlyCustomerVisitAnalysisService
+class MonthlyVisitAnalysisService
 {
     const MARKETING_DEPARTMENT_ID = 2;
 
@@ -71,6 +77,50 @@ class MonthlyCustomerVisitAnalysisService
     /* ═══════════════════════════════════════════════
      *  DATA GATHERING
      * ═══════════════════════════════════════════════ */
+
+    /**
+     * Holidays (from holiday_lists) that apply to this employee for the
+     * given month — national holidays, plus city-specific ones matching the
+     * employee's base_city. Recurring holidays (is_recurring, stored with a
+     * fixed month/day such as 15 Aug / 2 Oct) are re-anchored onto the
+     * report's year. Same matching rules as AdminAttendanceController's
+     * holiday lookup, kept in sync so a day is never "HOL" here but not
+     * there, or vice versa.
+     *
+     * @return array<string, string>  dateString => holiday name
+     */
+    private function holidaysForMonth(User $user, Carbon $monthStart, Carbon $monthEnd): array
+    {
+        $month    = $monthStart->month;
+        $year     = $monthStart->year;
+        $monthPad = sprintf('%02d', $month);
+
+        $holidays = HolidayList::where('is_active', true)
+            ->where(function ($q) use ($month, $year, $monthPad) {
+                $q->where(function ($i) use ($month, $year) {
+                    $i->whereMonth('date', $month)->whereYear('date', $year);
+                })->orWhere(function ($i) use ($monthPad) {
+                    $i->where('is_recurring', true)->whereRaw("DATE_FORMAT(date,'%m')=?", [$monthPad]);
+                });
+            })
+            ->select('id', 'name', 'date', 'city', 'is_national', 'is_recurring')
+            ->get();
+
+        $map = [];
+        foreach ($holidays as $h) {
+            if (!$h->is_national && strtolower((string) $h->city) !== strtolower((string) $user->base_city)) {
+                continue;
+            }
+
+            $ds = $h->is_recurring
+                ? ($year . '-' . $monthPad . '-' . Carbon::parse($h->date)->format('d'))
+                : Carbon::parse($h->date)->toDateString();
+
+            $map[$ds] = $h->name;
+        }
+
+        return $map;
+    }
 
     public function gather(User $user, Carbon $monthStart, Carbon $monthEnd): array
     {
@@ -134,6 +184,25 @@ class MonthlyCustomerVisitAnalysisService
         $uniqueCustomers = $dvrs->map($customerKey)->unique()->count();
         $visitDetailPending = $dvrs->filter(fn($d) => !$d->is_submitted)->count();
 
+        // ── Visit Entry Analysis — how the visit was logged, not what
+        //    happened on it: Official/Unofficial (visit_type), On Site/Off
+        //    Site (site_type), and whether it was captured live or filled in
+        //    afterwards (visit_recorded — displayed as "Real Time"/"Post
+        //    Visit" in the report). Location match/mismatch is derived from
+        //    location_message: empty means the GPS check passed, any message
+        //    means it flagged a mismatch. ──
+        $visitTypeOfficial   = $dvrs->where('visit_type', 'Official')->count();
+        $visitTypeUnofficial = $dvrs->where('visit_type', 'Unofficial')->count();
+
+        $siteTypeOnSite  = $dvrs->where('site_type', 'On Site')->count();
+        $siteTypeOffSite = $dvrs->where('site_type', 'Off Site')->count();
+
+        $recordedRealTime  = $dvrs->where('visit_recorded', 'On Site')->count();
+        $recordedPostVisit = $dvrs->where('visit_recorded', 'Off Site')->count();
+
+        $locationMatch    = $dvrs->filter(fn($d) => empty($d->location_message))->count();
+        $locationMismatch = $totalVisits - $locationMatch;
+
         // ── Unique customers, broken down by business linking ──
         //    Dealer-linked customers are broken down BY DEALER NAME (not just
         //    a single "Dealer" bucket), plus separate Direct/Open counts.
@@ -178,11 +247,49 @@ class MonthlyCustomerVisitAnalysisService
         $trialsAttached = collect($trialDetails)->where('attached', true)->count();
         $trialsPending  = $totalTrials - $trialsAttached;
 
-        // ── Date-wise analysis ──
-        $dvrsByDate = $dvrs->groupBy(fn($d) => Carbon::parse($d->dvr_date)->toDateString());
-        $dateWise   = [];
+        // ── Date-wise analysis — one row per CALENDAR day in the month, so a
+        //    day with no visit still shows up (as a holiday/Sunday label, or
+        //    a dash for a plain missed working day) instead of just vanishing
+        //    from the table. ──
+        $holidayMap = $this->holidaysForMonth($user, $monthStart, $monthEnd);
 
-        foreach ($dvrsByDate as $ds => $dayDvrs) {
+        $dvrsByDate       = $dvrs->groupBy(fn($d) => Carbon::parse($d->dvr_date)->toDateString());
+        $dateWise         = [];
+        $daysWorked       = 0;
+        $workingDaysTotal = 0;
+
+        for ($cursor = $monthStart->copy(); $cursor->lte($monthEnd); $cursor->addDay()) {
+            $ds        = $cursor->toDateString();
+            $isSunday  = $cursor->isSunday();
+            $isHoliday = isset($holidayMap[$ds]);
+            $dayDvrs   = $dvrsByDate->get($ds);
+            $hasVisit  = $dayDvrs && $dayDvrs->count() > 0;
+
+            // Working days exclude Sunday/holiday — UNLESS the employee
+            // actually worked (visited) that day, which then still counts.
+            if ($hasVisit || (!$isSunday && !$isHoliday)) {
+                $workingDaysTotal++;
+            }
+
+            if (!$hasVisit) {
+                $dateWise[] = [
+                    'date'                 => $cursor->format('d M Y'),
+                    'day'                  => $cursor->format('D'),
+                    'visits'               => 0,
+                    'met'                  => 0,
+                    'not_met'              => 0,
+                    'visit_detail_pending' => 0,
+                    'trials'               => 0,
+                    'trials_attached'      => 0,
+                    'trials_not_attached'  => 0,
+                    'day_type'             => $isHoliday ? 'HOL' : ($isSunday ? 'SUN' : null),
+                    'holiday_name'         => $isHoliday ? $holidayMap[$ds] : null,
+                ];
+                continue;
+            }
+
+            $daysWorked++;
+
             $dayMet    = $dayDvrs->filter(fn($d) => (bool) $d->have_you_met)->count();
             $dayVisits = $dayDvrs->count();
 
@@ -202,10 +309,9 @@ class MonthlyCustomerVisitAnalysisService
 
             $dayVisitDetailPending = $dayDvrs->filter(fn($d) => !$d->is_submitted)->count();
 
-            $date = Carbon::parse($ds);
             $dateWise[] = [
-                'date'           => $date->format('d M Y'),
-                'day'            => $date->format('D'),
+                'date'           => $cursor->format('d M Y'),
+                'day'            => $cursor->format('D'),
                 'visits'         => $dayVisits,
                 'met'            => $dayMet,
                 'not_met'        => $dayVisits - $dayMet,
@@ -213,8 +319,12 @@ class MonthlyCustomerVisitAnalysisService
                 'trials'         => $dayTrialsCount,
                 'trials_attached'     => $dayAttached,
                 'trials_not_attached' => $dayTrialsCount - $dayAttached,
+                'day_type'       => null,
+                'holiday_name'   => null,
             ];
         }
+
+        $daysWorkedPercent = $workingDaysTotal > 0 ? (int) round(($daysWorked / $workingDaysTotal) * 100) : 0;
 
         // ── Customer-wise analysis ──
         $customerWise = $dvrs
@@ -267,6 +377,17 @@ class MonthlyCustomerVisitAnalysisService
                 'dealer_wise'      => $dealerWise,
                 'direct_customers' => $directCustomerCount,
                 'open_customers'   => $openCustomerCount,
+                'days_worked'         => $daysWorked,
+                'working_days_total'  => $workingDaysTotal,
+                'days_worked_percent' => $daysWorkedPercent,
+                'visit_type_official'   => $visitTypeOfficial,
+                'visit_type_unofficial' => $visitTypeUnofficial,
+                'site_type_onsite'      => $siteTypeOnSite,
+                'site_type_offsite'     => $siteTypeOffSite,
+                'recorded_realtime'     => $recordedRealTime,
+                'recorded_postvisit'    => $recordedPostVisit,
+                'location_match'        => $locationMatch,
+                'location_mismatch'     => $locationMismatch,
             ],
             'dateWise'     => $dateWise,
             'customerWise' => $customerWise,
@@ -286,7 +407,7 @@ class MonthlyCustomerVisitAnalysisService
      */
     public function writePdf(User $user, array $data, Carbon $monthStart, Carbon $monthEnd): string
     {
-        $dir = storage_path('app/monthly-customer-visit-analysis');
+        $dir = storage_path('app/monthly-visit-analysis');
         if (!File::isDirectory($dir)) {
             File::makeDirectory($dir, 0755, true);
         }
@@ -308,14 +429,14 @@ class MonthlyCustomerVisitAnalysisService
 
     public function filename(User $user, Carbon $monthStart): string
     {
-        return 'Monthly_Customer_Visit_Analysis_'
+        return 'Monthly_Visit_Analysis_'
             . preg_replace('/[^A-Za-z0-9]+/', '_', $user->name)
             . '_' . $monthStart->format('Y-m') . '.pdf';
     }
 
     private function buildMpdf(User $user, array $data, Carbon $monthStart, Carbon $monthEnd): Mpdf
     {
-        $html = view('employee_reports.monthly_customer_visit_analysis_pdf', [
+        $html = view('employee_reports.monthly_visit_analysis_pdf', [
             'employee'    => $user,
             'monthLabel'  => $monthStart->format('F Y'),
             'monthRange'  => $monthStart->format('d M') . ' – ' . $monthEnd->format('d M Y'),
@@ -336,13 +457,13 @@ class MonthlyCustomerVisitAnalysisService
             'tempDir'           => storage_path('app/mpdf-temp'),
         ]);
 
-        $mpdf->SetTitle('Monthly Customer Visit Analysis — ' . $user->name);
+        $mpdf->SetTitle('Monthly Visit Analysis — ' . $user->name);
         $mpdf->SetAuthor('Greenwave');
 
         $mpdf->SetHTMLFooter(
             '<table width="100%" style="border-top:1px solid #cbd5e1; font-size:7px; color:#64748b;">
                 <tr>
-                    <td style="font-weight:bold; color:#334155;">Greenwave &bull; Monthly Customer Visit Analysis &mdash; ' . e($user->name) . '</td>
+                    <td style="font-weight:bold; color:#334155;">Greenwave &bull; Monthly Visit Analysis &mdash; ' . e($user->name) . '</td>
                     <td align="center">Confidential &mdash; Internal Use Only</td>
                     <td align="right">Page {PAGENO} of {nbpg} &nbsp;&bull;&nbsp; ' . now()->format('d M Y') . '</td>
                 </tr>

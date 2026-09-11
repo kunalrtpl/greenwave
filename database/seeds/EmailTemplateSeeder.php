@@ -44,11 +44,11 @@ class EmailTemplateSeeder extends Seeder
                 'is_active'  => true,
             ],
             [
-                'event_key'  => 'monthly_customer_visit_analysis',
+                'event_key'  => 'monthly_visit_analysis',
                 'template_for' => 'employee',
-                'name'       => 'Monthly Customer Visit Analysis to Employee',
-                'subject'    => 'Monthly Customer Visit Analysis | {employee_name} | {monthLabel}',
-                'blade_view' => 'emails.monthly_customer_visit_analysis.employee',
+                'name'       => 'Monthly Visit Analysis to Employee',
+                'subject'    => 'Monthly Visit Analysis | {employee_name} | {monthLabel}',
+                'blade_view' => 'emails.monthly_visit_analysis.employee',
                 'to_emails'  => null,    // employee email passed dynamically
                 'cc_emails'  => null,
                 'bcc_emails' => null,

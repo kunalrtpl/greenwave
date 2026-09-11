@@ -44,14 +44,14 @@ body {
    grid borders; every color is set inline in the markup — mPDF has proven
    unreliable applying color through nested/descendant class selectors). ── */
 .summary-strip { width: 100%; border-collapse: separate; margin-bottom: 0; }
-.s-col { width: 33.33%; vertical-align: top; padding: 16px 18px; border-radius: 10px; }
+.s-col { width: 25%; vertical-align: top; padding: 16px 18px; border-radius: 10px; }
 .s-head  { font-size: 27px; font-weight: bold; display: block; line-height: 1; }
 .s-label { font-size: 9px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 0.6px; display: block; margin-top: 4px; }
 .s-biz-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
 .s-biz-table td { font-size: 8.3px; padding: 2.5px 0; color: #334155; }
 
-.month-strip { width: 100%; text-align: right; margin-bottom: 22px; }
-.month-strip .m-label { font-size: 13px; font-weight: bold; color: #1e293b; }
+.month-strip { width: 100%; text-align: left; margin-bottom: 22px; }
+.month-strip .m-label { font-size: 24px; font-weight: bold; color: #1e293b; }
 .month-strip .m-sub   { font-size: 7.5px; font-weight: bold; letter-spacing: 0.8px; color: #64748b; text-transform: uppercase; }
 
 /* ── SECTION TITLES ── */
@@ -81,6 +81,7 @@ table.data-table tbody td {
 }
 table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
 .center { text-align: center; }
+.left   { text-align: left; }
 
 .col-num { text-align: center; white-space: nowrap; padding-left: 2px !important; padding-right: 2px !important; }
 
@@ -157,6 +158,21 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
             ? '<div style="font-size:7.3px; margin-top:2px;"><span style="color:#fbbf24; font-weight:bold;">Visit Detail Pending: ' . $n . '</span></div>'
             : '';
     };
+
+    /* ── Same "0 → dash" rule for the Visit Entry Analysis cards: a
+       coloured s-head number ($statHead) and a coloured breakdown value
+       ($statSub), each muted grey instead of a bare "0". ── */
+    $statHead = function ($n, $color) {
+        return $n > 0
+            ? '<span class="s-head" style="color:' . $color . ';">' . $n . '</span>'
+            : '<span class="s-head" style="color:#94a3b8;">&mdash;</span>';
+    };
+
+    $statSub = function ($n, $color) {
+        return $n > 0
+            ? '<span style="color:' . $color . '; font-weight:bold;">' . $n . '</span>'
+            : '<span style="color:#94a3b8; font-weight:bold;">&mdash;</span>';
+    };
 @endphp
 
 {{-- ── HEADER ── --}}
@@ -166,8 +182,7 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
             <img src="https://g2app.in/public/images/greenwave-logo-1-275-sl.jpg" class="logo-img" />
         </td>
         <td class="hdr-right">
-            <div class="hdr-doc-type">Monthly Customer Visit Analysis</div>
-            <div class="hdr-date">Month: {{ $monthRange }}</div>
+            <div class="hdr-doc-type">Monthly Visit Analysis</div>
             <div class="hdr-date">Generated on: {{ $generatedAt }}</div>
         </td>
     </tr>
@@ -193,7 +208,7 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
     <span class="m-sub">Overall Summary</span>
 </div>
 
-{{-- ── SUMMARY STRIP — Total Visits | Trials Done | Customers Visited (dealer-wise) ── --}}
+{{-- ── SUMMARY STRIP — Days Worked | Total Visits | Trials Done | Customers Visited (dealer-wise) ── --}}
 <table class="summary-strip" cellspacing="8" cellpadding="0">
     <tr>
         <td class="s-col" style="background-color:#f1f5f9; border-top:4px solid #1e293b;">
@@ -209,6 +224,13 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
                     <td style="text-align:right; color:#dc2626; font-weight:bold;">{{ $overall['not_met'] }}</td>
                 </tr>
             </table>
+            @if($overall['visit_detail_pending'] > 0)
+            <div style="border-top:1px solid #e2e8f0; margin-top:12px; padding-top:12px;">
+                <span style="display:inline-block; background-color:#fef3c7; border:1px solid #fcd34d; color:#92400e; font-size:7.5px; font-weight:bold; letter-spacing:0.3px; padding:4px 11px; border-radius:10px;">
+                    &#9679; {{ $overall['visit_detail_pending'] }} Visit Detail{{ $overall['visit_detail_pending'] == 1 ? '' : 's' }} Pending
+                </span>
+            </div>
+            @endif
         </td>
         <td class="s-col" style="background-color:#f4effc; border-top:4px solid #7c3aed;">
             <span class="s-head" style="color:#6d28d9;">{{ $overall['total_trials'] }}</span>
@@ -248,6 +270,16 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
                 @endif
             </table>
         </td>
+        <td class="s-col" style="background-color:#ecfdf5; border-top:4px solid #059669;">
+            <span class="s-head" style="color:#047857;">{{ $overall['days_worked'] }}</span>
+            <span class="s-label">Days Worked</span>
+            <table class="s-biz-table" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td>Performance(%)</td>
+                    <td style="text-align:right; color:#047857; font-weight:bold;">{{ $overall['days_worked'] }}/{{ $overall['working_days_total'] }} ({{ $overall['days_worked_percent'] }}%)</td>
+                </tr>
+            </table>
+        </td>
     </tr>
 </table>
 
@@ -256,17 +288,14 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
 <table class="sec-title-table" cellspacing="0" cellpadding="0">
     <tr>
         <td class="sec-title-left">1. Date-Wise Analysis &mdash; {{ $monthLabel }}</td>
-        <td class="sec-title-right">{{ count($dateWise) }} {{ count($dateWise) === 1 ? 'Active Day' : 'Active Days' }}</td>
+        <td class="sec-title-right">{{ $overall['days_worked'] }} {{ $overall['days_worked'] === 1 ? 'Active Day' : 'Active Days' }}</td>
     </tr>
 </table>
-@if(count($dateWise) === 0)
-    <div class="empty-cell">No visits were recorded during {{ $monthLabel }}.</div>
-@else
 <table class="data-table">
     <thead>
         <tr>
             <th class="col-num" style="width:26px;">#</th>
-            <th style="width:25%;">Date</th>
+            <th style="width:25%; text-align:left;">Date</th>
             <th class="center" style="width:37%;">Visits</th>
             <th class="center" style="width:38%;">Trials</th>
         </tr>
@@ -275,10 +304,21 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
     @foreach($dateWise as $i => $dw)
         <tr>
             <td class="col-num" style="width:26px; color:#64748b; font-weight:bold;">{{ $i + 1 }}</td>
-            <td>
+            <td class="left">
                 <span style="font-weight:bold; color:#0f172a;">{{ $dw['date'] }}</span><br>
                 <span style="font-size:7px; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">{{ $dw['day'] }}</span>
             </td>
+            @if($dw['day_type'])
+            <td class="center">
+                <span class="brk-num" style="color: {{ $dw['day_type'] === 'HOL' ? '#b45309' : '#2563eb' }};">{{ $dw['day_type'] }}</span>
+                @if(!empty($dw['holiday_name']))
+                <div class="brk-sub">{{ $dw['holiday_name'] }}</div>
+                @endif
+            </td>
+            <td class="center">
+                <span class="brk-num" style="color:#94a3b8;">&mdash;</span>
+            </td>
+            @else
             <td class="center">
                 {!! $bigNum($dw['visits']) !!}
                 @if($dw['not_met'] > 0)
@@ -292,6 +332,7 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
                 <div class="brk-sub"><span style="color:#dc2626; font-weight:bold;">Report Pending: {{ $dw['trials_not_attached'] }}</span></div>
                 @endif
             </td>
+            @endif
         </tr>
     @endforeach
         @php $tdBg = 'background-color:#1e293b; color:#ffffff; font-weight:bold; border:1px solid #1e293b;'; @endphp
@@ -309,18 +350,17 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
         </tr>
     </tbody>
 </table>
-@endif
 
 {{-- ── VISIT DETAIL PENDING — action banner, only shown when it needs attention ── --}}
 @if($overall['visit_detail_pending'] > 0)
-<table style="width:100%; border-collapse:collapse; margin-top:10px;">
+<!-- <table style="width:100%; border-collapse:collapse; margin-top:10px;">
     <tr>
         <td style="background-color:#fff7e6; border:1px solid #fcd88f; border-left:4px solid #f59e0b; padding:9px 14px; font-size:9px; font-weight:bold; color:#92400e;">
             {{ $overall['visit_detail_pending'] }} Visit Detail{{ $overall['visit_detail_pending'] == 1 ? '' : 's' }} Pending
             <span style="font-weight:normal; color:#78350f;">&mdash; out of {{ $overall['total_visits'] }} visits this month, {{ $overall['visit_detail_pending'] }} still need{{ $overall['visit_detail_pending'] == 1 ? 's' : '' }} the visit-detail notes filled in.</span>
         </td>
     </tr>
-</table>
+</table> -->
 @endif
 {{-- ═══════════════ 2. CUSTOMER-WISE ANALYSIS ═══════════════ --}}
 <table class="sec-title-table" cellspacing="0" cellpadding="0">
@@ -336,7 +376,7 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
     <thead>
         <tr>
             <th class="col-num" style="width:26px;">#</th>
-            <th style="width:38%;">Customer</th>
+            <th style="width:38%; text-align:left;">Customer</th>
             <th class="center" style="width:31%;">Total Visits</th>
             <th class="center" style="width:31%;">Trials</th>
         </tr>
@@ -345,9 +385,9 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
     @foreach($customerWise as $i => $cw)
         <tr>
             <td class="col-num" style="width:26px; color:#64748b; font-weight:bold;">{{ $i + 1 }}</td>
-            <td>
+            <td class="left">
                 <span style="font-weight:bold; color:#0f172a;">{{ $cw['customer_name'] }}</span><br>
-                <span style="font-size:7px; color:#64748b;">Business Linking: {{ !empty($cw['dealer_name']) ? $cw['dealer_name'] : $cw['business_type'] }}</span>
+                <span style="font-size:7px; color:#64748b;">{{ !empty($cw['dealer_name']) ? $cw['dealer_name'] : $cw['business_type'] }}</span>
             </td>
             <td class="center">
                 {!! $bigNum($cw['total_visits']) !!}
@@ -381,10 +421,66 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
 </table>
 @endif
 
-{{-- ═══════════════ 3. TRIAL DETAILS ═══════════════ --}}
+{{-- ═══════════════ 3. VISIT ENTRY ANALYSIS ═══════════════
+     How visits were LOGGED, not what happened on them — visit type,
+     site type, capture timing and GPS accuracy. Every card follows the
+     same language as the summary strip: the big number is the healthy
+     default, the coloured sub-line is the exception worth a glance. ── --}}
 <table class="sec-title-table" cellspacing="0" cellpadding="0">
     <tr>
-        <td class="sec-title-left">3. Trial Details &mdash; {{ $monthLabel }}</td>
+        <td class="sec-title-left">3. Visit Entry Analysis &mdash; {{ $monthLabel }}</td>
+        <td class="sec-title-right">{{ $overall['total_visits'] }} {{ $overall['total_visits'] === 1 ? 'Visit Logged' : 'Visits Logged' }}</td>
+    </tr>
+</table>
+<table class="summary-strip" cellspacing="8" cellpadding="0" style="margin-bottom:20px;">
+    <tr>
+        <td class="s-col" style="background-color:#eef2ff; border-top:4px solid #4338ca;">
+            {!! $statHead($overall['visit_type_official'], '#3730a3') !!}
+            <span class="s-label">Official Visits</span>
+            <table class="s-biz-table" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td>Unofficial</td>
+                    <td style="text-align:right;">{!! $statSub($overall['visit_type_unofficial'], '#dc2626') !!}</td>
+                </tr>
+            </table>
+        </td>
+        <td class="s-col" style="background-color:#ecfeff; border-top:4px solid #0891b2;">
+            {!! $statHead($overall['site_type_onsite'], '#0e7490') !!}
+            <span class="s-label">On Site Visits</span>
+            <table class="s-biz-table" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td>Off Site</td>
+                    <td style="text-align:right;">{!! $statSub($overall['site_type_offsite'], '#dc2626') !!}</td>
+                </tr>
+            </table>
+        </td>
+        <td class="s-col" style="background-color:#f8fafc; border-top:4px solid #64748b;">
+            {!! $statHead($overall['recorded_realtime'], '#334155') !!}
+            <span class="s-label">Real Time Entries</span>
+            <table class="s-biz-table" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td>Post Visit</td>
+                    <td style="text-align:right;">{!! $statSub($overall['recorded_postvisit'], '#475569') !!}</td>
+                </tr>
+            </table>
+        </td>
+        <td class="s-col" style="background-color:#f0fdf4; border-top:4px solid #16a34a;">
+            {!! $statHead($overall['location_match'], '#15803d') !!}
+            <span class="s-label">Location Matched</span>
+            <table class="s-biz-table" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td>Mismatch</td>
+                    <td style="text-align:right;">{!! $statSub($overall['location_mismatch'], '#dc2626') !!}</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+{{-- ═══════════════ 4. TRIAL DETAILS ═══════════════ --}}
+<table class="sec-title-table" cellspacing="0" cellpadding="0">
+    <tr>
+        <td class="sec-title-left">4. Trial Details &mdash; {{ $monthLabel }}</td>
         <td class="sec-title-right">{{ count($trialDetails) }} {{ count($trialDetails) === 1 ? 'Trial' : 'Trials' }}</td>
     </tr>
 </table>

@@ -2,10 +2,10 @@
 
 namespace App\Console\Commands;
 
-use App\MonthlyCustomerVisitAnalysisLog;
+use App\MonthlyVisitAnalysisLog;
 use App\User;
 use App\Services\EmailService;
-use App\Services\Report\MonthlyCustomerVisitAnalysisService;
+use App\Services\Report\MonthlyVisitAnalysisService;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * ─────────────────────────────────────────────────────────────────────
- *  MONTHLY CUSTOMER VISIT ANALYSIS — EMAIL WITH PDF ATTACHMENT
+ *  MONTHLY VISIT ANALYSIS — EMAIL WITH PDF ATTACHMENT
  * ─────────────────────────────────────────────────────────────────────
  *  Runs every few minutes between 06:00–07:30 on the 1ST of every month
  *  (see Kernel). On the 1st of e.g. September it reports on August.
@@ -28,18 +28,18 @@ use Illuminate\Support\Facades\Log;
  *  Report window : previous calendar month (1st → last day).
  *
  *  The eligible-employee list, the data gathering and the PDF rendering all
- *  live in App\Services\Report\MonthlyCustomerVisitAnalysisService, shared
- *  with the admin-panel screen (Admin\MonthlyCustomerVisitAnalysisController)
+ *  live in App\Services\Report\MonthlyVisitAnalysisService, shared
+ *  with the admin-panel screen (Admin\MonthlyVisitAnalysisController)
  *  so both produce an identical report.
  */
-class SendMonthlyCustomerVisitAnalysis extends Command
+class SendMonthlyVisitAnalysis extends Command
 {
-    protected $signature = 'report:monthly-customer-visit-analysis
+    protected $signature = 'report:monthly-visit-analysis
                         {--limit=2 : Records processed per run}
                         {--date=   : Simulate "today" (Y-m-d) — report covers the previous calendar month}
                         {--user=   : Process only this user id (testing)}';
 
-    protected $description = "Email each employee their previous-month Customer Visit Analysis (PDF) — visit counts, customer coverage and trial status";
+    protected $description = "Email each employee their previous-month Visit Analysis (PDF) — visit counts, customer coverage and trial status";
 
     const RETENTION_DAYS = 400;
 
@@ -47,10 +47,10 @@ class SendMonthlyCustomerVisitAnalysis extends Command
     // employee's real inbox. Set to null to send to real employees.
     const TEST_EMAIL_OVERRIDE = 'mkanum786@gmail.com';
 
-    /** @var MonthlyCustomerVisitAnalysisService */
+    /** @var MonthlyVisitAnalysisService */
     protected $reportService;
 
-    public function __construct(MonthlyCustomerVisitAnalysisService $reportService)
+    public function __construct(MonthlyVisitAnalysisService $reportService)
     {
         parent::__construct();
         $this->reportService = $reportService;
@@ -70,7 +70,7 @@ class SendMonthlyCustomerVisitAnalysis extends Command
         $limit = max(1, (int) $this->option('limit'));
 
         // ── 1. Housekeeping: purge old tracking rows ──
-        DB::table('monthly_customer_visit_analysis_logs')
+        DB::table('monthly_visit_analysis_logs')
             ->where('report_date', '<', Carbon::today()->subDays(self::RETENTION_DAYS)->toDateString())
             ->delete();
 
@@ -107,7 +107,7 @@ class SendMonthlyCustomerVisitAnalysis extends Command
                 ->where('id', $this->option('user'))
                 ->pluck('id');
         } else {
-            $userIds = MonthlyCustomerVisitAnalysisService::eligibleEmployees()->pluck('id');
+            $userIds = MonthlyVisitAnalysisService::eligibleEmployees()->pluck('id');
         }
 
         $now  = now();
@@ -134,7 +134,7 @@ class SendMonthlyCustomerVisitAnalysis extends Command
                     $bindings[] = $r['updated_at'];
                 }
                 DB::insert(
-                    'INSERT IGNORE INTO monthly_customer_visit_analysis_logs
+                    'INSERT IGNORE INTO monthly_visit_analysis_logs
                      (user_id, report_date, status, created_at, updated_at)
                      VALUES ' . implode(',', $values),
                     $bindings
@@ -148,7 +148,7 @@ class SendMonthlyCustomerVisitAnalysis extends Command
         $onlyUser = $this->option('user');
 
         return DB::transaction(function () use ($monthStart, $limit, $onlyUser) {
-            $logs = MonthlyCustomerVisitAnalysisLog::where('report_date', $monthStart->toDateString())
+            $logs = MonthlyVisitAnalysisLog::where('report_date', $monthStart->toDateString())
                 ->where(function ($q) {
                     $q->where('status', 'pending')
                       ->orWhere(function ($q2) {
@@ -180,7 +180,7 @@ class SendMonthlyCustomerVisitAnalysis extends Command
      *  PROCESS ONE USER
      * ═══════════════════════════════════════════════ */
 
-    private function processLog(MonthlyCustomerVisitAnalysisLog $log, Carbon $monthStart, Carbon $monthEnd)
+    private function processLog(MonthlyVisitAnalysisLog $log, Carbon $monthStart, Carbon $monthEnd)
     {
         $pdfPath = null;
 
@@ -221,7 +221,7 @@ class SendMonthlyCustomerVisitAnalysis extends Command
 
             $monthLabel = $monthStart->format('F Y');
 
-            EmailService::send('monthly_customer_visit_analysis', [
+            EmailService::send('monthly_visit_analysis', [
                 'employee'      => ['name' => $user->name, 'email' => $user->email],
                 'employee_name' => $user->name,
                 'monthLabel'    => $monthLabel,
@@ -240,10 +240,10 @@ class SendMonthlyCustomerVisitAnalysis extends Command
                 'error_message' => null,
             ]);
 
-            $this->info("  ✓ {$user->name}: monthly customer visit analysis sent ({$data['overall']['total_visits']} visits)");
+            $this->info("  ✓ {$user->name}: monthly visit analysis sent ({$data['overall']['total_visits']} visits)");
 
         } catch (\Exception $e) {
-            Log::error('MonthlyCustomerVisitAnalysis failed for user ' . $log->user_id, ['error' => $e->getMessage()]);
+            Log::error('MonthlyVisitAnalysis failed for user ' . $log->user_id, ['error' => $e->getMessage()]);
             $log->update([
                 'status'        => 'failed',
                 'error_message' => substr($e->getMessage(), 0, 2000),

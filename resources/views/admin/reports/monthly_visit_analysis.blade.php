@@ -87,7 +87,7 @@
             <div class="portlet-title">
                 <div class="caption font-blue-sharp">
                     <i class="fa fa-line-chart font-blue-sharp"></i>
-                    <span class="caption-subject bold uppercase">Monthly Customer Visit Analysis</span>
+                    <span class="caption-subject bold uppercase">Monthly Visit Analysis</span>
                 </div>
             </div>
 
@@ -101,7 +101,7 @@
                 @endif
 
                 {{-- Month / Year selection --}}
-                <form method="GET" action="{{ route('admin.monthly-customer-visit-analysis.index') }}" id="month-form">
+                <form method="GET" action="{{ route('admin.monthly-visit-analysis.index') }}" id="month-form">
                     <div class="filter-strip">
 
                         <div class="fg">
@@ -166,7 +166,7 @@
                                 <td class="center">
                                     <a class="btn-generate-row"
                                        target="_blank"
-                                       href="{{ route('admin.monthly-customer-visit-analysis.pdf', ['user_id' => $emp->id, 'month' => $month, 'year' => $year]) }}">
+                                       href="{{ route('admin.monthly-visit-analysis.pdf', ['user_id' => $emp->id, 'month' => $month, 'year' => $year]) }}">
                                         <i class="fa fa-file-pdf-o"></i> Generate PDF
                                     </a>
                                 </td>
