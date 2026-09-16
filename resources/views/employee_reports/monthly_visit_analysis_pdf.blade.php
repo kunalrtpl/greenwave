@@ -101,6 +101,18 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
    specific `table.data-table tbody td` rule, so a class-based override silently
    lost and left the row background white with invisible white-on-white text. */
 
+/* ── VISIT ENTRY ANALYSIS — plain bordered boxes (client's own sketch:
+   simple black-outlined rectangles, no colour fill). Both rows in a box
+   (e.g. "Official" / "Unofficial") are the SAME size/weight — the sketch
+   draws them as two equal lines, not a hero number plus small subtext.
+   Red is used only for the four "exception" values: Unofficial, Off Site,
+   Post Visit, Mismatch. ── */
+.entry-strip { width: 100%; border-collapse: separate; margin-bottom: 20px; }
+.entry-col { width: 25%; vertical-align: top; padding: 14px 16px; border: 1px solid #1e293b; }
+.entry-rows { width: 100%; border-collapse: collapse; }
+.entry-rows td { font-size: 11px; font-weight: bold; color: #1e293b; padding: 4px 0; }
+.entry-rows td.entry-val { text-align: right; }
+
 /* Trial status */
 .status-txt {
     font-size: 8px; font-weight: bold;
@@ -159,19 +171,13 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
             : '';
     };
 
-    /* ── Same "0 → dash" rule for the Visit Entry Analysis cards: a
-       coloured s-head number ($statHead) and a coloured breakdown value
-       ($statSub), each muted grey instead of a bare "0". ── */
-    $statHead = function ($n, $color) {
+    /* One row's value inside a Visit Entry Analysis box — both rows in a
+       box share this exact same styling (font-size, weight); only the
+       colour differs, red for the four "exception" values. */
+    $entryVal = function ($n, $color = '#1e293b') {
         return $n > 0
-            ? '<span class="s-head" style="color:' . $color . ';">' . $n . '</span>'
-            : '<span class="s-head" style="color:#94a3b8;">&mdash;</span>';
-    };
-
-    $statSub = function ($n, $color) {
-        return $n > 0
-            ? '<span style="color:' . $color . '; font-weight:bold;">' . $n . '</span>'
-            : '<span style="color:#94a3b8; font-weight:bold;">&mdash;</span>';
+            ? '<span style="color:' . $color . ';">' . $n . '</span>'
+            : '<span style="color:#94a3b8;">&mdash;</span>';
     };
 @endphp
 
@@ -432,45 +438,53 @@ table.data-table tbody tr:nth-child(even) td { background: #f8fafc; }
         <td class="sec-title-right">{{ $overall['total_visits'] }} {{ $overall['total_visits'] === 1 ? 'Visit Logged' : 'Visits Logged' }}</td>
     </tr>
 </table>
-<table class="summary-strip" cellspacing="8" cellpadding="0" style="margin-bottom:20px;">
+<table class="entry-strip" cellspacing="8" cellpadding="0">
     <tr>
-        <td class="s-col" style="background-color:#eef2ff; border-top:4px solid #4338ca;">
-            {!! $statHead($overall['visit_type_official'], '#3730a3') !!}
-            <span class="s-label">Official Visits</span>
-            <table class="s-biz-table" cellspacing="0" cellpadding="0">
+        <td class="entry-col">
+            <table class="entry-rows" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td>Official</td>
+                    <td class="entry-val">{!! $entryVal($overall['visit_type_official']) !!}</td>
+                </tr>
                 <tr>
                     <td>Unofficial</td>
-                    <td style="text-align:right;">{!! $statSub($overall['visit_type_unofficial'], '#dc2626') !!}</td>
+                    <td class="entry-val">{!! $entryVal($overall['visit_type_unofficial'], '#dc2626') !!}</td>
                 </tr>
             </table>
         </td>
-        <td class="s-col" style="background-color:#ecfeff; border-top:4px solid #0891b2;">
-            {!! $statHead($overall['site_type_onsite'], '#0e7490') !!}
-            <span class="s-label">On Site Visits</span>
-            <table class="s-biz-table" cellspacing="0" cellpadding="0">
+        <td class="entry-col">
+            <table class="entry-rows" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td>On Site</td>
+                    <td class="entry-val">{!! $entryVal($overall['site_type_onsite']) !!}</td>
+                </tr>
                 <tr>
                     <td>Off Site</td>
-                    <td style="text-align:right;">{!! $statSub($overall['site_type_offsite'], '#dc2626') !!}</td>
+                    <td class="entry-val">{!! $entryVal($overall['site_type_offsite'], '#dc2626') !!}</td>
                 </tr>
             </table>
         </td>
-        <td class="s-col" style="background-color:#f8fafc; border-top:4px solid #64748b;">
-            {!! $statHead($overall['recorded_realtime'], '#334155') !!}
-            <span class="s-label">Real Time Entries</span>
-            <table class="s-biz-table" cellspacing="0" cellpadding="0">
+        <td class="entry-col">
+            <table class="entry-rows" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td>Real Time</td>
+                    <td class="entry-val">{!! $entryVal($overall['recorded_realtime']) !!}</td>
+                </tr>
                 <tr>
                     <td>Post Visit</td>
-                    <td style="text-align:right;">{!! $statSub($overall['recorded_postvisit'], '#475569') !!}</td>
+                    <td class="entry-val">{!! $entryVal($overall['recorded_postvisit'], '#dc2626') !!}</td>
                 </tr>
             </table>
         </td>
-        <td class="s-col" style="background-color:#f0fdf4; border-top:4px solid #16a34a;">
-            {!! $statHead($overall['location_match'], '#15803d') !!}
-            <span class="s-label">Location Matched</span>
-            <table class="s-biz-table" cellspacing="0" cellpadding="0">
+        <td class="entry-col">
+            <table class="entry-rows" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td>Location Matched</td>
+                    <td class="entry-val">{!! $entryVal($overall['location_match']) !!}</td>
+                </tr>
                 <tr>
                     <td>Mismatch</td>
-                    <td style="text-align:right;">{!! $statSub($overall['location_mismatch'], '#dc2626') !!}</td>
+                    <td class="entry-val">{!! $entryVal($overall['location_mismatch'], '#dc2626') !!}</td>
                 </tr>
             </table>
         </td>
