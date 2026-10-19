@@ -69,6 +69,11 @@ class User extends Authenticatable
         return $this->hasMany('App\UserCustomer');
     }
 
+    // Dealers linked to a Marketing user (admin add/edit user screen)
+    public function linked_dealers(){
+        return $this->belongsToMany('App\Dealer', 'user_linked_dealers', 'user_id', 'dealer_id')->withTimestamps();
+    }
+
     public function shares(){
         return $this->hasMany('App\UserCustomerShare')->join('customers','customers.id','=','user_customer_shares.customer_id')->select('user_customer_shares.*')->orderby('customers.name','ASC')->with('customer');
     }

@@ -716,6 +716,47 @@
 	    return array_values(array_unique(array_filter($emails)));
 	}
 
+	/**
+	 * Emails of the active employees linked to a dealer (user_linked_dealers),
+	 * used as CC on dealer emails. Logs who was found so a missing CC can be
+	 * traced in storage/logs.
+	 *
+	 * @param  int|null $dealerId  Parent dealer id (purchase_orders.dealer_id)
+	 * @param  string   $context   Shown in the log line, e.g. "PO 5097 [po_dealer_self]"
+	 * @return array<string>
+	 */
+	function getDealerLinkedEmployeeEmails($dealerId, string $context = ''): array
+	{
+	    if (empty($dealerId)) {
+	        \Log::info("{$context}: no dealer id, no linked employees to CC");
+	        return [];
+	    }
+
+	    $linkedUsers = \DB::table('user_linked_dealers')
+	        ->join('users', 'users.id', '=', 'user_linked_dealers.user_id')
+	        ->where('user_linked_dealers.dealer_id', $dealerId)
+	        ->get(['users.id', 'users.name', 'users.email', 'users.status']);
+
+	    $isUsable = function ($u) { return $u->status == 1 && !empty($u->email); };
+
+	    $ccEmails = $linkedUsers->filter($isUsable)->pluck('email')->unique()->values()->toArray();
+
+	    \Log::info("{$context}: linked employees for dealer {$dealerId}", [
+	        'linked_users' => $linkedUsers->map(function ($u) use ($isUsable) {
+	            return [
+	                'user_id' => $u->id,
+	                'name'    => $u->name,
+	                'email'   => $u->email,
+	                'status'  => $u->status,
+	                'used'    => $isUsable($u),
+	            ];
+	        })->values()->toArray(),
+	        'cc' => $ccEmails,
+	    ]);
+
+	    return $ccEmails;
+	}
+
 	if (!function_exists('format_indian_number')) {
 		/**
 		 * Formats a number using the Indian numbering system (lakh/crore grouping),

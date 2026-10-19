@@ -144,6 +144,9 @@
 }
 #InlineDeptDetails .form-group { margin-bottom: 15px; }
 #InlineDeptDetails .select2-container { width: 100% !important; }
+/* Marketing-only blocks start hidden on Add, so select2 can't measure them */
+#regionSectionWrapper .select2-container,
+#linkedDealersWrapper .select2-container { width: 100% !important; }
 #InlineDeptDetails .form-control { width: 100%; }
 
 /* Panel accordion */
@@ -959,6 +962,39 @@
                         </div>
                     </div>
 
+                    {{-- Linked Dealers (Marketing only) --}}
+                    <div id="linkedDealersWrapper" style="{{ $existingDeptIsMarketing ? '' : 'display:none;' }}">
+                        <div class="dept-region-divider">
+                            <span><i class="fa fa-handshake-o"></i> Linked Dealers</span>
+                        </div>
+                        <div class="dept-region-col">
+                            <div class="dept-col-header">
+                                <div class="dept-col-label"><i class="fa fa-users"></i> Dealers</div>
+                                <label class="dept-selectall-pill">
+                                    @php $availableDealerCount = $linkableDealers->whereNotIn('id', array_keys($dealersLinkedToOthers))->count(); @endphp
+                                    <input type="checkbox" id="SelectAllLinkedDealers"
+                                        {{ ($availableDealerCount > 0 && count($selLinkedDealers) == $availableDealerCount) ? 'checked' : '' }}>
+                                    Select All
+                                </label>
+                            </div>
+                            <select class="form-control select2" id="inline_linked_dealers" name="linked_dealers[]" multiple data-placeholder="Select dealers">
+                                @foreach($linkableDealers as $dealer)
+                                    @php $linkedTo = $dealersLinkedToOthers[$dealer->id] ?? null; @endphp
+                                    <option value="{{ $dealer->id }}"
+                                        {{ $linkedTo ? 'disabled' : '' }}
+                                        {{ !$linkedTo && in_array($dealer->id, $selLinkedDealers) ? 'selected' : '' }}>
+                                        {{ $dealer->business_name }}@if(!empty($dealer->city)) ({{ $dealer->city }})@endif
+                                        @if($linkedTo) — linked to {{ $linkedTo }}@endif
+                                    </option>
+                                @endforeach
+                            </select>
+                            <h4 class="text-danger" style="display:none;font-size:12px;" id="Employee-linked_dealers"></h4>
+                            @if(count($linkableDealers) == 0)
+                                <div class="dept-hint"><i class="fa fa-info-circle"></i> No confirmed dealers found</div>
+                            @endif
+                        </div>
+                    </div>
+
                     <input type="hidden" id="inline_user_dept_json" name="user_depts[]" value="">
                 </div>
             </div>
@@ -1364,7 +1400,13 @@ $(document).ready(function(){
         // Region block only for Marketing
         if(isMarketing){
             $('#regionSectionWrapper').show();
+            $('#linkedDealersWrapper').show();
+            // Re-init now that it is visible, so select2 sizes it correctly
+            $('#inline_linked_dealers').select2({ width: '100%', placeholder: 'Select dealers' });
         } else {
+            $('#linkedDealersWrapper').hide();
+            $('#inline_linked_dealers').val(null).trigger('change.select2');
+            $('#SelectAllLinkedDealers').prop('checked', false);
             $('#regionSectionWrapper').hide();
             $('#inline_regions').val(null).trigger('change.select2');
             $('#inline_subregions').html('').val(null);
@@ -1372,6 +1414,23 @@ $(document).ready(function(){
         }
 
         rebuildDeptJson();
+    });
+
+    // ── Linked dealers: Select All ────────────────────────────────
+    $(document).on('change','#SelectAllLinkedDealers', function(){
+        var $sel = $('#inline_linked_dealers');
+        // Dealers linked to another employee are disabled and never selected
+        if($(this).is(':checked')){
+            $sel.find('option:not(:disabled)').prop('selected', true);
+        } else {
+            $sel.find('option').prop('selected', false);
+        }
+        $sel.trigger('change.select2');
+    });
+    $(document).on('change','#inline_linked_dealers', function(){
+        var total    = $(this).find('option:not(:disabled)').length;
+        var selected = $(this).find('option:selected').length;
+        $('#SelectAllLinkedDealers').prop('checked', total > 0 && selected === total);
     });
 
     // ── Report To change → rebuild JSON ───────────────────────────

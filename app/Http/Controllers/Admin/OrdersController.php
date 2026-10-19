@@ -1663,9 +1663,15 @@ class OrdersController extends Controller
         }
 
         //$dispatchedDealer->email = "mkanum786@gmail.com";
-        $emails = getDealerTemplateRecipients('po_dealer_dispatched', $dispatchedDealer);
         // ── Send dispatch email — dealer orders only ─────────────────────
         if ($isDealerOrder && $dispatchedDealer && !empty($dispatchedDealer->email)) {
+            $emails = getDealerTemplateRecipients('po_dealer_dispatched', $dispatchedDealer);
+
+            // CC the active employees linked to this dealer (user_linked_dealers)
+            $logContext = "Dispatch LR {$data['lr_no']} PO {$dispatchedPo->id} [po_dealer_dispatched]";
+            $ccEmails   = getDealerLinkedEmployeeEmails($dispatchedPo->dealer_id, $logContext);
+            \Log::info("{$logContext}: recipients", ['to' => $emails, 'cc' => $ccEmails]);
+
             \App\Services\EmailService::send(
                 'po_dealer_dispatched',
                 [
@@ -1677,7 +1683,8 @@ class OrdersController extends Controller
                     'dispatch_date'    => \Carbon\Carbon::parse($data['dispatch_date'])->format('d M Y'),
                     'dispatched_by'    => auth()->user()->name,
                 ],
-                $emails
+                $emails,
+                $ccEmails
             );
         }
         // ── End email ─────────────────────────────────────────────────────

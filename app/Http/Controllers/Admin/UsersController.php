@@ -18,6 +18,7 @@ use App\UserDepartmentProduct;
 use App\UserCustomer;
 use App\ProductDetail;
 use App\Customer;
+use App\Dealer;
 use DB;
 use Cookie;
 use Session;
@@ -181,8 +182,33 @@ class UsersController extends Controller
             $empdata =array();
             $selProductTypes = array();
         }
-        //echo "<pre>"; print_r($selProductTypes); die;
-        return view('admin.users.add-edit-user')->with(compact('title','empdata','selCusts','selProductTypes','selAppRoles'));
+        // Linked dealers (Marketing only): top-level confirmed dealers.
+        // Already-linked dealers are kept in the list so they are not lost on save
+        // if their stage changed later.
+        $selLinkedDealers = array();
+        if(!empty($userid)){
+            $selLinkedDealers = DB::table('user_linked_dealers')->where('user_id',$userid)->pluck('dealer_id')->toArray();
+        }
+        $linkableDealers = Dealer::select('id','business_name','city')
+            ->whereNull('parent_id')
+            ->where(function($q) use ($selLinkedDealers){
+                $q->where(function($q2){
+                    $q2->where('stage','confirmed')->where('is_delete',0);
+                })->orWhereIn('id',$selLinkedDealers);
+            })
+            ->orderBy('business_name')
+            ->get();
+
+        // A dealer can belong to one employee only: dealer_id => other employee's name
+        $dealersLinkedToOthers = DB::table('user_linked_dealers')
+            ->join('users','users.id','=','user_linked_dealers.user_id')
+            ->when(!empty($userid), function($q) use ($userid){
+                return $q->where('user_linked_dealers.user_id','!=',$userid);
+            })
+            ->pluck('users.name','user_linked_dealers.dealer_id')
+            ->toArray();
+
+        return view('admin.users.add-edit-user')->with(compact('title','empdata','selCusts','selProductTypes','selAppRoles','selLinkedDealers','linkableDealers','dealersLinkedToOthers'));
     }
 
     public function saveUser(Request $request){
@@ -224,6 +250,23 @@ class UsersController extends Controller
                     //echo "<pre>"; print_r($data); die;
                     if(!isset($data['user_depts'])){
                         return response()->json(['status'=>false,'errors'=>array('user_depts'=> ['Please add atleast one user department'])]);
+                    }
+                    // A dealer can be linked to one employee only — check before saving anything
+                    if (!empty($data['linked_dealers'])) {
+                        $takenDealers = DB::table('user_linked_dealers')
+                            ->join('users','users.id','=','user_linked_dealers.user_id')
+                            ->join('dealers','dealers.id','=','user_linked_dealers.dealer_id')
+                            ->whereIn('user_linked_dealers.dealer_id', (array)$data['linked_dealers'])
+                            ->when(!empty($data['employeeid']), function($q) use ($data){
+                                return $q->where('user_linked_dealers.user_id','!=',$data['employeeid']);
+                            })
+                            ->get(['dealers.business_name','users.name']);
+                        if ($takenDealers->isNotEmpty()) {
+                            $msg = $takenDealers->map(function($t){
+                                return $t->business_name.' is already linked to '.$t->name;
+                            })->implode(', ');
+                            return response()->json(['status'=>false,'errors'=>array('linked_dealers'=> [$msg])]);
+                        }
                     }
                     //DB::beginTransaction();
                     if($type =="add"){
@@ -484,8 +527,25 @@ class UsersController extends Controller
                             }
                         }
                     }
+                    // ── Linked dealers (Marketing only) ───────────────────────────
+                    $isMarketing = false;
+                    foreach ($data['user_depts'] as $userDept) {
+                        $userDeptArr = json_decode($userDept, true);
+                        if (!empty($userDeptArr['department_id']) && $userDeptArr['department_id'] == User::MARKETING_DEPARTMENT_ID) {
+                            $isMarketing = true;
+                        }
+                    }
+                    $linkedDealerIds = array();
+                    if ($isMarketing && !empty($data['linked_dealers'])) {
+                        // Keep only valid top-level dealers
+                        $linkedDealerIds = Dealer::whereNull('parent_id')
+                            ->whereIn('id', (array)$data['linked_dealers'])
+                            ->pluck('id')->toArray();
+                    }
+                    $user->linked_dealers()->sync($linkedDealerIds);
+
                     /*if(!isset($data['customers'])){
-                        $data['customers'] = array(); 
+                        $data['customers'] = array();
                     }
                     if($type =="add"){
                         $user->customers()->attach($data['customers']); 

@@ -571,7 +571,12 @@ class PurchaseOrder extends Model
             EmailService::send('po_admin', ['po' => $po]);
 
             $emails = getDealerTemplateRecipients('po_dealer_self', $po->dealer);
-            EmailService::send('po_dealer_self', ['po' => $po], $emails);
+
+            // CC the active employees linked to this dealer (user_linked_dealers)
+            $ccEmails = getDealerLinkedEmployeeEmails($po->dealer_id, "PO {$po->id} [po_dealer_self]");
+            \Log::info("PO {$po->id} [po_dealer_self]: recipients", ['to' => $emails, 'cc' => $ccEmails]);
+
+            EmailService::send('po_dealer_self', ['po' => $po], $emails, $ccEmails);
 
         } elseif ($data['action'] === 'customer') {
             // EmailService::send('po_customer_self', ['po' => $po], $po->customer ? $po->customer->email : null);

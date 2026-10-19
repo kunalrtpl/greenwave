@@ -66,6 +66,15 @@ class DynamicMail extends Mailable
         return $mail;
     }
 
+    /**
+     * The subject as the recipient will see it, with its {placeholders} filled
+     * in. Used for logging who was sent what without building the whole mail.
+     */
+    public function resolvedSubject()
+    {
+        return $this->parsePlaceholders($this->template->subject);
+    }
+
     protected function parsePlaceholders($subject)
     {
         return preg_replace_callback('/\{([\w.]+)\}/', function ($matches) {
