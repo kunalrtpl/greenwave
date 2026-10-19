@@ -33,7 +33,7 @@ class CreateSamplingItemsTable extends Migration
             $table->text('discounts');
             $table->longtext('raw_materials');
             $table->text('comments');
-            $table->string('item_action')
+            $table->string('item_action');
             $table->tinyInteger('is_urgent')->default(0);
             $table->timestamps();
         });

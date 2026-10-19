@@ -548,7 +548,10 @@ class SamplingController extends Controller
                 $itemDetails->actual_no_of_packs    = $data['actual_no_of_packs'][$ikey];
                 $itemDetails->comments              = $data['comments'][$ikey];
                 $itemDetails->dispatched_qty        = 0;
-                $itemDetails->required_through = $data['required_through'][$ikey];
+                // Transport is now chosen at dispatch time (admin/sample-dispatch)
+                if (isset($data['required_through'][$ikey])) {
+                    $itemDetails->required_through = $data['required_through'][$ikey];
+                }
                 $itemDetails->dealer_price = $data['dealer_prices'][$ikey];
                 $itemDetails->final_value = $itemDetails->dealer_price * $itemDetails->actual_qty;
                 $itemDetails->save();

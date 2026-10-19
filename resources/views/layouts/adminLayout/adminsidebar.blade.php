@@ -26,7 +26,14 @@ $getallModules =  Module::getModules(); ?>
 				<?php } } else{ 
 				$sessionvalues = explode(',',$module['session_value']);
 				?>
-				<?php if(in_array(Session::get('active'),$sessionvalues)) {?>
+				<?php
+				// The parent's own list is capped at varchar(191) and can lose
+				// entries off the end, so fall back to what its children say.
+				$childSessionValues = array_column($module['undermodules'], 'session_value');
+				$isOpen = in_array(Session::get('active'), $sessionvalues)
+				       || in_array(Session::get('active'), $childSessionValues);
+				?>
+				<?php if($isOpen) {?>
 	            <li class="start active ">
 	            <?php }else{ ?> 
 	            <li>

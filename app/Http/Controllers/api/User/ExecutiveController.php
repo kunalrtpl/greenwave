@@ -44,6 +44,8 @@ use App\MarketProductInfo;
 use App\StockAdjustment;
 use App\InterDealerStockLog;
 use App\Sampling;
+use App\SamplingRequest;
+use App\Services\SamplingRequestService;
 use App\Feedback;
 use App\MarketSample;
 use App\ComplaintSample;
@@ -741,40 +743,12 @@ class ExecutiveController extends Controller
         }
     }
 
-    public function createSampleRequest(Request $request){
-        if($request->isMethod('post')){
-            $resp = $this->resp;
-            if($resp['status'] && isset($resp['user'])) {
-                $data = $request->all();
-                $rules = [
-                    'items'               => 'sometimes|array',
-                    'items.*.product_id'  => 'required|exists:products,id',
-                    'items.*.qty'         => 'required|numeric',
-                ];
-                $customMessages = [];
-                $validator = Validator::make($data,$rules,$customMessages);
-                if ($validator->fails()) {
-                    return response()->json(validationResponse($validator),422); 
-                }else{
-                    //DB::beginTransaction();
-                    $data['user'] = $resp['user']['id'];
-                    $data['action'] = 'user';
-                    $data['sample_date'] = date('Y-m-d');
-                    $data['request_type'] = 'On Request';
-                    Sampling::createOrEditFreeSample($data,$resp);
-                    //DB::commit();
-                    $message ="Sample has been created successfully";
-                    return response()->json(apiSuccessResponse($message),200);
-                }
-            }else{
-                $message = "Unable to fetch. PLease try again after sometime";
-                return response()->json(apiErrorResponse($message),422);
-            }
-        }else{
-            $message = "GET not supported for this route";
-            return response()->json(apiErrorResponse($message),422); 
-        }
-    }
+    /**
+     * Sample requests moved to SamplingRequestController, which serves both the
+     * old and the new app payloads and writes the new sampling_requests tables.
+     *
+     * @see \App\Http\Controllers\api\User\SamplingRequestController
+     */
 
     public function deleteSampleRequest(Request $request)
     {

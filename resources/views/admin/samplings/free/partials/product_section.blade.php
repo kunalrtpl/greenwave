@@ -114,7 +114,6 @@
                                     <th width="10%">No of Packs</th>
                                     <th width="10%">Qty (Kg)</th>
                                     <th width="10%">Value (₹)</th>
-                                    <th width="10%">Transport</th>
                                     <th width="15%">Comments</th>
                                 </tr>
                             </thead>
@@ -139,7 +138,6 @@
                                         <td>{{ $item->pack_size }}</td>
                                         <td>{{ $item->no_of_packs }}</td>
                                         <td>{{ $item->qty }} Kg</td>
-                                        <td>—</td>
                                         <td>—</td>
                                         <td>{{ $item->remarks }}</td>
                                     </tr>
@@ -244,14 +242,6 @@
                                     </td>
 
                                     <td>₹ <span class="row-value">0</span></td>
-
-                                    <td>
-                                        <select name="required_through[]" class="form-control" required>
-                                            <option value="">Select</option>
-                                            <option value="courier" {{ $item->required_through == 'courier' ? 'selected' : '' }}>Courier</option>
-                                            <option value="transport" {{ $item->required_through == 'transport' ? 'selected' : '' }}>Transport</option>
-                                        </select>
-                                    </td>
 
                                     <td>
                                         <textarea class="form-control"

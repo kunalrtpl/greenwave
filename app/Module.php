@@ -108,7 +108,17 @@ class Module extends Model
                 ->where('samplings.sample_status', 'approved')
                 ->whereColumn('sampling_items.actual_qty', '!=', 'sampling_items.dispatched_qty')
                 ->count();
+        } elseif ($sessionValue == "samplingRequestsAll") {
+            $counts['pending'] = \App\SamplingRequest::ofStatus(\App\SamplingRequest::STATUS_PENDING)->where('is_voluntarily', 0)->count();
+        } elseif ($sessionValue == "samplingRequests") {
+            $counts['pending'] = \App\SamplingRequest::ofStatus(\App\SamplingRequest::STATUS_PENDING)->where('is_voluntarily', 0)->count();
+        } elseif ($sessionValue == "samplingRequestsApproved") {
+            // Red badge = still waiting on stores, blue badge = ready to go out.
+            $counts['pending']  = \App\SamplingRequest::pendingDispatch()->where('is_ready', 0)->count();
+            $counts['approved'] = \App\SamplingRequest::pendingDispatch()->where('is_ready', 1)->count();
         }
+        // "Dispatched Samples (All)" (samplingDispatch) carries no badge: it is
+        // a history screen, so there is nothing pending on it to count.
 
         return $counts;
     }

@@ -66,9 +66,30 @@ class EmailService
 
     protected static function resolveRecipients(EmailTemplate $template, $to): array
     {
-        if (!empty($to)) {
-            return array_values(array_filter((array) $to));
+        $recipients = !empty($to)
+            ? array_values(array_filter((array) $to))
+            : array_values(array_filter((array) ($template->to_emails ?? [])));
+
+        return self::applyRedirect($recipients, $template);
+    }
+
+    /**
+     * While MAIL_REDIRECT_TO is set, every message goes to that one inbox. The
+     * real recipients are still worked out and logged, so testing shows who
+     * would have been written to without anyone actually being written to.
+     */
+    protected static function applyRedirect(array $recipients, EmailTemplate $template): array
+    {
+        $redirectTo = config('mail.redirect_to');
+
+        if (empty($redirectTo) || empty($recipients)) {
+            return $recipients;
         }
-        return array_values(array_filter((array) ($template->to_emails ?? [])));
+
+        Log::info("EmailService: Redirecting [{$template->event_key}] to {$redirectTo}", [
+            'would_have_gone_to' => $recipients,
+        ]);
+
+        return array_values(array_filter((array) $redirectTo));
     }
 }

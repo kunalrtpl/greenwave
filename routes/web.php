@@ -448,6 +448,46 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 		Route::match(['get', 'post'], '/sample-bill-ready', 'SamplingController@sampleBillReady');
 		Route::match(['get', 'post'], '/sample-dispatched-material', 'SamplingController@sampleDispatchedMaterial');
 
+		/*
+		 | Revamped two-step sampling flow.
+		 |
+		 | Step 1 — sampling-requests: one screen for all four statuses, picked
+		 |          with ?status=pending|approved|closed|declined.
+		 | Step 2 — sample-dispatch: replaces dispatch planning, finalize D.O.,
+		 |          D.O. ready and bill ready.
+		 */
+		Route::prefix('/sampling-requests')->name('admin.sampling-requests.')->group(function () {
+		    /*
+		     | One screen, five clean URLs. They are declared separately rather
+		     | than as /{status} so each has its own route uri, which is what the
+		     | `user` middleware matches module permissions against.
+		     */
+		    Route::get('/', 'SamplingRequestController@index')->name('index');
+		    Route::get('/pending', 'SamplingRequestController@pending')->name('pending');
+		    Route::get('/approved', 'SamplingRequestController@approved')->name('approved');
+		    Route::get('/closed', 'SamplingRequestController@closed')->name('closed');
+		    Route::get('/declined', 'SamplingRequestController@declined')->name('declined');
+		    Route::get('/{id}', 'SamplingRequestController@show')->name('show')->where('id', '[0-9]+');
+		    Route::post('/{id}', 'SamplingRequestController@update')->name('update')->where('id', '[0-9]+');
+		    Route::post('/{id}/approve', 'SamplingRequestController@approve')->name('approve')->where('id', '[0-9]+');
+		    Route::post('/{id}/decline', 'SamplingRequestController@decline')->name('decline')->where('id', '[0-9]+');
+		    Route::post('/{id}/mark-ready', 'SamplingRequestController@markReady')->name('mark-ready')->where('id', '[0-9]+');
+
+		    // Query thread between the employee and the admin.
+		    Route::get('/{id}/queries', 'SamplingRequestController@queries')->name('queries')->where('id', '[0-9]+');
+		    Route::post('/{id}/raise-query', 'SamplingRequestController@raiseQuery')->name('raise-query')->where('id', '[0-9]+');
+		});
+
+		// Shared dealer / customer / employee picker for both steps.
+		Route::get('/sampling-parties', 'SamplingRequestController@parties')->name('admin.sampling-parties');
+
+		Route::prefix('/sample-dispatch')->name('admin.sample-dispatch.')->group(function () {
+		    Route::get('/', 'SampleDispatchController@index')->name('index');
+		    Route::get('/create', 'SampleDispatchController@create')->name('create');
+		    Route::post('/', 'SampleDispatchController@store')->name('store');
+		    Route::get('/requests', 'SampleDispatchController@readyRequests')->name('requests');
+		});
+
 
 		Route::match(['get', 'post'], '/offline-batches', 'OfflineBatchController@offlineBatches');
 		Route::match(['get', 'post'], '/add-edit-offline-batch/{id?}', 'OfflineBatchController@addEditOfflineBatch');

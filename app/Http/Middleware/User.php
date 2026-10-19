@@ -26,28 +26,49 @@ class User
         }else{
             if(Auth::user()->type !="admin"){
                 $currentUrl = Route::getFacadeRoot()->current()->uri();
-                $moduleDetail = Module::orwhere('view_route',$currentUrl)->orwhere('edit_route',$currentUrl)->orwhere('delete_route',$currentUrl)->first();
-                $moduleDetail = json_decode(json_encode($moduleDetail),true);
-                if(!empty($moduleDetail)){
-                    $userRoleDetail = UserRole::where(['user_id'=>Auth::user()->id,'module_id' => $moduleDetail['id']])->first();
-                    $userRoleDetail = json_decode(json_encode($userRoleDetail),true);
-                    if(!empty($userRoleDetail) && !empty($moduleDetail)){
-                        if($currentUrl == $moduleDetail['view_route'] && $userRoleDetail['view_access'] == 0){
-                            return redirect('/admin/dashboard')->with('flash_message_error','You have no right to access this functionality');
+
+                /*
+                 | Several modules can point at the same route with different
+                 | query strings — the sampling request screens are one screen
+                 | listed four times as ?status=pending|approved|closed|declined.
+                 | So match on the path and let access to any of them through.
+                 */
+                $modules = Module::where(function ($query) use ($currentUrl) {
+                    foreach (['view_route', 'edit_route', 'delete_route'] as $column) {
+                        $query->orWhere($column, $currentUrl)
+                              ->orWhere($column, 'like', $currentUrl . '?%');
+                    }
+                })->get();
+
+                if($modules->count()){
+                    $allowed = false;
+
+                    foreach($modules as $module){
+                        $userRoleDetail = UserRole::where(['user_id'=>Auth::user()->id,'module_id' => $module->id])->first();
+
+                        // A module the role was never configured for stays open,
+                        // which is how this check has always behaved.
+                        if(empty($userRoleDetail)){
+                            $allowed = true;
+                            break;
                         }
-                        if($currentUrl == $moduleDetail['edit_route'] && $userRoleDetail['edit_access'] == 0){
-                            return redirect('/admin/dashboard')->with('flash_message_error','You have no right to access this functionality');
+                        if($this->routeMatches($currentUrl, $module->view_route) && $userRoleDetail->view_access != 0){
+                            $allowed = true;
+                            break;
                         }
-                        if($currentUrl == $moduleDetail['delete_route'] && $userRoleDetail['delete_access'] == 0){
-                            return redirect('/admin/dashboard')->with('flash_message_error','You have no right to access this functionality');
+                        if($this->routeMatches($currentUrl, $module->edit_route) && $userRoleDetail->edit_access != 0){
+                            $allowed = true;
+                            break;
+                        }
+                        if($this->routeMatches($currentUrl, $module->delete_route) && $userRoleDetail->delete_access != 0){
+                            $allowed = true;
+                            break;
                         }
                     }
-                }else{
-                    $moduleDetail = DB::table('modules')->orwhere('view_route',$currentUrl)->orwhere('edit_route',$currentUrl)->orwhere('delete_route',$currentUrl)->first();
-                        $moduleDetail = json_decode(json_encode($moduleDetail),true);
-                        if(!empty($moduleDetail)){
-                            return redirect('/admin/dashboard')->with('flash_message_error','You have no right to access this functionality');
-                        }
+
+                    if(!$allowed){
+                        return redirect('/admin/dashboard')->with('flash_message_error','You have no right to access this functionality');
+                    }
                 }
             }
 
@@ -62,5 +83,14 @@ class User
             }
         }
         return $next($request);
+    }
+
+    /** True when a module route points at this path, with or without a query string. */
+    private function routeMatches($currentUrl, $moduleRoute)
+    {
+        if (empty($moduleRoute)) {
+            return false;
+        }
+        return strtok($moduleRoute, '?') === $currentUrl;
     }
 }

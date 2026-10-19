@@ -42,6 +42,21 @@ class User extends Authenticatable
         'hash_salt' => 'array'
     ];
 
+    const MARKETING_DEPARTMENT_ID = 2;
+
+    /**
+     * Active marketing-department employees, the same criteria as the
+     * SendDailyWorkReport command.
+     */
+    public function scopeMarketingEmployees($query){
+        return $query->where('users.status', 1)
+            ->whereIn('users.id', function ($q) {
+                $q->select('user_id')
+                  ->from('user_departments')
+                  ->where('department_id', self::MARKETING_DEPARTMENT_ID);
+            });
+    }
+
     public function departments(){
         return $this->hasMany('App\UserDepartment')->with(['subregions','products']);
     }

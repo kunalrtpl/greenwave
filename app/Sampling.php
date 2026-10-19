@@ -27,6 +27,14 @@ class Sampling extends Model
         return $this->belongsTo('App\User');
     }
 
+    public function dispatch_dealer(){
+        return $this->belongsTo('App\Dealer', 'dispatch_dealer_id');
+    }
+
+    public function dispatch_customer(){
+        return $this->belongsTo('App\Customer', 'dispatch_customer_id');
+    }
+
     public function sampleitems(){
         return $this->hasMany('App\SamplingItem')->with(['requested_product','product','sale_invoice_items']);
     }

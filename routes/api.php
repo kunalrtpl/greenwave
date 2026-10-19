@@ -207,11 +207,34 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::match(['get', 'post'], '/purchase-order','ExecutiveController@purchaseOrder'); 
 			Route::match(['get', 'post'], '/purchase-orders','ExecutiveController@purchaseorderListing');
 
-			Route::match(['get', 'post'], '/create-sample-request','ExecutiveController@createSampleRequest');
-			
+			/*
+			 | Sample requests live in their own controller so the old and the new
+			 | app can each have their own entry point. Both write the same
+			 | sampling_requests rows — see SamplingRequestController.
+			 */
+			Route::match(['get', 'post'], '/create-sample-request','SamplingRequestController@createSampleRequest');
+
 			Route::match(['get', 'post'], '/delete-sample-request','ExecutiveController@deleteSampleRequest');
 
-			Route::match(['get', 'post'], '/samplings','ExecutiveController@samplings'); 
+			Route::match(['get', 'post'], '/samplings','ExecutiveController@samplings');
+
+			// The new app's entry point: the same payload plus the dispatch party.
+			Route::post('/create-sampling-request','SamplingRequestController@createSamplingRequest');
+			Route::get('/sampling-requests','SamplingRequestController@samplingRequests');
+
+			// Query thread on one request — readable always, postable only
+			// while the request is pending or approved.
+			Route::get('/sampling-requests/{id}/queries','SamplingRequestController@getQueries');
+			Route::post('/sampling-requests/{id}/query','SamplingRequestController@sendQuery');
+
+			/*
+			 | Dispatched sample material and its receipt confirmation. The
+			 | request's own status is untouched by this: receipt is a flag on
+			 | the dispatched line, the same way is_ready is a flag inside
+			 | approved — see SampleDispatchController.
+			 */
+			Route::get('/sample-dispatches','SampleDispatchController@dispatches');
+			Route::post('/sample-dispatches/mark-received','SampleDispatchController@markReceived');
 
 			Route::match(['get', 'post'], '/market-products-info','ExecutiveController@marketProductsInfo');
 			Route::match(['get', 'post'], '/delete-market-products-info/{id}','ExecutiveController@deleteMarketProductsInfo');

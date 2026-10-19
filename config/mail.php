@@ -55,6 +55,33 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Redirect All Mail
+    |--------------------------------------------------------------------------
+    |
+    | While testing, set MAIL_REDIRECT_TO so every message goes to one inbox
+    | instead of to real employees, dealers or customers. The code still works
+    | out the real recipients and logs them, so what would have been sent is
+    | visible without anyone actually receiving it. Leave empty in production.
+    |
+    */
+
+    'redirect_to' => env('MAIL_REDIRECT_TO'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Admin panel URL used in emails
+    |--------------------------------------------------------------------------
+    |
+    | Where an "open the admin panel" button in an email should point. It is
+    | its own setting because APP_URL is the app's own host, which on a dev
+    | machine is not the host the person reading the email can open.
+    |
+    */
+
+    'admin_panel_url' => rtrim(env('MAIL_ADMIN_PANEL_URL', env('APP_URL', 'https://g2app.in')), '/'),
+
     'from' => [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
         'name' => env('MAIL_FROM_NAME', 'Example'),
