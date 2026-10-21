@@ -612,6 +612,15 @@ Route::post('/email-templates/{id}',    'EmailTemplateController@update')->name(
 		    // AJAX POST: update a single product row
 		    Route::post('update/{id}', 'ProductPricingController@update')
 		         ->name('update');
+
+		    // Discontinue: own flag, saved on its own; ticking it emails the
+		    // linked employees and dealers in batches from a popup.
+		    Route::get('discontinue/{id}/recipients', 'ProductPricingController@discontinueRecipients')
+		         ->name('discontinue.recipients')->where('id', '[0-9]+');
+		    Route::post('discontinue/{id}', 'ProductPricingController@discontinue')
+		         ->name('discontinue')->where('id', '[0-9]+');
+		    Route::post('discontinue/{id}/notify', 'ProductPricingController@discontinueNotify')
+		         ->name('discontinue.notify')->where('id', '[0-9]+');
 		    Route::get('product-pricing/export-pdf', 'ProductPricingController@exportPdf')
      		->name('export-pdf');
 

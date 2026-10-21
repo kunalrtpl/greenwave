@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Session;
 use Mpdf\Mpdf;
+use App\Services\ProductDiscontinueService;
 
 class ProductPricingController extends Controller
 {
@@ -150,6 +151,102 @@ class ProductPricingController extends Controller
             DB::rollBack();
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Who will be told about a discontinuation: the employees and dealers
+     * linked to the product.
+     * GET /admin/product-pricing/discontinue/{id}/recipients
+     */
+    public function discontinueRecipients(ProductDiscontinueService $service, $productId)
+    {
+        $product = DB::table('products')->where('id', $productId)->first();
+        if (!$product) {
+            return response()->json(['success' => false, 'message' => 'Product not found.'], 404);
+        }
+
+        $strip = function ($r) {
+            unset($r->emails);
+            return $r;
+        };
+
+        return response()->json([
+            'success'   => true,
+            'product'   => [
+                'id'            => $product->id,
+                'product_name'  => $product->product_name,
+                'product_code'  => $product->product_code,
+                'not_available' => (int) $product->not_available,
+                'discontinued'  => (int) $product->discontinued,
+            ],
+            'employees' => $service->employees($product->id)->map($strip)->values(),
+            'dealers'   => $service->dealers($product->id)->map($strip)->values(),
+        ]);
+    }
+
+    /**
+     * Set or clear the discontinued flag on its own, without touching the
+     * rest of the row. Unticking saves straight away; ticking is done from
+     * the notify popup.
+     * POST /admin/product-pricing/discontinue/{id}
+     */
+    public function discontinue(Request $request, ProductDiscontinueService $service, $productId)
+    {
+        $request->validate(['discontinued' => 'required|boolean']);
+
+        $product = DB::table('products')->where('id', $productId)->first();
+        if (!$product) {
+            return response()->json(['success' => false, 'message' => 'Product not found.'], 404);
+        }
+
+        $discontinued = (bool) $request->input('discontinued');
+        $error = $service->setDiscontinued($product, $discontinued);
+        if ($error) {
+            return response()->json(['success' => false, 'message' => $error], 422);
+        }
+
+        return response()->json([
+            'success'      => true,
+            'discontinued' => $discontinued ? 1 : 0,
+            'message'      => $discontinued
+                ? $product->product_name . ' marked as discontinued.'
+                : $product->product_name . ' is no longer discontinued.',
+        ]);
+    }
+
+    /**
+     * Email one batch of linked employees / dealers about the discontinuation.
+     * The popup posts the list a few at a time and shows progress between
+     * batches.
+     * POST /admin/product-pricing/discontinue/{id}/notify
+     */
+    public function discontinueNotify(Request $request, ProductDiscontinueService $service, $productId)
+    {
+        $request->validate([
+            'recipients'             => 'required|array|max:' . ProductDiscontinueService::MAX_BATCH,
+            'recipients.*.type'      => 'required|in:employee,dealer',
+            'recipients.*.id'        => 'required|integer',
+            'remarks'                => 'nullable|string|max:1000',
+        ]);
+
+        $product = DB::table('products')->where('id', $productId)->first();
+        if (!$product) {
+            return response()->json(['success' => false, 'message' => 'Product not found.'], 404);
+        }
+        if (!$product->discontinued) {
+            return response()->json(['success' => false, 'message' => 'This product is not marked as discontinued.'], 422);
+        }
+
+        // A batch of SMTP sends can outlast PHP's default limit.
+        @set_time_limit(120);
+
+        $results = $service->notifyBatch(
+            $product,
+            $request->input('recipients'),
+            $request->input('remarks')
+        );
+
+        return response()->json(['success' => true, 'results' => $results]);
     }
 
     /**

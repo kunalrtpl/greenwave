@@ -18,18 +18,21 @@ class EmailService
      *                                      mailData to attach files — no signature change needed.
      * @param string|array|null $to         Override recipients; null = use to_emails from DB
      * @param string|array|null $cc         Optional CC recipients
+     * @return bool                        True when the message was handed to the mailer.
+     *                                      Existing callers can keep ignoring it.
      */
-    public static function send(string $eventKey, array $mailData = [], $to = null, $cc = null): void
+    public static function send(string $eventKey, array $mailData = [], $to = null, $cc = null): bool
     {
         try {
             $template = EmailTemplate::getActive($eventKey);
             if (!$template) {
                 Log::warning("EmailService: No active template for [{$eventKey}]. Skipping.");
-                return;
+                return false;
             }
-            self::sendTemplate($template, $mailData, $to, $cc);
+            return self::sendTemplate($template, $mailData, $to, $cc);
         } catch (\Exception $e) {
             Log::error("EmailService: Failed [{$eventKey}] — " . $e->getMessage());
+            return false;
         }
     }
 
@@ -40,8 +43,9 @@ class EmailService
      * @param array             $mailData
      * @param string|array|null $to         Override recipients; null = use to_emails from DB
      * @param string|array|null $cc         Optional CC recipients
+     * @return bool                        True when the message was handed to the mailer.
      */
-    public static function sendTemplate(EmailTemplate $template, array $mailData = [], $to = null, $cc = null): void
+    public static function sendTemplate(EmailTemplate $template, array $mailData = [], $to = null, $cc = null): bool
     {
         $recipients   = [];
         $ccRecipients = [];
@@ -50,7 +54,7 @@ class EmailService
             $recipients = self::resolveRecipients($template, $to);
             if (empty($recipients)) {
                 Log::warning("EmailService: No recipients for template [{$template->event_key}] (id={$template->id}). Skipping.");
-                return;
+                return false;
             }
 
             $ccRecipients = self::resolveCc($template, $cc, $recipients);
@@ -86,11 +90,14 @@ class EmailService
                 // Kept for anyone already grepping the old key.
                 'recipients' => $recipients,
             ]);
+
+            return true;
         } catch (\Exception $e) {
             Log::error(
                 "EmailService: Failed template [{$template->event_key}] (id={$template->id}) — " . $e->getMessage(),
                 ['to' => $recipients, 'cc' => $ccRecipients]
             );
+            return false;
         }
     }
 
