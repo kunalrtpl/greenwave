@@ -613,14 +613,17 @@ Route::post('/email-templates/{id}',    'EmailTemplateController@update')->name(
 		    Route::post('update/{id}', 'ProductPricingController@update')
 		         ->name('update');
 
-		    // Discontinue: own flag, saved on its own; ticking it emails the
-		    // linked employees and dealers in batches from a popup.
-		    Route::get('discontinue/{id}/recipients', 'ProductPricingController@discontinueRecipients')
-		         ->name('discontinue.recipients')->where('id', '[0-9]+');
+		    // Discont. and N.A. are saved on their own from the notify popup,
+		    // which can then email the linked employees and dealers about the
+		    // change (also used for dealer price changes).
+		    Route::get('notify/{id}/recipients', 'ProductPricingController@notifyRecipients')
+		         ->name('notify.recipients')->where('id', '[0-9]+');
+		    Route::post('notify/{id}', 'ProductPricingController@notify')
+		         ->name('notify')->where('id', '[0-9]+');
 		    Route::post('discontinue/{id}', 'ProductPricingController@discontinue')
 		         ->name('discontinue')->where('id', '[0-9]+');
-		    Route::post('discontinue/{id}/notify', 'ProductPricingController@discontinueNotify')
-		         ->name('discontinue.notify')->where('id', '[0-9]+');
+		    Route::post('not-available/{id}', 'ProductPricingController@notAvailable')
+		         ->name('not-available')->where('id', '[0-9]+');
 		    Route::get('product-pricing/export-pdf', 'ProductPricingController@exportPdf')
      		->name('export-pdf');
 

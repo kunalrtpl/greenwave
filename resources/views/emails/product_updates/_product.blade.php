@@ -1,10 +1,12 @@
 {{--
-   The product block shared by both discontinued emails: what was
-   discontinued, from when, and the admin's note.
+   The product block shared by every product update email: which product,
+   its new status, from when, and the admin's note.
+
+   Expects: $product, $effectiveOn, $statusLabel, $statusColor, optional $remarks
 --}}
 <tr>
    <td class="section">
-      <div class="section-label">Discontinued Product</div>
+      <div class="section-label">Product Details</div>
       <table role="presentation" class="info-table">
          <tr>
             <td class="info-row-label">Product</td>
@@ -17,17 +19,13 @@
          </tr>
          @endif
          <tr>
+            <td class="info-row-label">Status</td>
+            <td class="info-row-value"><strong style="color:{{ $statusColor }};">{{ $statusLabel }}</strong></td>
+         </tr>
+         <tr>
             <td class="info-row-label">Effective From</td>
-            <td class="info-row-value"><strong style="color:#c62828;">{{ $discontinuedOn }}</strong></td>
+            <td class="info-row-value"><strong>{{ $effectiveOn }}</strong></td>
          </tr>
       </table>
    </td>
 </tr>
-
-@if(!empty($remarks))
-<tr>
-   <td class="section">
-      <div class="note"><strong>Note from Greenwave:</strong><br>{!! nl2br(e($remarks)) !!}</div>
-   </td>
-</tr>
-@endif

@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Session;
 use Mpdf\Mpdf;
-use App\Services\ProductDiscontinueService;
+use App\Services\ProductNotifyService;
 
 class ProductPricingController extends Controller
 {
@@ -154,11 +154,11 @@ class ProductPricingController extends Controller
     }
 
     /**
-     * Who will be told about a discontinuation: the employees and dealers
-     * linked to the product.
-     * GET /admin/product-pricing/discontinue/{id}/recipients
+     * The employees and dealers linked to a product — the people the notify
+     * popup can email about a change.
+     * GET /admin/product-pricing/notify/{id}/recipients
      */
-    public function discontinueRecipients(ProductDiscontinueService $service, $productId)
+    public function notifyRecipients(ProductNotifyService $service, $productId)
     {
         $product = DB::table('products')->where('id', $productId)->first();
         if (!$product) {
@@ -172,79 +172,90 @@ class ProductPricingController extends Controller
 
         return response()->json([
             'success'   => true,
-            'product'   => [
-                'id'            => $product->id,
-                'product_name'  => $product->product_name,
-                'product_code'  => $product->product_code,
-                'not_available' => (int) $product->not_available,
-                'discontinued'  => (int) $product->discontinued,
-            ],
             'employees' => $service->employees($product->id)->map($strip)->values(),
             'dealers'   => $service->dealers($product->id)->map($strip)->values(),
         ]);
     }
 
     /**
-     * Set or clear the discontinued flag on its own, without touching the
-     * rest of the row. Unticking saves straight away; ticking is done from
-     * the notify popup.
+     * Set or clear Discontinued on its own, without touching the rest of the
+     * row. Called from the notify popup, before any email goes out.
      * POST /admin/product-pricing/discontinue/{id}
      */
-    public function discontinue(Request $request, ProductDiscontinueService $service, $productId)
+    public function discontinue(Request $request, ProductNotifyService $service, $productId)
     {
         $request->validate(['discontinued' => 'required|boolean']);
 
+        return $this->saveFlag($productId, (bool) $request->input('discontinued'), function ($product, $on) use ($service) {
+            return $service->setDiscontinued($product, $on);
+        }, 'marked as discontinued.', 'is available again.');
+    }
+
+    /**
+     * Set or clear Not Available on its own. Called from the notify popup.
+     * POST /admin/product-pricing/not-available/{id}
+     */
+    public function notAvailable(Request $request, ProductNotifyService $service, $productId)
+    {
+        $request->validate(['not_available' => 'required|boolean']);
+
+        return $this->saveFlag($productId, (bool) $request->input('not_available'), function ($product, $on) use ($service) {
+            return $service->setNotAvailable($product, $on);
+        }, 'marked as not available.', 'marked as available.');
+    }
+
+    protected function saveFlag($productId, bool $on, callable $save, $onText, $offText)
+    {
         $product = DB::table('products')->where('id', $productId)->first();
         if (!$product) {
             return response()->json(['success' => false, 'message' => 'Product not found.'], 404);
         }
 
-        $discontinued = (bool) $request->input('discontinued');
-        $error = $service->setDiscontinued($product, $discontinued);
+        $error = $save($product, $on);
         if ($error) {
             return response()->json(['success' => false, 'message' => $error], 422);
         }
 
         return response()->json([
-            'success'      => true,
-            'discontinued' => $discontinued ? 1 : 0,
-            'message'      => $discontinued
-                ? $product->product_name . ' marked as discontinued.'
-                : $product->product_name . ' is no longer discontinued.',
+            'success' => true,
+            'value'   => $on ? 1 : 0,
+            'message' => $product->product_name . ' ' . ($on ? $onText : $offText),
         ]);
     }
 
     /**
-     * Email one batch of linked employees / dealers about the discontinuation.
-     * The popup posts the list a few at a time and shows progress between
-     * batches.
-     * POST /admin/product-pricing/discontinue/{id}/notify
+     * Email linked employees / dealers about one change. The popup posts one
+     * recipient per request so its progress bar moves after every email.
+     * POST /admin/product-pricing/notify/{id}
      */
-    public function discontinueNotify(Request $request, ProductDiscontinueService $service, $productId)
+    public function notify(Request $request, ProductNotifyService $service, $productId)
     {
         $request->validate([
-            'recipients'             => 'required|array|max:' . ProductDiscontinueService::MAX_BATCH,
-            'recipients.*.type'      => 'required|in:employee,dealer',
-            'recipients.*.id'        => 'required|integer',
-            'remarks'                => 'nullable|string|max:1000',
+            'event'             => 'required|in:' . implode(',', array_keys(ProductNotifyService::EVENTS)),
+            'recipients'        => 'required|array|max:' . ProductNotifyService::MAX_BATCH,
+            'recipients.*.type' => 'required|in:employee,dealer',
+            'recipients.*.id'   => 'required|integer',
+            'remarks'           => 'nullable|string|max:1000',
+            'old_price'         => 'nullable|numeric|min:0',
         ]);
 
         $product = DB::table('products')->where('id', $productId)->first();
         if (!$product) {
             return response()->json(['success' => false, 'message' => 'Product not found.'], 404);
         }
-        if (!$product->discontinued) {
-            return response()->json(['success' => false, 'message' => 'This product is not marked as discontinued.'], 422);
+
+        $event = $request->input('event');
+        if ($mismatch = $service->eventMismatch($event, $product)) {
+            return response()->json(['success' => false, 'message' => $mismatch], 422);
         }
 
-        // A batch of SMTP sends can outlast PHP's default limit.
+        // An SMTP send can outlast PHP's default limit.
         @set_time_limit(120);
 
-        $results = $service->notifyBatch(
-            $product,
-            $request->input('recipients'),
-            $request->input('remarks')
-        );
+        $results = $service->notifyBatch($event, $product, $request->input('recipients'), [
+            'remarks'   => $request->input('remarks'),
+            'old_price' => $request->input('old_price'),
+        ]);
 
         return response()->json(['success' => true, 'results' => $results]);
     }

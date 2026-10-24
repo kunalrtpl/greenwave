@@ -150,12 +150,7 @@
     .na-toggle    input[type="checkbox"] { transform: scale(1.3); accent-color: #e53e3e;  cursor: pointer; }
     .disc-toggle  input[type="checkbox"] { transform: scale(1.3); accent-color: #805ad5;  cursor: pointer; }
     .disc-toggle  input[type="checkbox"]:disabled { cursor: not-allowed; opacity: .45; }
-    .disc-toggle.is-saving input { visibility: hidden; }
-    .disc-toggle { position: relative; }
-    .disc-toggle.is-saving:after {
-        content: ""; position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px;
-        border: 2px solid #d6bcfa; border-top-color: #805ad5; border-radius: 50%; animation: dcSpin .7s linear infinite;
-    }
+    .na-toggle    input[type="checkbox"]:disabled { cursor: not-allowed; opacity: .45; }
     .focus-toggle input[type="checkbox"] { transform: scale(1.3); accent-color: #38a169;  cursor: pointer; }
 
     .dp-wrap { display: flex; align-items: center; gap: 4px; width: 100%; }
@@ -220,7 +215,7 @@
     .dot-disc     { background: #805ad5; }
     .dot-focus    { background: #38a169; }
 
-    /* ══════════════ Discontinue popup ══════════════ */
+    /* ══════════════ Notify popup (Discont. / N.A. / price) ══════════════ */
     @keyframes dcSpin   { to { transform: rotate(360deg); } }
     @keyframes dcFadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes dcRise   { from { opacity: 0; transform: translateY(18px) scale(.98); } to { opacity: 1; transform: none; } }
@@ -362,10 +357,12 @@
 
     .dc-notice {
         margin-bottom: 16px;
-        display: flex; gap: 12px; padding: 12px 14px; border-radius: 10px !important;
+        display: none; gap: 12px; padding: 12px 14px; border-radius: 10px !important;
         background: #fffbeb; border: 1px solid #fbd38d; border-left: 4px solid #dd6b20;
         font-size: 12.5px; color: #7b341e; line-height: 1.6;
     }
+    /* Shown only once the main button is pressed and the work is running. */
+    .dc-modal.is-sending .dc-notice { display: flex; }
     .dc-notice > i { font-size: 18px; color: #dd6b20; margin-top: 2px; flex-shrink: 0; }
     .dc-notice strong { color: #7b341e; }
 
@@ -439,6 +436,48 @@
     .dc-modal.is-busy .dc-busy-hint { display: inline-flex; }
     .dc-modal.is-busy .dc-link { display: none; }
     .dc-hidden { display: none !important; }
+
+    /* themes — one per kind of change (done / failed headers still win) */
+    .dc-modal.t-green:not(.is-done):not(.is-failed) .dc-head { background: linear-gradient(135deg, #22543d 0%, #2f855a 60%, #48bb78 100%); }
+    .dc-modal.t-red:not(.is-done):not(.is-failed)   .dc-head { background: linear-gradient(135deg, #822727 0%, #c53030 60%, #f56565 100%); }
+    .dc-modal.t-blue:not(.is-done):not(.is-failed)  .dc-head { background: linear-gradient(135deg, #2a4365 0%, #2b6cb0 60%, #4299e1 100%); }
+    .dc-modal.t-green .dc-btn-primary { background: linear-gradient(135deg, #2f855a, #48bb78); box-shadow: 0 4px 12px rgba(72,187,120,.3); }
+    .dc-modal.t-red   .dc-btn-primary { background: linear-gradient(135deg, #c53030, #e53e3e); box-shadow: 0 4px 12px rgba(229,62,62,.3); }
+    .dc-modal.t-blue  .dc-btn-primary { background: linear-gradient(135deg, #2b6cb0, #3182ce); box-shadow: 0 4px 12px rgba(49,130,206,.3); }
+
+    /* "what is changing" card */
+    .dc-change {
+        display: flex; gap: 14px; align-items: flex-start; margin-bottom: 16px; padding: 14px 16px;
+        background: #fff; border: 1px solid #e2e8f0; border-left: 4px solid #805ad5; border-radius: 10px !important;
+    }
+    .dc-change-ico {
+        width: 36px; height: 36px; border-radius: 10px !important; flex-shrink: 0; font-size: 16px;
+        display: flex; align-items: center; justify-content: center; background: #faf5ff; color: #805ad5;
+    }
+    .dc-modal.t-green .dc-change      { border-left-color: #38a169; }
+    .dc-modal.t-green .dc-change-ico  { background: #f0fff4; color: #2f855a; }
+    .dc-modal.t-red   .dc-change      { border-left-color: #e53e3e; }
+    .dc-modal.t-red   .dc-change-ico  { background: #fff5f5; color: #c53030; }
+    .dc-modal.t-blue  .dc-change      { border-left-color: #3182ce; }
+    .dc-modal.t-blue  .dc-change-ico  { background: #ebf8ff; color: #2b6cb0; }
+    .dc-change-body { flex: 1; min-width: 0; font-size: 13px; color: #4a5568; line-height: 1.6; padding-top: 6px; }
+    .dc-change-body b { color: #2d3748; }
+    .dc-change-sub { font-size: 12px; color: #718096; margin-top: 10px; }
+
+    .dc-price { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding-top: 0; }
+    .dc-price-col .cap { font-size: 10px; font-weight: 800; color: #a0aec0; text-transform: uppercase; letter-spacing: .6px; }
+    .dc-price-col .old { font-size: 18px; font-weight: 700; color: #a0aec0; text-decoration: line-through; }
+    .dc-price-col .new { font-size: 24px; font-weight: 800; color: #2d3748; }
+    .dc-price-arrow { color: #cbd5e0; font-size: 20px; padding-top: 12px; }
+    .dc-price-delta {
+        margin-left: auto; padding: 8px 14px; border-radius: 10px !important; font-size: 15px; font-weight: 800;
+        display: flex; flex-direction: column; align-items: flex-end; line-height: 1.3;
+    }
+    .dc-price-delta span { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; }
+    .dc-price-delta.up   { background: #fff5f5; color: #c53030; }
+    .dc-price-delta.down { background: #f0fff4; color: #2f855a; }
+    .dc-price-delta.same { background: #ebf8ff; color: #2b6cb0; font-size: 13px; }
+    @media (max-width: 720px) { .dc-price-delta { margin-left: 0; align-items: flex-start; } }
 
     @media (max-width: 720px) {
         .dc-lists { grid-template-columns: 1fr; }
@@ -719,7 +758,7 @@
     </div>
 </div>
 
-{{-- ══ Discontinue popup ══ --}}
+{{-- ══ Notify popup: Discont., N.A. and dealer price changes ══ --}}
 <div class="dc-overlay" id="dc-overlay" aria-hidden="true">
     <div class="dc-modal" id="dc-modal" role="dialog" aria-modal="true" aria-labelledby="dc-title">
 
@@ -744,20 +783,25 @@
             <div id="dc-content" class="dc-hidden">
                 <div class="dc-error" id="dc-error"></div>
 
+                {{-- what is changing; filled per change by the script --}}
+                <div class="dc-change">
+                    <span class="dc-change-ico"><i class="fa fa-ban" id="dc-change-icon"></i></span>
+                    <div class="dc-change-body" id="dc-change-body"></div>
+                </div>
+
                 <div class="dc-notice">
                     <i class="fa fa-exclamation-triangle"></i>
                     <div>
                         <strong>Important:</strong> keep this window open until every email has been sent.
                         Emails go out one by one from this page — closing, refreshing or leaving it
-                        stops the ones that are left. Each person gets their own email at the real
-                        address shown below, so please check the list before you continue.
+                        stops the ones that are left.
                     </div>
                 </div>
 
                 {{-- progress (shown once sending starts) --}}
                 <div class="dc-progress">
                     <div class="dc-steps">
-                        <span class="dc-step" id="dc-step-1"><span class="num">1</span> Mark discontinued</span>
+                        <span class="dc-step" id="dc-step-1"><span class="num">1</span> <span id="dc-step-1-label">Save change</span></span>
                         <span class="dc-step-line" id="dc-line-1"></span>
                         <span class="dc-step" id="dc-step-2"><span class="num">2</span> Send emails</span>
                         <span class="dc-step-line" id="dc-line-2"></span>
@@ -819,12 +863,12 @@
         </div>
 
         <div class="dc-foot">
-            <button type="button" class="dc-link" id="dc-mark-only">Mark discontinued without sending emails</button>
+            <button type="button" class="dc-link" id="dc-mark-only">Save without sending emails</button>
             <span class="dc-busy-hint"><i class="fa fa-spinner fa-spin"></i> Sending — please don't close this window</span>
             <div class="dc-foot-right">
                 <button type="button" class="dc-btn dc-btn-ghost" id="dc-cancel">Cancel</button>
                 <button type="button" class="dc-btn dc-btn-warn dc-hidden" id="dc-retry"><i class="fa fa-refresh"></i> Retry failed</button>
-                <button type="button" class="dc-btn dc-btn-primary" id="dc-go" disabled><i class="fa fa-ban"></i> <span>Mark as Discontinued</span></button>
+                <button type="button" class="dc-btn dc-btn-primary" id="dc-go" disabled><i class="fa fa-ban" id="dc-go-icon"></i> <span>Save</span></button>
                 <button type="button" class="dc-btn dc-btn-success dc-hidden" id="dc-done"><i class="fa fa-check"></i> Done</button>
             </div>
         </div>
@@ -853,7 +897,6 @@ $(document).ready(function () {
         var dirty = (
             $row.find('.field-moq').val().trim()      !== ($row.data('orig-moq') + '')      ||
             $row.find('.field-dispatch').val().trim() !== ($row.data('orig-dispatch') + '') ||
-            ($row.find('.field-na').is(':checked')    ? 1 : 0) !== parseInt($row.data('orig-na'))    ||
             ($row.find('.field-focus').is(':checked') ? 1 : 0) !== parseInt($row.data('orig-focus')) ||
             curDpStr($row) !== origDpStr($row)
         );
@@ -871,78 +914,46 @@ $(document).ready(function () {
         checkDirty($(this).closest('.product-row'));
     });
 
-    /* ══ 2. NOT AVAILABLE — mutual exclusion ══ */
+    /* ══ 2–3. N.A. AND DISCONTINUED — independent of Update ══
+       Ticking or unticking either box opens the notify popup (section 9).
+       The box is put back straight away and only changes once the popup has
+       saved the new value, so cancelling the popup leaves it as it was. */
     $(document).on('change', '.product-row .field-na', function () {
-        var $this = $(this);
-        var $row  = $this.closest('.product-row');
-        var $disc = $row.find('.field-disc');
+        var $row = $(this).closest('.product-row');
+        var on   = this.checked;
+        $(this).prop('checked', !on);
 
-        if ($this.is(':checked') && $disc.is(':checked')) {
-            alert('Cannot mark as Not Available because this product is already marked as Discontinued.');
-            $this.prop('checked', false);
+        if (on && $row.find('.field-disc').is(':checked')) {
+            showToast('danger', '<i class="fa fa-exclamation-circle"></i> &nbsp;This product is discontinued. Untick Discont. first.');
             return;
         }
-
-        if ($this.is(':checked')) {
-            $disc.prop('disabled', true);
-        } else {
-            $disc.prop('disabled', false);
-        }
-
-        checkDirty($row);
+        NotifyModal.open($row, on ? 'na' : 'available');
     });
 
-    /* ══ 3. DISCONTINUED — independent of Update ══
-       Unticking saves straight away. Ticking opens the discontinue popup
-       (see the bottom of this script); the box is only ticked once the
-       popup has saved it. */
     $(document).on('change', '.product-row .field-disc', function () {
-        var $this = $(this);
-        var $row  = $this.closest('.product-row');
+        var $row = $(this).closest('.product-row');
+        var on   = this.checked;
+        $(this).prop('checked', !on);
 
-        if ($this.is(':checked')) {
-            $this.prop('checked', false);          // popup ticks it when saved
-            if ($row.find('.field-na').is(':checked') || parseInt($row.data('orig-na')) === 1) {
-                showToast('danger', '<i class="fa fa-exclamation-circle"></i> &nbsp;This product is marked Not Available. Untick N.A. and click Update first.');
-                return;
-            }
-            DiscModal.open($row);
+        if (on && $row.find('.field-na').is(':checked')) {
+            showToast('danger', '<i class="fa fa-exclamation-circle"></i> &nbsp;This product is marked Not Available. Untick N.A. first.');
             return;
         }
-
-        // Unticked: save immediately.
-        var $cell = $this.closest('.disc-toggle');
-        $this.prop('disabled', true);
-        $cell.addClass('is-saving');
-
-        $.ajax({
-            url:    '/admin/product-pricing/discontinue/' + $row.data('product-id'),
-            method: 'POST',
-            data:   { _token: CSRF, discontinued: 0 },
-            success: function (resp) {
-                if (!resp.success) { $this.prop('checked', true); showToast('danger', resp.message); return; }
-                setRowDiscontinued($row, false);
-                flashRow($row);
-                showToast('success', '<i class="fa fa-check-circle"></i> &nbsp;' + escapeHtml(resp.message));
-            },
-            error: function (xhr) {
-                $this.prop('checked', true);
-                showToast('danger', '<i class="fa fa-times-circle"></i> &nbsp;' + ajaxError(xhr, 'Could not save.'));
-            },
-            complete: function () {
-                $this.prop('disabled', false);
-                $cell.removeClass('is-saving');
-            }
-        });
+        NotifyModal.open($row, on ? 'discontinue' : 'reinstate');
     });
 
-    /* Keep the row, its N.A. box and the summary card in step with the saved flag. */
-    function setRowDiscontinued($row, on) {
-        $row.data('orig-disc', on ? 1 : 0);
-        $row.find('.field-disc').prop('checked', on);
-        $row.find('.field-na').prop('disabled', on);
+    /* Keep a row's boxes and the summary cards in step with a saved flag.
+       Discontinued and Not Available exclude each other, so ticking one
+       locks the other. */
+    function setRowFlag($row, flag, on) {
+        var mine  = flag === 'disc' ? '.field-disc' : '.field-na';
+        var other = flag === 'disc' ? '.field-na'   : '.field-disc';
+        $row.data(flag === 'disc' ? 'orig-disc' : 'orig-na', on ? 1 : 0);
+        $row.find(mine).prop('checked', on);
+        $row.find(other).prop('disabled', on);
         $('#sum-disc').text($('#pricing-tbody .field-disc:checked').length);
-        if ($('#filter-disc').is(':checked')) applyFilters();
+        $('#sum-na').text($('#pricing-tbody .field-na:checked').length);
+        if ($('#filter-disc').is(':checked') || $('#filter-na').is(':checked')) applyFilters();
     }
 
     function flashRow($row) {
@@ -955,14 +966,14 @@ $(document).ready(function () {
     }
 
     function ajaxError(xhr, fallback) {
-        if (xhr.responseJSON) {
+        if (xhr && xhr.responseJSON) {
             if (xhr.responseJSON.errors) {
                 var k = Object.keys(xhr.responseJSON.errors)[0];
                 return escapeHtml(xhr.responseJSON.errors[k][0]);
             }
             if (xhr.responseJSON.message) return escapeHtml(xhr.responseJSON.message);
         }
-        if (xhr.status === 0) return 'Network error — check your connection.';
+        if (xhr && xhr.status === 0) return 'Network error — check your connection.';
         return fallback;
     }
 
@@ -971,64 +982,77 @@ $(document).ready(function () {
         checkDirty($(this).closest('.product-row'));
     });
 
-    /* ══ 5. UPDATE AJAX ══ */
-    $(document).on('click', '.btn-update:not(:disabled)', function () {
-        var $btn  = $(this);
-        var $row  = $btn.closest('.product-row');
-        var pid   = $row.data('product-id');
+    /* ══ 5. UPDATE ══
+       A new dealer price goes through the notify popup, so the linked
+       employees and dealers can be told about it. MOQ, dispatch time and
+       focus alone are saved straight away. */
+    function priceChanged($row) {
+        return curDpStr($row) !== '' && curDpStr($row) !== origDpStr($row);
+    }
+
+    /* Save the row. Resolves with the server response, rejects with an
+       error message. */
+    function saveRow($row) {
         var curDp = $row.find('.field-dp').val().trim();
         var dpChg = curDpStr($row) !== origDpStr($row);
 
         var payload = {
-            _token:                '{{ csrf_token() }}',
+            _token:                CSRF,
             moq:                   $row.find('.field-moq').val().trim(),
             average_dispatch_time: $row.find('.field-dispatch').val().trim(),
-            not_available:         $row.find('.field-na').is(':checked')    ? 1 : 0,
             focus_product:         $row.find('.field-focus').is(':checked') ? 1 : 0,
             dealer_price:          curDp !== '' ? curDp : null,
             dp_changed:            dpChg ? 1 : 0,
             pricing_id:            $row.data('pricing-id') || '',
         };
 
-        $btn.addClass('saving').html('<i class="fa fa-spinner fa-spin"></i>');
-
-        $.ajax({
-            url:    '/admin/product-pricing/update/' + pid,
+        return $.ajax({
+            url:    '/admin/product-pricing/update/' + $row.data('product-id'),
             method: 'POST',
-            data:   payload,
-            success: function (resp) {
-                if (!resp.success) { showToast('danger', resp.message); return; }
+            data:   payload
+        }).then(function (resp) {
+            if (!resp.success) return $.Deferred().reject(escapeHtml(resp.message || 'Update failed.')).promise();
 
-                $row.data('orig-moq',      payload.moq);
-                $row.data('orig-dispatch', payload.average_dispatch_time);
-                $row.data('orig-na',       payload.not_available);
-                $row.data('orig-focus',    payload.focus_product);
-                $row.data('orig-dp',       curDp !== '' ? parseFloat(curDp).toFixed(2) : '');
-                $row.data('focus',         payload.focus_product);
+            $row.data('orig-moq',      payload.moq);
+            $row.data('orig-dispatch', payload.average_dispatch_time);
+            $row.data('orig-focus',    payload.focus_product);
+            $row.data('orig-dp',       curDp !== '' ? parseFloat(curDp).toFixed(2) : '');
+            $row.data('focus',         payload.focus_product);
 
-                if (dpChg && resp.pricing_id) {
-                    $row.data('pricing-id', resp.pricing_id);
-                    $row.data('has-price', 1);
-                    $row.data('is-today',  1);
-                    $row.find('.price-date-label')
-                        .removeClass('pd-old pd-none').addClass('pd-today').text('Today');
-                }
+            if (dpChg && resp.pricing_id) {
+                $row.data('pricing-id', resp.pricing_id);
+                $row.data('has-price', 1);
+                $row.data('is-today',  1);
+                $row.find('.price-date-label')
+                    .removeClass('pd-old pd-none').addClass('pd-today').text('Today');
+            }
 
-                $row.removeClass('is-dirty');
-                $row.find('.inline-input').removeClass('changed');
-                $row.addClass('row-saved');
-                setTimeout(function () { $row.removeClass('row-saved'); }, 1700);
-                showToast('success', '<i class="fa fa-check-circle"></i> &nbsp;' + resp.message);
-            },
-            error: function (xhr) {
-                var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Update failed.';
-                showToast('danger', '<i class="fa fa-times-circle"></i> &nbsp;' + msg);
-            },
-            complete: function () {
+            $row.find('.inline-input').removeClass('changed');
+            checkDirty($row);
+            flashRow($row);
+            return resp;
+        }, function (xhr) {
+            return $.Deferred().reject(ajaxError(xhr, 'Update failed.')).promise();
+        });
+    }
+
+    $(document).on('click', '.btn-update:not(:disabled)', function () {
+        var $btn = $(this);
+        var $row = $btn.closest('.product-row');
+
+        if (priceChanged($row)) {
+            NotifyModal.open($row, 'price', { oldPrice: origDpStr($row), newPrice: curDpStr($row) });
+            return;
+        }
+
+        $btn.addClass('saving').html('<i class="fa fa-spinner fa-spin"></i>');
+        saveRow($row)
+            .done(function (resp) { showToast('success', '<i class="fa fa-check-circle"></i> &nbsp;' + escapeHtml(resp.message)); })
+            .fail(function (msg)  { showToast('danger',  '<i class="fa fa-times-circle"></i> &nbsp;' + msg); })
+            .always(function () {
                 $btn.removeClass('saving').html('<i class="fa fa-save"></i> Update');
                 checkDirty($row);
-            }
-        });
+            });
     });
 
     /* ══ 6. FILTERS + RENUMBER ══ */
@@ -1137,15 +1161,117 @@ $(document).ready(function () {
         }, 3200);
     }
 
-    /* ══ 9. DISCONTINUE POPUP ══
-       Ticking Discont. opens this. "Mark as Discontinued" saves the flag
-       first, then emails the selected employees and dealers a few at a time
-       (one AJAX request per batch) so the progress bar is live. The popup
-       cannot be closed while a batch is in flight. */
-    var DiscModal = (function () {
+    /* ══ 9. NOTIFY POPUP ══
+       One popup for every change the linked employees and dealers hear
+       about: discontinue, continue again, not available, available again
+       and a new dealer price. Each has an entry in ACTIONS. The main button
+       saves the change first, then emails the ticked people one per request
+       so the progress bar moves after every email. It cannot be closed
+       while a request is in flight. */
+    var NotifyModal = (function () {
         var BATCH = 1;   // one email per request, so the bar moves after every send
         var $ov = $('#dc-overlay'), $m = $('#dc-modal');
-        var st  = null;   // state of the popup currently open
+        var st  = null;  // state of the popup currently open
+
+        function money(v) {
+            return '₹' + parseFloat(v).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function postFlag(path, data) {
+            return $.ajax({
+                url:    '/admin/product-pricing/' + path + '/' + st.pid,
+                method: 'POST',
+                data:   $.extend({ _token: CSRF }, data)
+            }).then(function (resp) {
+                if (!resp.success) return $.Deferred().reject(escapeHtml(resp.message)).promise();
+                return resp;
+            }, function (xhr) {
+                return $.Deferred().reject(ajaxError(xhr, 'Could not save the change.')).promise();
+            });
+        }
+
+        function flagSaver(path, field, flag, on) {
+            return function () {
+                var data = {}; data[field] = on ? 1 : 0;
+                return postFlag(path, data).then(function (resp) {
+                    setRowFlag(st.$row, flag, on);
+                    flashRow(st.$row);
+                    return resp;
+                });
+            };
+        }
+
+        var ACTIONS = {
+            discontinue: {
+                event: 'discontinued', theme: 't-purple', icon: 'fa-ban',
+                kicker: 'Discontinue Product', step1: 'Mark discontinued', go: 'Mark as Discontinued',
+                markOnly: 'Mark discontinued without sending emails', doneKicker: 'Discontinued',
+                summary: function () {
+                    return 'Linked employees and dealers will be told that this product has been <b>discontinued</b> and can no longer be ordered.';
+                },
+                save: flagSaver('discontinue', 'discontinued', 'disc', true)
+            },
+            reinstate: {
+                event: 'reinstated', theme: 't-green', icon: 'fa-undo',
+                kicker: 'Continue Product', step1: 'Mark as continued', go: 'Continue Product',
+                markOnly: 'Continue without sending emails', doneKicker: 'Available again',
+                summary: function () {
+                    return 'This product was discontinued. Linked employees and dealers will be told it is <b>available again</b> and can be ordered.';
+                },
+                save: flagSaver('discontinue', 'discontinued', 'disc', false)
+            },
+            na: {
+                event: 'not_available', theme: 't-red', icon: 'fa-pause-circle',
+                kicker: 'Mark Not Available', step1: 'Mark not available', go: 'Mark as Not Available',
+                markOnly: 'Mark not available without sending emails', doneKicker: 'Marked not available',
+                summary: function () {
+                    return 'Linked employees and dealers will be told this product is <b>temporarily not available</b>. It is not discontinued.';
+                },
+                save: flagSaver('not-available', 'not_available', 'na', true)
+            },
+            available: {
+                event: 'available', theme: 't-green', icon: 'fa-check-circle',
+                kicker: 'Mark Available', step1: 'Mark available', go: 'Mark as Available',
+                markOnly: 'Mark available without sending emails', doneKicker: 'Marked available',
+                summary: function () {
+                    return 'This product was not available. Linked employees and dealers will be told it is <b>back in stock</b>.';
+                },
+                save: flagSaver('not-available', 'not_available', 'na', false)
+            },
+            price: {
+                event: 'price_changed', theme: 't-blue', icon: 'fa-inr',
+                kicker: 'Update Dealer Price', step1: 'Save new price', go: 'Update Price',
+                markOnly: 'Update price without sending emails', doneKicker: 'Price updated',
+                summary: function (o) {
+                    var oldP = o.oldPrice === '' ? null : parseFloat(o.oldPrice);
+                    var newP = parseFloat(o.newPrice);
+                    var delta;
+                    if (oldP === null) {
+                        delta = '<div class="dc-price-delta same"><i class="fa fa-star"></i> First price for this product</div>';
+                    } else {
+                        var diff = newP - oldP, up = diff > 0;
+                        var pct  = oldP > 0 ? Math.abs(diff / oldP * 100).toFixed(1) + '%' : '';
+                        delta = '<div class="dc-price-delta ' + (up ? 'up' : 'down') + '">' +
+                                    '<i class="fa fa-arrow-' + (up ? 'up' : 'down') + '"></i> ' + money(Math.abs(diff)) +
+                                    (pct ? ' (' + (up ? '+' : '−') + pct + ')' : '') +
+                                    '<span>Price ' + (up ? 'increase' : 'decrease') + '</span>' +
+                                '</div>';
+                    }
+                    return '<div class="dc-price">' +
+                               (oldP === null ? '' :
+                               '<div class="dc-price-col"><div class="cap">Current</div><div class="old">' + money(oldP) + '</div></div>' +
+                               '<div class="dc-price-arrow"><i class="fa fa-long-arrow-right"></i></div>') +
+                               '<div class="dc-price-col"><div class="cap">New price</div><div class="new">' + money(newP) + '</div></div>' +
+                               delta +
+                           '</div>' +
+                           '<div class="dc-change-sub">Linked employees and dealers will be told about the new dealer price. ' +
+                           'Any MOQ, dispatch time or focus change on this row is saved with it.</div>';
+                },
+                save: function () {
+                    return saveRow(st.$row);
+                }
+            }
+        };
 
         function initials(name) {
             var p = String(name || '?').trim().split(/\s+/);
@@ -1193,9 +1319,7 @@ $(document).ready(function () {
                 var $p = $m.find('.dc-pick[data-type="' + t + '"]:not(:disabled)');
                 $('.dc-all[data-type="' + t + '"]').prop('checked', $p.length > 0 && $p.filter(':checked').length === $p.length);
             });
-            $('#dc-go span').text(n > 0
-                ? 'Mark as Discontinued & Email ' + n + (n === 1 ? ' person' : ' people')
-                : 'Mark as Discontinued');
+            $('#dc-go span').text(st.action.go + (n > 0 ? ' & Email ' + n + (n === 1 ? ' person' : ' people') : ''));
             $('#dc-go').prop('disabled', false);
         }
 
@@ -1203,10 +1327,7 @@ $(document).ready(function () {
             st.busy = on;
             $m.toggleClass('is-busy', on);
             $m.find('.dc-pick, .dc-all, #dc-remarks').prop('disabled', on);
-            if (!on) {
-                // put back the "no email" rows as disabled
-                $m.find('.dc-item.no-email .dc-pick').prop('disabled', true);
-            }
+            if (!on) $m.find('.dc-item.no-email .dc-pick').prop('disabled', true);
             $('#dc-cancel, #dc-go').prop('disabled', on);
         }
 
@@ -1240,14 +1361,22 @@ $(document).ready(function () {
         }
 
         /* ── open ── */
-        function open($row) {
-            st = { $row: $row, pid: $row.data('product-id'), busy: false, marked: false, sent: 0, failed: 0, skipped: 0, total: 0, failedList: [] };
+        function open($row, actionKey, opts) {
+            var action = ACTIONS[actionKey];
+            st = { $row: $row, pid: $row.data('product-id'), action: action, opts: opts || {},
+                   busy: false, saved: false, sent: 0, failed: 0, skipped: 0, total: 0, failedList: [] };
 
-            $m.removeClass('is-busy is-sending is-finished is-done is-failed has-failures');
-            $('#dc-head-icon').attr('class', 'fa fa-ban');
-            $('#dc-kicker').text('Discontinue Product');
+            $m.removeClass('is-busy is-sending is-finished is-done is-failed has-failures t-purple t-green t-red t-blue')
+              .addClass(action.theme);
+            $('#dc-head-icon, #dc-change-icon').attr('class', 'fa ' + action.icon);
+            $('#dc-go-icon').attr('class', 'fa ' + action.icon);
+            $('#dc-kicker').text(action.kicker);
             $('#dc-title').text($row.find('.prod-name').text());
             $('#dc-code').text($row.find('.prod-code').text()).toggle(!!$.trim($row.find('.prod-code').text()));
+            $('#dc-change-body').html(action.summary(st.opts));
+            $('#dc-step-1-label').text(action.step1);
+            $('#dc-mark-only').text(action.markOnly);
+            $('#dc-go span').text(action.go);
             $('#dc-loading').removeClass('dc-hidden');
             $('#dc-content').addClass('dc-hidden');
             $('#dc-remarks').val('');
@@ -1260,9 +1389,14 @@ $(document).ready(function () {
 
             $ov.addClass('open').attr('aria-hidden', 'false');
             $('body').addClass('dc-lock');
+            $m.find('.dc-body').scrollTop(0);
 
-            $.getJSON('/admin/product-pricing/discontinue/' + st.pid + '/recipients')
+            var mine = st;
+            $.getJSON('/admin/product-pricing/notify/' + st.pid + '/recipients')
                 .done(function (resp) {
+                    if (st !== mine) return;
+                    $('#dc-loading').addClass('dc-hidden');
+                    $('#dc-content').removeClass('dc-hidden');
                     if (!resp.success) { showError(escapeHtml(resp.message)); return; }
                     $('#dc-n-emp').text(resp.employees.length);
                     $('#dc-n-dlr').text(resp.dealers.length);
@@ -1270,11 +1404,10 @@ $(document).ready(function () {
                     $('#dc-cnt-dlr').text(resp.dealers.length);
                     renderList('employee', resp.employees);
                     renderList('dealer', resp.dealers);
-                    $('#dc-loading').addClass('dc-hidden');
-                    $('#dc-content').removeClass('dc-hidden');
                     refreshCount();
                 })
                 .fail(function (xhr) {
+                    if (st !== mine) return;
                     $('#dc-loading').addClass('dc-hidden');
                     $('#dc-content').removeClass('dc-hidden');
                     showError(ajaxError(xhr, 'Could not load the linked employees and dealers.'));
@@ -1288,31 +1421,18 @@ $(document).ready(function () {
             st = null;
         }
 
-        /* ── step 1: save the flag ── */
-        function markDiscontinued() {
-            return $.ajax({
-                url:    '/admin/product-pricing/discontinue/' + st.pid,
-                method: 'POST',
-                data:   { _token: CSRF, discontinued: 1 }
-            }).then(function (resp) {
-                if (!resp.success) return $.Deferred().reject({ responseJSON: resp }).promise();
-                st.marked = true;
-                setRowDiscontinued(st.$row, true);
-                flashRow(st.$row);
-                return resp;
-            });
-        }
-
-        /* ── step 2: email in batches ── */
+        /* ── emails, one per request ── */
         function sendAll(queue) {
             st.total = st.sent + st.failed + st.skipped + queue.length;
             queue.forEach(function (r) { setPill(r.type + '-' + r.id, 'queued'); });
             updateProgress('Sending emails…');
 
             var payloadBase = {
-                _token: CSRF,
+                _token:  CSRF,
+                event:   st.action.event,
                 remarks: $.trim($('#dc-remarks').val())
             };
+            if (st.action.event === 'price_changed') payloadBase.old_price = st.opts.oldPrice;
 
             function next(i) {
                 if (i >= queue.length) { finish(); return; }
@@ -1323,9 +1443,9 @@ $(document).ready(function () {
                 scrollIntoList(batch[0]);
 
                 $.ajax({
-                    url:    '/admin/product-pricing/discontinue/' + st.pid + '/notify',
-                    method: 'POST',
-                    data:   $.extend({ recipients: batch }, payloadBase),
+                    url:     '/admin/product-pricing/notify/' + st.pid,
+                    method:  'POST',
+                    data:    $.extend({ recipients: batch }, payloadBase),
                     timeout: 180000
                 }).done(function (resp) {
                     var byKey = {};
@@ -1348,7 +1468,7 @@ $(document).ready(function () {
 
         /* Keep the person being emailed visible inside their list. */
         function scrollIntoList(r) {
-            var $it = $m.find('.dc-item[data-key="' + r.type + '-' + r.id + '"]');
+            var $it  = $m.find('.dc-item[data-key="' + r.type + '-' + r.id + '"]');
             var $box = $it.closest('.dc-items');
             if (!$it.length || !$box.length) return;
             var top = $it.position().top + $box.scrollTop() - $box.height() / 2 + $it.outerHeight() / 2;
@@ -1363,20 +1483,21 @@ $(document).ready(function () {
         }
 
         function finish() {
+            var a = st.action;
             setBusy(false);
             step(2, 'done'); step(3, 'done');
             $m.removeClass('is-sending').addClass('is-finished').toggleClass('has-failures', st.failed > 0);
             $m.toggleClass('is-done', st.failed === 0).toggleClass('is-failed', st.failed > 0);
             $('#dc-head-icon').attr('class', st.failed ? 'fa fa-exclamation-triangle' : 'fa fa-check');
-            $('#dc-kicker').text(st.failed ? 'Discontinued — some emails failed' : 'Discontinued & notified');
-            updateProgress(st.total ? 'Finished' : 'Marked as discontinued');
+            $('#dc-kicker').text(a.doneKicker + (st.failed ? ' — some emails failed' : (st.sent ? ' & notified' : '')));
+            updateProgress(st.total ? 'Finished' : 'Saved');
 
             var msg;
             if (!st.total) {
-                msg = '<span style="color:#2f855a;"><i class="fa fa-check-circle"></i> Product marked as discontinued. No emails were sent.</span>';
+                msg = '<span style="color:#2f855a;"><i class="fa fa-check-circle"></i> ' + a.doneKicker + '. No emails were sent.</span>';
             } else if (st.failed) {
                 msg = '<span style="color:#c05621;"><i class="fa fa-exclamation-triangle"></i> ' + st.sent + ' sent, ' + st.failed +
-                      ' failed. The product is discontinued — you can retry the failed ones now.</span>';
+                      ' failed. The change is saved — you can retry the failed ones now.</span>';
             } else {
                 msg = '<span style="color:#2f855a;"><i class="fa fa-check-circle"></i> All done — ' + st.sent + ' email' + (st.sent === 1 ? '' : 's') +
                       ' sent' + (st.skipped ? ', ' + st.skipped + ' skipped' : '') + '.</span>';
@@ -1386,12 +1507,12 @@ $(document).ready(function () {
             $('#dc-go, #dc-cancel, #dc-mark-only').addClass('dc-hidden');
             $('#dc-retry').toggleClass('dc-hidden', st.failed === 0).html('<i class="fa fa-refresh"></i> Retry failed (' + st.failed + ')');
             $('#dc-done').removeClass('dc-hidden');
-            // Lists stay read-only once the product is discontinued.
+            // The change is saved; the lists are now a record of who heard.
             $m.find('.dc-pick, .dc-all, #dc-remarks').prop('disabled', true);
 
             showToast(st.failed ? 'danger' : 'success',
-                st.failed ? '<i class="fa fa-exclamation-circle"></i> &nbsp;Discontinued. ' + st.failed + ' email(s) failed.'
-                          : '<i class="fa fa-check-circle"></i> &nbsp;Product discontinued' + (st.sent ? ' and ' + st.sent + ' email(s) sent.' : '.'));
+                st.failed ? '<i class="fa fa-exclamation-circle"></i> &nbsp;' + a.doneKicker + '. ' + st.failed + ' email(s) failed.'
+                          : '<i class="fa fa-check-circle"></i> &nbsp;' + a.doneKicker + (st.sent ? ' — ' + st.sent + ' email(s) sent.' : '.'));
         }
 
         function run(queue, withEmails) {
@@ -1400,12 +1521,10 @@ $(document).ready(function () {
             $m.addClass('is-sending').removeClass('is-finished is-done is-failed has-failures');
             $m.find('.dc-body').stop().animate({ scrollTop: 0 }, 200);
 
-            if (!withEmails) {
-                $m.find('.dc-pick:checked').each(function () { setPill($(this).data('type') + '-' + $(this).data('id'), 'excluded'); });
-            } else {
-                // people left unticked get a muted dash, so it is clear they were left out on purpose
-                $m.find('.dc-pick:not(:checked)').each(function () { setPill($(this).data('type') + '-' + $(this).data('id'), 'excluded'); });
-            }
+            // People left out get a muted dash, so it is clear it was on purpose.
+            $m.find(withEmails ? '.dc-pick:not(:checked)' : '.dc-pick').each(function () {
+                setPill($(this).data('type') + '-' + $(this).data('id'), 'excluded');
+            });
 
             var go = function () {
                 step(1, 'done');
@@ -1414,15 +1533,18 @@ $(document).ready(function () {
                 sendAll(queue);
             };
 
-            if (st.marked) { go(); return; }
+            if (st.saved) { go(); return; }
 
             step(1, 'active');
-            updateProgress('Marking product as discontinued…');
-            markDiscontinued().then(go, function (xhr) {
+            updateProgress(escapeHtml(st.action.step1) + '…');
+            st.action.save().then(function () {
+                st.saved = true;
+                go();
+            }, function (msg) {
                 setBusy(false);
                 $m.removeClass('is-sending');
                 step(1, '');
-                showError(ajaxError(xhr, 'Could not mark the product as discontinued.'));
+                showError(msg || 'Could not save the change.');
             });
         }
 
@@ -1446,7 +1568,6 @@ $(document).ready(function () {
             var queue = st.failedList;
             st.failed = 0;
             st.failedList = [];
-            st.total = st.sent + st.skipped;
             $('#dc-retry, #dc-done').addClass('dc-hidden');
             run(queue, true);
         });
@@ -1455,14 +1576,13 @@ $(document).ready(function () {
         $ov.on('mousedown', function (e) { if (e.target === this && !$m.hasClass('is-finished')) close(); });
         $(document).on('keydown', function (e) { if (e.key === 'Escape' && $ov.hasClass('open')) close(); });
 
-        // Last line of defence while emails are going out.
+        // Last line of defence while a change or an email is in flight.
         window.addEventListener('beforeunload', function (e) {
             if (st && st.busy) { e.preventDefault(); e.returnValue = ''; return ''; }
         });
 
         return { open: open };
     })();
-
 
 });
 </script>

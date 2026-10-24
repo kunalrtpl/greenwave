@@ -1,7 +1,7 @@
 {{--
-   Shared shell for the product-discontinued emails (employee and dealer).
-   A copy of the sampling layout so both families look alike; only the
-   footer wording and the notice styles differ.
+   Shared shell for the product update emails sent from Product Pricing
+   (discontinued, available again, not available, back in stock, price
+   revised). A copy of the sampling layout so both families look alike.
 
    Email clients ignore most modern CSS, so this stays on tables, inline-ish
    styles and web-safe fonts, in the same green as the purchase-order mails.
@@ -18,7 +18,7 @@
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-   <title>@yield('title', 'Product Discontinued')</title>
+   <title>@yield('title', 'Product Update')</title>
    <style>
       * { margin:0; padding:0; box-sizing:border-box; }
       img { border:0; display:block; }
@@ -81,6 +81,13 @@
       .alt-code { font-size:11px; color:#66bb6a; padding-top:2px; }
       .steps td { font-size:13px; color:#33691e; line-height:1.6; padding:5px 0; vertical-align:top; }
       .step-dot { width:22px; color:#43a047; font-weight:700; }
+      .good { background:#f1f8e9; border:1px solid #c5e1a5; border-left:5px solid #43a047; border-radius:10px; padding:16px 18px; }
+      .good .notice-title { color:#2e7d32; }
+      .good .notice-body { color:#33691e; }
+      .price-grid td { padding:14px 10px; text-align:center; vertical-align:middle; }
+      .price-cap { font-size:10.5px; font-weight:700; color:#7cb342; text-transform:uppercase; letter-spacing:.6px; padding-bottom:6px; }
+      .price-old { font-size:18px; color:#9e9e9e; text-decoration:line-through; font-weight:700; }
+      .price-new { font-size:24px; color:#1b5e20; font-weight:800; }
       .badge-red { display:inline-block; background-color:#c62828; border:1px solid #ef9a9a; border-radius:20px; padding:3px 14px; font-size:11px; font-weight:700; color:#ffffff !important; text-transform:uppercase; letter-spacing:.5px; }
    </style>
 </head>
@@ -96,7 +103,7 @@
                      <img src="https://g2app.in/images/greenwave-logo-1-275-sl.jpg" alt="Greenwave" width="170" style="display:block; border:0;">
                   </div>
                   <div class="header-divider" style="width:48px; height:2px; background-color:#5a9e62; margin:0 auto 18px;"></div>
-                  <div class="header-title" style="font-size:22px; font-weight:700; color:#ffffff; margin-bottom:8px;">@yield('heading', 'Product Discontinued')</div>
+                  <div class="header-title" style="font-size:22px; font-weight:700; color:#ffffff; margin-bottom:8px;">@yield('heading', 'Product Update')</div>
                   <div class="header-date" style="font-size:12.5px; color:#d7ebd8;">{{ date('d M Y, h:i A') }}</div>
                </td>
             </tr>
