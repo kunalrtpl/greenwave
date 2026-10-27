@@ -64,10 +64,27 @@ class DvrController extends Controller
             'sample_submission',
             'user_scheduler',
             'customer_contact_info',
-            'query_info',
+            // Feedback linked to the DVR: `product` + `products` trimmed like the qcfs listing.
+            'query_info' => function ($q) {
+                $q->with([
+                    'product'  => function ($p) { $p->select(\App\Feedback::API_PRODUCT_COLUMNS); },
+                    'products' => function ($p) { $p->select(\App\Feedback::API_PRODUCT_COLUMNS); },
+                ]);
+            },
             'additional_trials',
             'sample_submissions'
         ]);
+    }
+
+    /**
+     * Shape query_info's products for the app (see Feedback::shapeProductsForApi).
+     */
+    protected function shapeQueryInfo($dvr)
+    {
+        if ($dvr && $dvr->query_info) {
+            $dvr->query_info->shapeProductsForApi();
+        }
+        return $dvr;
     }
 
     /**
@@ -174,6 +191,7 @@ class DvrController extends Controller
         $dvrs = $dvrs
             ->orderBy('dvr_date', 'desc')
             ->get();
+        $dvrs->each(function ($dvr) { $this->shapeQueryInfo($dvr); });
 
         return response()->json(
             apiSuccessResponse('DVR list fetched', ['dvrs' => $dvrs]),
@@ -205,6 +223,7 @@ class DvrController extends Controller
         if (!$dvr) {
             return response()->json(apiErrorResponse('DVR not found'), 404);
         }
+        $this->shapeQueryInfo($dvr);
 
         return response()->json(
             apiSuccessResponse('DVR detail fetched', ['dvr' => $dvr]),
@@ -233,6 +252,7 @@ class DvrController extends Controller
         if (!$dvr) {
             return response()->json(apiErrorResponse('No DVR found'), 404);
         }
+        $this->shapeQueryInfo($dvr);
 
         return response()->json(
             apiSuccessResponse('Latest DVR fetched', ['dvr' => $dvr]),

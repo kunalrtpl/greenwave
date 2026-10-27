@@ -24,8 +24,97 @@ class Feedback extends Model
         return $this->belongsto('App\CustomerEmployee','customer_employee_id','id');
     }
 
+    /** Product columns returned to the app for a feedback. */
+    const API_PRODUCT_COLUMNS = ['products.id', 'products.product_name', 'products.version', 'products.discontinued', 'products.not_available', 'products.status'];
+
     public function product(){
     	return $this->belongsto('App\Product','product_id','id');
+    }
+
+    /** Products attached to this feedback (feedback_products table). */
+    public function products(){
+        return $this->belongsToMany('App\Product','feedback_products','feedback_id','product_id')
+            ->withPivot('batch_no')
+            ->withTimestamps()
+            ->orderBy('feedback_products.id');
+    }
+
+    /**
+     * Products to attach to a feedback, read from a save-feedback request.
+     *
+     * - New app builds send `products`: [{product_id, batch_no}, ...]
+     *   (a real array, or a JSON string of one when posting form-data).
+     * - Old app builds send a single `product_id` + `batch_no`.
+     * `products` wins when both are sent. Non-sample feedback only carries
+     * products when is_product_related is 1, same as before.
+     *
+     * @return array [['product_id' => int, 'batch_no' => string|null], ...]
+     */
+    public static function productsFromRequest(array $data, $isProductRelated){
+        if(($data['type'] ?? null) != 'need sample/trial' && $isProductRelated != 1){
+            return [];
+        }
+
+        if(!empty($data['products']) && is_array($data['products'])){
+            $items = $data['products'];
+        }elseif(!empty($data['product_id'])){
+            $items = [['product_id' => $data['product_id'], 'batch_no' => $data['batch_no'] ?? null]];
+        }else{
+            return [];
+        }
+
+        $products = [];
+        foreach($items as $item){
+            if(empty($item['product_id'])){
+                continue;
+            }
+            $batchNo = trim((string) ($item['batch_no'] ?? ''));
+            $row = ['product_id' => (int) $item['product_id'], 'batch_no' => $batchNo === '' ? null : $batchNo];
+            $products[$row['product_id'].'|'.$row['batch_no']] = $row; // drop exact duplicates
+        }
+        return array_values($products);
+    }
+
+    /**
+     * Store products in feedback_products. Ids that don't exist in products
+     * are dropped instead of failing the save, so old app payloads that used
+     * to save keep saving.
+     */
+    public function saveProducts(array $products){
+        $validIds = \App\Product::whereIn('id', array_column($products, 'product_id'))->pluck('id')->flip();
+
+        foreach($products as $row){
+            if(isset($validIds[$row['product_id']])){
+                $this->products()->attach($row['product_id'], ['batch_no' => $row['batch_no']]);
+            }
+        }
+    }
+
+    /**
+     * Shape products for the app: `products` holds every linked product, and
+     * `product` holds the first one so old app builds that read a single
+     * product keep working. Falls back to the old product_id column when the
+     * feedback has no rows in feedback_products yet.
+     *
+     * Expects `products` and `product` to be eager loaded with API_PRODUCT_COLUMNS.
+     */
+    public function shapeProductsForApi(){
+        $products = $this->products->map(function ($p) {
+            $p->setAttribute('batch_no', $p->pivot->batch_no);
+            return $p->setAppends(['product_gst'])->makeHidden('pivot');
+        });
+
+        $first = $products->first();
+        if(!$first && $this->product){
+            $first = $this->product->setAppends(['product_gst']);
+            $first->setAttribute('batch_no', $this->batch_no);
+        }
+
+        $this->setRelation('products', $products);
+        $this->setRelation('product', $first);
+        $this->makeHidden('product_id');
+
+        return $this;
     }
 
     public function replies(){

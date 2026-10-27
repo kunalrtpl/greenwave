@@ -899,22 +899,38 @@ class ExecutiveController extends Controller
     }
 
 
+    /**
+     * Save a feedback / query / complaint from the executive app.
+     *
+     * Products can be sent two ways:
+     * - New app builds: `products` = [{"product_id": 1, "batch_no": "B-1"}, ...]
+     *   (JSON body, form-data products[0][product_id], or a JSON string in form-data).
+     * - Old app builds: single `product_id` + `batch_no` keys.
+     * Both end up as rows in feedback_products. The first product is also
+     * written to feedback.product_id / batch_no for screens not yet moved over.
+     */
     public function saveFeedback(Request $request){
         if($request->isMethod('post')){
             $resp = $this->resp;
             if($resp['status'] && isset($resp['user'])) {
                 $data = $request->all();
+                if(isset($data['products']) && is_string($data['products'])){
+                    $data['products'] = json_decode($data['products'], true);
+                }
                 $rules = [
                     //"customer_id"=> "required",
                     "feedback_date"=> "required",
                     "type"=> "required|in:query,complaint,feedback,suggestion,need sample/trial,feedback/suggestion,",
+                    // New key only; the legacy product_id / batch_no keep their old (loose) handling.
+                    "products"=> "nullable|array",
+                    "products.*.product_id"=> "required|integer|exists:products,id",
+                    "products.*.batch_no"=> "nullable|string|max:191",
                 ];
                 $customMessages = [];
                 $validator = Validator::make($data,$rules,$customMessages);
                 if ($validator->fails()){
                     return response()->json(validationResponse($validator),422); 
                 }
-                $data = $request->all();
                 $savefeed = new Feedback;
                 if(isset($data['customer_id']) && !empty($data['customer_id'])){
                     $savefeed->customer_id = $data['customer_id'] ?? null;
@@ -930,17 +946,26 @@ class ExecutiveController extends Controller
                     $savefeed->visit_type = $data['visit_type'];
                 }
                 $savefeed->type = $data['type'];
+
+                $isProductRelated = $data['is_product_related'] ?? (!empty($data['products']) ? 1 : 0);
+                $products = Feedback::productsFromRequest($data, $isProductRelated);
+                $first = $products[0] ?? null;
+
                 if($data['type']=="need sample/trial"){
-                    $savefeed->product_id = $data['product_id'];
+                    $savefeed->product_id = $first['product_id'] ?? ($data['product_id'] ?? null);
                 }else{
-                    $savefeed->is_product_related = $data['is_product_related'];
-                    if($data['is_product_related'] == 1){
-                        $savefeed->product_id = $data['product_id'];
-                        $savefeed->batch_no = $data['batch_no'];
+                    $savefeed->is_product_related = $isProductRelated;
+                    if($isProductRelated == 1){
+                        $savefeed->product_id = $first['product_id'] ?? ($data['product_id'] ?? null);
+                        $savefeed->batch_no = $first['batch_no'] ?? ($data['batch_no'] ?? null);
                     }
                 }
-                $savefeed->submit_by = 'executive';  
-                $savefeed->save();
+                $savefeed->submit_by = 'executive';
+
+                DB::transaction(function () use ($savefeed, $products) {
+                    $savefeed->save();
+                    $savefeed->saveProducts($products);
+                });
                 $message = 'Request has been submitted successfully. We will get back to you soon';
                 return response()->json(apiSuccessResponse($message),200);
             }
@@ -1016,7 +1041,13 @@ class ExecutiveController extends Controller
                               ->without('contact_persons','linked_products');
                           }
                       ]);
-                    },'customer_employee','product','replies'])->forUserSharedData($userId);
+                    },'customer_employee','replies',
+                    'product' => function ($p) {
+                        $p->select(Feedback::API_PRODUCT_COLUMNS);
+                    },
+                    'products' => function ($p) {
+                        $p->select(Feedback::API_PRODUCT_COLUMNS);
+                    }])->forUserSharedData($userId);
                 if($data['type'] !='all'){
                     $feedbacks = $feedbacks->where('type',$data['type']);
                 }
@@ -1027,6 +1058,7 @@ class ExecutiveController extends Controller
                     $feedbacks = $feedbacks->where('customer_register_request_id',$data['customer_register_request_id']);
                 }
                 $feedbacks = $feedbacks->orderby('id','DESC')->get();
+                $feedbacks->each->shapeProductsForApi();
                 $message = 'Record has ben fetched successfully';
                 $result['feedbacks'] = $feedbacks;
                 return response()->json(apiSuccessResponse($message,$result),200);
