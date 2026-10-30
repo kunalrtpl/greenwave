@@ -945,6 +945,10 @@ class ExecutiveController extends Controller
                 if(isset($data['visit_type'])){
                     $savefeed->visit_type = $data['visit_type'];
                 }
+
+                if(isset($data['suggested_solution'])){
+                    $savefeed->suggested_solution = $data['suggested_solution'];
+                }
                 $savefeed->type = $data['type'];
 
                 $isProductRelated = $data['is_product_related'] ?? (!empty($data['products']) ? 1 : 0);
