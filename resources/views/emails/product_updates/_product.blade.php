@@ -20,7 +20,7 @@
          @endif
          <tr>
             <td class="info-row-label">Status</td>
-            <td class="info-row-value"><strong style="color:{{ $statusColor }};">{{ $statusLabel }}</strong></td>
+            <td class="info-row-value"><strong style="color:{{ $statusColor }};">{{ ucwords($statusLabel) }}</strong></td>
          </tr>
          <tr>
             <td class="info-row-label">Effective From</td>

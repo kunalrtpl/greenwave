@@ -1,9 +1,9 @@
 {{-- The standard dealer price was raised or lowered. --}}
-{{-- "Hi Ajay," for an employee, "Dear Kamal Singhania," for a dealer. --}}
+{{-- "Hi Ajay," for an employee, "Dear Sharma Traders," (business name) for a dealer. --}}
 @php
    $isDealer = ($audience ?? 'employee') === 'dealer';
    $greeting = $isDealer
-      ? 'Dear ' . (($recipient->person ?? null) ?: ($recipient->name ?: 'Partner')) . ','
+      ? 'Dear ' . (($recipient->business_name ?? null) ?: ($recipient->name ?: 'Partner')) . ','
       : 'Hi ' . ($recipient->name ?: 'there') . ',';
 @endphp
 @php
@@ -15,10 +15,10 @@
 @endphp
 @extends('emails.product_updates.layout')
 
-@section('title', 'Dealer Price ' . ucfirst($priceDirection))
-@section('heading', 'Dealer Price ' . ($up ? 'Increase' : ($down ? 'Reduction' : 'Update')))
+@section('title', 'Price ' . $priceDirectionLabel)
+@section('heading', 'Price ' . $priceDirectionLabel)
 @section('ribbon', $product->product_name)
-@section('ribbon_badge')<span class="badge-red" style="background-color:{{ $tone }};">Price {{ ucfirst($priceDirection) }} {{ $arrow }}</span>@endsection
+@section('ribbon_badge')<span class="badge-red" style="background-color:{{ $tone }};">Price {{ $priceDirectionLabel }} {{ $arrow }}</span>@endsection
 
 @section('greeting', $greeting)
 @section('intro')
@@ -66,7 +66,7 @@
    </td>
 </tr>
 
-@include('emails.product_updates._product', ['statusLabel' => 'Price ' . $priceDirection, 'statusColor' => $tone])
+@include('emails.product_updates._product', ['statusLabel' => 'Price ' . $priceDirectionLabel, 'statusColor' => $tone])
 @include('emails.product_updates._remarks')
 @include('emails.product_updates._steps', ['tone' => $down ? 'good' : 'warn', 'steps' => $isDealer ? [
    'Purchase orders placed from ' . $effectiveOn . ' will be at the new dealer price.',

@@ -1379,7 +1379,8 @@ $(document).ready(function () {
             $('#dc-go span').text(action.go);
             $('#dc-loading').removeClass('dc-hidden');
             $('#dc-content').addClass('dc-hidden');
-            $('#dc-remarks').val('');
+            // finish() locks the note; unlock it for the new action.
+            $('#dc-remarks').val('').prop('disabled', false);
             $('#dc-go').prop('disabled', true).removeClass('dc-hidden');
             $('#dc-cancel, #dc-mark-only').removeClass('dc-hidden').prop('disabled', false);
             $('#dc-done, #dc-retry').addClass('dc-hidden');

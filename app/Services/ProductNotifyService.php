@@ -153,6 +153,10 @@ class ProductNotifyService
             ->where(function ($q) {
                 $q->whereNull('d.is_delete')->orWhere('d.is_delete', 0);
             })
+            // Sub dealers are never notified — they are served through their main dealer.
+            ->where(function ($q) {
+                $q->whereNull('d.dealer_type')->orWhere('d.dealer_type', '!=', 'sub dealer');
+            })
             ->select('d.id', 'd.business_name', 'd.owner_name', 'd.name', 'd.city', 'd.email')
             ->distinct()
             ->orderBy('d.business_name');
@@ -168,6 +172,7 @@ class ProductNotifyService
                 'type'      => 'dealer',
                 'id'        => (int) $d->id,
                 'name'      => $d->business_name ?: $person,
+                'business_name' => $d->business_name,
                 'person'    => $person,
                 'sub'       => trim(implode(' · ', array_filter([$person, $d->city]))),
                 'emails'    => $emails,
@@ -263,8 +268,8 @@ class ProductNotifyService
                 'priceDiff'      => $diff,
                 'pricePct'       => ($diff !== null && $old > 0) ? round($diff / $old * 100, 1) : null,
                 'priceDirection' => $direction,
-                // Used in the subject line: "Dealer Price Increased | ..."
-                'priceDirectionLabel' => ucfirst($direction),
+                // Used in the subject line: "Dealer Price Increase | ..."
+                'priceDirectionLabel' => ['increased' => 'Increase', 'decreased' => 'Reduction'][$direction] ?? 'Update',
             ];
         }
 

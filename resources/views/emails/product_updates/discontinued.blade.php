@@ -1,9 +1,9 @@
 {{-- Discont. ticked. One email per linked employee / dealer ($audience). --}}
-{{-- "Hi Ajay," for an employee, "Dear Kamal Singhania," for a dealer. --}}
+{{-- "Hi Ajay," for an employee, "Dear Sharma Traders," (business name) for a dealer. --}}
 @php
    $isDealer = ($audience ?? 'employee') === 'dealer';
    $greeting = $isDealer
-      ? 'Dear ' . (($recipient->person ?? null) ?: ($recipient->name ?: 'Partner')) . ','
+      ? 'Dear ' . (($recipient->business_name ?? null) ?: ($recipient->name ?: 'Partner')) . ','
       : 'Hi ' . ($recipient->name ?: 'there') . ',';
 @endphp
 @extends('emails.product_updates.layout')
@@ -16,12 +16,10 @@
 @section('greeting', $greeting)
 @section('intro')
    @if($isDealer)
-      We would like to inform you that <strong>{{ $product->product_name }}</strong>, which is linked to
-      {{ $recipient->name ?: 'your dealership' }}, has been discontinued with effect from
-      <strong>{{ $effectiveOn }}</strong>. We thank you for your continued partnership with Greenwave.
+      We would like to inform you that <strong>{{ $product->product_name }}</strong> has been discontinued with effect from
+      <strong>{{ $effectiveOn }}</strong>.
    @else
-      Please note that <strong>{{ $product->product_name }}</strong>, one of the products linked to you,
-      has been discontinued with effect from <strong>{{ $effectiveOn }}</strong>.
+      Please note that <strong>{{ $product->product_name }}</strong> has been discontinued with effect from <strong>{{ $effectiveOn }}</strong>.
    @endif
 @endsection
 

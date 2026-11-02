@@ -1,9 +1,9 @@
 {{-- Discont. unticked: a discontinued product is available again. --}}
-{{-- "Hi Ajay," for an employee, "Dear Kamal Singhania," for a dealer. --}}
+{{-- "Hi Ajay," for an employee, "Dear Sharma Traders," (business name) for a dealer. --}}
 @php
    $isDealer = ($audience ?? 'employee') === 'dealer';
    $greeting = $isDealer
-      ? 'Dear ' . (($recipient->person ?? null) ?: ($recipient->name ?: 'Partner')) . ','
+      ? 'Dear ' . (($recipient->business_name ?? null) ?: ($recipient->name ?: 'Partner')) . ','
       : 'Hi ' . ($recipient->name ?: 'there') . ',';
 @endphp
 @extends('emails.product_updates.layout')
