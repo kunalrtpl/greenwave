@@ -228,5 +228,63 @@ class WorkNoteDealerOtherTest extends TestCase
 
         $this->assertSame('Rajesh Prasad', $row['name'],
             'a dealer who is not on the system still has a name to print');
+        $this->assertTrue($row['is_other']);
+        $this->assertSame('9408730419', $row['other_mobile'], 'the mobile is printed too');
+        $this->assertSame('Saregam', $row['other_address'], 'and the address');
+    }
+
+    /** A party that IS on the system carries no "other" details. */
+    public function testAWorkNoteOnARegisteredDealerCarriesNoOtherDetails()
+    {
+        $dealer = \App\Dealer::where('status', 1)->firstOrFail();
+
+        $payload = $this->payload();
+        $payload['dealer_id'] = $dealer->id;
+
+        $id = $this->postJson('/api/executive/work-notes', $payload, $this->headers())
+            ->assertStatus(200)
+            ->json('data.work_note.id');
+
+        $note    = WorkNote::with(['dealer', 'customer', 'customerRegisterRequest'])->findOrFail($id);
+        $command = new \App\Console\Commands\SendDailyWorkReport();
+
+        $method = new \ReflectionMethod($command, 'buildWorkNoteRow');
+        $method->setAccessible(true);
+        $row = $method->invoke($command, $note);
+
+        $this->assertSame($dealer->business_name, $row['name'], 'the registered dealer wins');
+        $this->assertFalse($row['is_other']);
+        $this->assertNull($row['other_mobile'], 'nothing extra is printed for a dealer on the system');
+        $this->assertNull($row['other_address']);
+    }
+
+    /** The generated PDF actually prints all three. */
+    public function testTheReportPdfPrintsTheNameMobileAndAddress()
+    {
+        if (!trim((string) shell_exec('which pdftotext'))) {
+            $this->markTestSkipped('pdftotext is needed to read the generated PDF back.');
+        }
+
+        $user = $this->executive;
+        $date = \Carbon\Carbon::parse($this->payload()['date']);
+
+        WorkNote::create(['user_id' => $user->id] + $this->payload());
+
+        $command = new \App\Console\Commands\SendDailyWorkReport();
+
+        $gather = new \ReflectionMethod($command, 'gatherReportData');
+        $gather->setAccessible(true);
+        $data = $gather->invoke($command, $user, $date, $date->copy()->addDay());
+
+        $generate = new \ReflectionMethod($command, 'generatePdf');
+        $generate->setAccessible(true);
+        $path = $generate->invoke($command, $user, $data, $date);
+
+        $text = (string) shell_exec('pdftotext -layout ' . escapeshellarg($path) . ' - 2>/dev/null');
+        @unlink($path);
+
+        $this->assertContains('Rajesh Prasad', $text);
+        $this->assertContains('9408730419', $text, 'the mobile is on the report');
+        $this->assertContains('Saregam', $text, 'and the address');
     }
 }

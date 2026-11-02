@@ -1038,7 +1038,16 @@ table.data-table-today tbody tr:nth-child(even) td { background: #f8fafc; }
             <td class="center" style="color:#64748b; font-weight:bold;">{{ $i + 1 }}</td>
             <td>
                 <span style="font-weight:bold; color:#0f172a;">{{ $n['name'] }}</span><br>
-                <span style="font-size:7.5px; color:#64748b;">{{ $n['related_to'] }}</span>
+                <span style="font-size:7.5px; color:#64748b;">
+                    {{ $n['related_to'] }}@if(!empty($n['is_other'])) &middot; Other @endif
+                </span>
+                {{-- Not on the system, so the note's own details are all there is. --}}
+                @if(!empty($n['other_mobile']))
+                    <br><span style="font-size:7.5px; color:#64748b;">M. {{ $n['other_mobile'] }}</span>
+                @endif
+                @if(!empty($n['other_address']))
+                    <br><span style="font-size:7.5px; color:#64748b;">{{ $n['other_address'] }}</span>
+                @endif
             </td>
             <td>{{ $n['subject'] }}</td>
             <td class="center">

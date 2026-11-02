@@ -690,12 +690,15 @@ class SendWeeklyWorkReport extends Command
     private function buildWorkNoteRow(WorkNote $note): array
     {
         // A dealer who is not on the system has no row to read a name from —
-        // the note carries it as free text instead.
-        $relatedName = optional($note->dealer)->business_name
+        // the note carries the name, mobile and address as free text instead,
+        // and all of it is printed, because that is the only record of who
+        // this was.
+        $linkedName = optional($note->dealer)->business_name
             ?: optional($note->customer)->name
-            ?: optional($note->customerRegisterRequest)->name
-            ?: $note->dealer_other
-            ?: '—';
+            ?: optional($note->customerRegisterRequest)->name;
+
+        $isOther     = !$linkedName && !empty($note->dealer_other);
+        $relatedName = $linkedName ?: ($note->dealer_other ?: '—');
 
         $action = null;
         if ($note->further_action_required) {
@@ -713,6 +716,10 @@ class SendWeeklyWorkReport extends Command
             'activity_mode' => $note->activity_mode,
             'related_to'    => ucfirst(str_replace('_', ' ', (string) $note->related_to)),
             'name'          => $relatedName,
+            // Only set for a party that is not on the system.
+            'is_other'       => $isOther,
+            'other_mobile'   => $isOther ? $note->dealer_other_mobile : null,
+            'other_address'  => $isOther ? $note->dealer_other_address : null,
             'description'   => $note->description,
             'key_take_away' => $note->key_take_away,
             'action'        => $action,
