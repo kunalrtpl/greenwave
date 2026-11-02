@@ -134,6 +134,9 @@ class WorkNotesController extends Controller
      *   date                          string   YYYY-MM-DD   required
      *   related_to                    string                optional — plain free text, no validation tied to it
      *   dealer_id                     integer               optional — saved if present & non-empty
+     *   dealer_other                  string                optional — dealer not on the system, free text name
+     *   dealer_other_mobile           string                optional — its mobile, free text
+     *   dealer_other_address          string                optional — its address, free text
      *   customer_id                   integer               optional — saved if present & non-empty
      *   customer_register_request_id  integer               optional — saved if present & non-empty
      *   subject                       string                optional
@@ -163,6 +166,14 @@ class WorkNotesController extends Controller
             'date'                         => 'required|date_format:Y-m-d',
             'related_to'                   => 'nullable|string|max:100',
             'dealer_id'                    => 'nullable|integer|exists:dealers,id',
+
+            // A dealer who is not on the system. All three are optional and
+            // may arrive on their own — builds already in the field never
+            // send them at all, which must keep working.
+            'dealer_other'                 => 'nullable|string|max:255',
+            'dealer_other_mobile'          => 'nullable|string|max:20',
+            'dealer_other_address'         => 'nullable|string',
+
             'customer_id'                  => 'nullable|integer|exists:customers,id',
             'customer_register_request_id' => 'nullable|integer|exists:customer_register_requests,id',
             'subject'                      => 'nullable|string|max:255',
@@ -216,6 +227,9 @@ class WorkNotesController extends Controller
             'date'                         => $request->input('date'),
             'related_to'                   => $request->input('related_to'),
             'dealer_id'                    => $fks['dealerId'],
+            'dealer_other'                 => $request->input('dealer_other'),
+            'dealer_other_mobile'          => $request->input('dealer_other_mobile'),
+            'dealer_other_address'         => $request->input('dealer_other_address'),
             'customer_id'                  => $fks['customerId'],
             'customer_register_request_id' => $fks['customerRegisterRequestId'],
             'subject'                      => $request->input('subject'),
@@ -361,6 +375,9 @@ class WorkNotesController extends Controller
             'date'                         => 'sometimes|date_format:Y-m-d',
             'related_to'                   => 'nullable|string|max:100',
             'dealer_id'                    => 'nullable|integer|exists:dealers,id',
+            'dealer_other'                 => 'nullable|string|max:255',
+            'dealer_other_mobile'          => 'nullable|string|max:20',
+            'dealer_other_address'         => 'nullable|string',
             'customer_id'                  => 'nullable|integer|exists:customers,id',
             'customer_register_request_id' => 'nullable|integer|exists:customer_register_requests,id',
             'subject'                      => 'nullable|string|max:255',
@@ -406,6 +423,13 @@ class WorkNotesController extends Controller
         if ($request->has('dealer_id'))                     $updateData['dealer_id']                    = !empty($data['dealer_id']) ? (int) $data['dealer_id'] : null;
         if ($request->has('customer_id'))                   $updateData['customer_id']                  = !empty($data['customer_id']) ? (int) $data['customer_id'] : null;
         if ($request->has('customer_register_request_id'))  $updateData['customer_register_request_id'] = !empty($data['customer_register_request_id']) ? (int) $data['customer_register_request_id'] : null;
+
+        // Present in the payload → set it (an empty value clears it); absent →
+        // left exactly as it was, so an old build editing a note cannot wipe
+        // fields it does not know about.
+        if ($request->has('dealer_other'))          $updateData['dealer_other']          = $request->input('dealer_other');
+        if ($request->has('dealer_other_mobile'))   $updateData['dealer_other_mobile']   = $request->input('dealer_other_mobile');
+        if ($request->has('dealer_other_address'))  $updateData['dealer_other_address']  = $request->input('dealer_other_address');
 
         if ($request->has('subject'))                      $updateData['subject']                      = $request->input('subject');
         if ($request->has('activity_mode'))                $updateData['activity_mode']                = $request->input('activity_mode');

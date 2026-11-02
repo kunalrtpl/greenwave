@@ -677,9 +677,12 @@ class SendDailyWorkReport extends Command
 
     private function buildWorkNoteRow(WorkNote $note): array
     {
+        // A dealer who is not on the system has no row to read a name from —
+        // the note carries it as free text instead.
         $relatedName = optional($note->dealer)->business_name
             ?: optional($note->customer)->name
             ?: optional($note->customerRegisterRequest)->name
+            ?: $note->dealer_other
             ?: '—';
 
         $action = null;

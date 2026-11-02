@@ -16,6 +16,11 @@ class WorkNote extends Model
         'date',
         'related_to',
         'dealer_id',
+        // A dealer who is not on the system: whatever the field user could
+        // give us, kept as plain text beside the note.
+        'dealer_other',
+        'dealer_other_mobile',
+        'dealer_other_address',
         'customer_id',
         'customer_register_request_id',
         'subject',
