@@ -236,6 +236,21 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::get('/sample-dispatches','SampleDispatchController@dispatches');
 			Route::post('/sample-dispatches/mark-received','SampleDispatchController@markReceived');
 
+			/*
+			 | Stock Transfer — one marketing employee hands free-sample stock
+			 | to another, who accepts or refuses it. The fixed paths are
+			 | declared before /{id} so they are not swallowed by it.
+			 */
+			Route::get('/stock-transfers/stock','StockTransferController@stock');
+			Route::get('/stock-transfers/employees','StockTransferController@employees');
+			Route::get('/stock-transfers/pending-approvals','StockTransferController@pendingApprovals');
+			Route::get('/stock-transfers','StockTransferController@index');
+			Route::post('/stock-transfers','StockTransferController@store');
+			Route::get('/stock-transfers/{id}','StockTransferController@show');
+			Route::post('/stock-transfers/{id}/approve','StockTransferController@approve');
+			Route::post('/stock-transfers/{id}/decline','StockTransferController@decline');
+			Route::post('/stock-transfers/{id}/cancel','StockTransferController@cancel');
+
 			Route::match(['get', 'post'], '/market-products-info','ExecutiveController@marketProductsInfo');
 			Route::match(['get', 'post'], '/delete-market-products-info/{id}','ExecutiveController@deleteMarketProductsInfo');
 
