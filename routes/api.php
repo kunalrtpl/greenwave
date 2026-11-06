@@ -145,6 +145,12 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::match(['get', 'post'], '/calculate-product-packing-cost','DealerController@calculateProductPackingCost');
 			Route::match(['get', 'post'], '/my-products-pdf','DealerController@myProductsPdf');
 
+			// Monthly sale (dealer only)
+			Route::match(['get', 'post'], '/monthly-sales','MonthlySaleController@index');
+			Route::post('/add-monthly-sale','MonthlySaleController@store');
+			Route::post('/edit-monthly-sale','MonthlySaleController@update');
+			Route::post('/delete-monthly-sale','MonthlySaleController@destroy');
+
 			// NEW: Linking Controller Routes
 	        Route::get('/sub-dealers-list', 'LinkingController@linkedDealersList');
 	        Route::post('/get-dealer-products', 'LinkingController@dealerLinkedProducts');
