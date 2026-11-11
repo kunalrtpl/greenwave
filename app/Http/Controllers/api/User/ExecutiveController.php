@@ -2293,6 +2293,9 @@ class ExecutiveController extends Controller
                 $sample_submission->sample_value = $data['sample_value']; 
                 $sample_submission->remarks = $data['remarks']; 
                 $sample_submission->save();
+                if(isset($data['from_dvr'])) { 
+                    $sample_submission->from_dvr = $data['from_dvr'];
+                }
                 $freeSamplingStock = DB::table('free_sampling_stocks')->where(['product_id'=>$data['product_id']])->where('user_id',$resp['user']['id'])->first();
                 if(is_object($freeSamplingStock)){
                     $update_sample_stock = FreeSamplingStock::find($freeSamplingStock->id);
