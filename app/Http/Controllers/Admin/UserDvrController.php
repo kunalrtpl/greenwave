@@ -8,6 +8,8 @@ use App\UserDvr;
 use App\User;
 use App\UserAttendance;
 use App\UserScheduler;
+use App\UserDvrQuery;
+use App\Services\DvrReviewService;
 use Carbon\Carbon;
 use PDF;
 /**
@@ -63,6 +65,7 @@ class UserDvrController extends Controller
             'trials.attachments',
             'attachments',
             'user_scheduler:id,scheduler_date,scheduler_time,description,status',
+            'verifier:id,name',
         ])
         ->withCount('trials')
         ->where('user_id', $request->user_id)
@@ -109,6 +112,17 @@ class UserDvrController extends Controller
             $allDvrs = $allDvrs->filter(fn($d) => $d['customer_name'] === $cf)->values();
         }
 
+        // ── DVR status / query status filters (top dropdowns) ──
+        if ($request->filled('dvr_status')) {
+            $ds      = $request->dvr_status;
+            $allDvrs = $allDvrs->filter(fn($d) => $d['dvr_status'] === $ds)->values();
+        }
+        if ($request->filled('query_status')) {
+            $qs      = $request->query_status;
+            // 'none' = DVRs no admin has raised a query on
+            $allDvrs = $allDvrs->filter(fn($d) => $qs === 'none' ? empty($d['query_status']) : $d['query_status'] === $qs)->values();
+        }
+
         // ── Visit type filter ───────────────────────────────
         if ($request->filled('visit_type')) {
             $allDvrs = $allDvrs->filter(fn($d) => $d['visit_type'] === $request->visit_type)->values();
@@ -127,6 +141,14 @@ class UserDvrController extends Controller
             $pageDvrs, $total, $perPage, $page,
             ['path' => $request->url(), 'query' => $request->query()]
         );
+
+        // Query thread counts for the rows on this page — two queries in all.
+        $queryCounts = app(DvrReviewService::class)->countsFor($pageDvrs->pluck('id')->all());
+        $pageDvrs = $pageDvrs->map(function ($row) use ($queryCounts) {
+            $row['query_total']  = $queryCounts['total'][$row['id']]  ?? 0;
+            $row['query_unread'] = $queryCounts['unread'][$row['id']] ?? 0;
+            return $row;
+        });
 
         $groupedDvrs = $pageDvrs->groupBy('dvr_date_key');
         //echo "<pre>"; print_r(json_decode(json_encode($groupedDvrs),true)); die;
@@ -480,6 +502,11 @@ class UserDvrController extends Controller
             'remarks'          => $dvr->remarks,
             'next_plan'        => $dvr->next_plan,
             'other_purpose'    => $dvr->other_purpose,
+            // Admin review
+            'dvr_status'       => $dvr->dvr_status ?: UserDvr::STATUS_PENDING,
+            'query_status'     => $dvr->query_status,
+            'verified_by_name' => optional($dvr->verifier)->name,
+            'verified_at'      => $dvr->dvr_verified_at ? Carbon::parse($dvr->dvr_verified_at)->format('d M Y, h:i A') : null,
         ];
     }
 
@@ -625,5 +652,71 @@ class UserDvrController extends Controller
         $presentDays = $attendanceMap->filter(fn($a) => $a->status === 'Present')->count();
 
         return compact('total', 'verified', 'pending', 'metCount', 'trialsSum', 'presentDays');
+    }
+
+    /* ═══════════════════════════════════════════════
+     *  REVIEW — verify + query thread
+     * ═══════════════════════════════════════════════ */
+
+    /**
+     * POST admin/dvrs/{id}/verify
+     *
+     * Pending Verification -> Verified. There is deliberately no way back.
+     */
+    public function verify($id)
+    {
+        $dvr = UserDvr::findOrFail($id);
+
+        if ($dvr->isVerified()) {
+            return response()->json(['success' => false, 'message' => 'This DVR is already verified.'], 422);
+        }
+
+        app(DvrReviewService::class)->verify($dvr, auth()->id());
+        $dvr->load('verifier:id,name');
+
+        return response()->json([
+            'success'          => true,
+            'dvr_status'       => $dvr->dvr_status,
+            'verified_by_name' => optional($dvr->verifier)->name,
+            'verified_at'      => Carbon::parse($dvr->dvr_verified_at)->format('d M Y, h:i A'),
+        ]);
+    }
+
+    /**
+     * GET admin/dvrs/{id}/queries
+     *
+     * The thread, marking the employee's messages as read by the admins.
+     */
+    public function queries($id)
+    {
+        $dvr    = UserDvr::findOrFail($id);
+        $thread = app(DvrReviewService::class)->thread($dvr, UserDvrQuery::SENDER_ADMIN);
+
+        return response()->json(['success' => true] + $thread);
+    }
+
+    /**
+     * POST admin/dvrs/{id}/raise-query
+     *
+     * An admin writes on the thread — starting it, or following up. Sets
+     * query_status to 'Query Raised' and emails the employee.
+     */
+    public function raiseQuery(Request $request, $id)
+    {
+        $request->validate(
+            ['message' => 'required|string|min:1|max:2000'],
+            ['message.required' => 'Please type your query before sending.']
+        );
+
+        $dvr     = UserDvr::findOrFail($id);
+        $service = app(DvrReviewService::class);
+        $query   = $service->post($dvr, UserDvrQuery::SENDER_ADMIN, auth()->id(), $request->message);
+
+        return response()->json([
+            'success'      => true,
+            'query'        => $query->fresh('sender:id,name')->toThreadArray(),
+            'total'        => UserDvrQuery::where('user_dvr_id', $dvr->id)->count(),
+            'query_status' => $dvr->fresh()->query_status,
+        ]);
     }
 }

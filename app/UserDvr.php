@@ -9,6 +9,30 @@ class UserDvr extends Model
     protected $table = 'user_dvrs';
     protected $guarded = [];
 
+    /* Admin review — see the 2026_11_12 review-status migration. */
+    const STATUS_PENDING  = 'Pending Verification';
+    const STATUS_VERIFIED = 'Verified';
+
+    const QUERY_RAISED    = 'Query Raised';
+    const QUERY_RESPONDED = 'Query Responded';
+
+    /** The admin query thread on this DVR, oldest first. */
+    public function review_queries()
+    {
+        return $this->hasMany('App\UserDvrQuery', 'user_dvr_id')->orderBy('id');
+    }
+
+    /** The admin who marked it Verified (null for DVRs verified in bulk by the migration). */
+    public function verifier()
+    {
+        return $this->belongsTo('App\User', 'dvr_verified_by');
+    }
+
+    public function isVerified()
+    {
+        return $this->dvr_status === self::STATUS_VERIFIED;
+    }
+
     public function customer(){
         return $this->belongsto('App\Customer','customer_id','id');
     } 

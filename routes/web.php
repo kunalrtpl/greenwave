@@ -519,6 +519,10 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 	    Route::get('/dvrs', 'UserDvrController@index');
 		Route::get('dvrs/export-pdf',    'UserDvrController@exportPdf')->name('admin.dvrs.pdf');
 		Route::get('/dvrs/{id}', 'UserDvrController@show');
+		// Admin review: verify (one way only) and the query thread with the employee
+		Route::post('dvrs/{id}/verify',      'UserDvrController@verify')->name('admin.dvrs.verify');
+		Route::get('dvrs/{id}/queries',      'UserDvrController@queries')->name('admin.dvrs.queries');
+		Route::post('dvrs/{id}/raise-query', 'UserDvrController@raiseQuery')->name('admin.dvrs.raise-query');
 
 
 		// User Expenses

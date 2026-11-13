@@ -423,6 +423,11 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 
 			    Route::get('dvr/detail/{id}', 'DvrController@dvrDetail');
 
+			    // Admin query thread on one DVR. The employee can read it and
+			    // respond, but only once an admin has raised a query.
+			    Route::get('dvr/{id}/queries', 'DvrController@getQueries');
+			    Route::post('dvr/{id}/query',  'DvrController@sendQuery');
+
 			    Route::get('dvr/latest', 'DvrController@latestDvr');
 
 			    Route::post('trials/by-days', 'DvrController@trialsByDays');

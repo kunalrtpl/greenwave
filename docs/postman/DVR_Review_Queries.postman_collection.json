@@ -1,0 +1,654 @@
+{
+  "info": {
+    "name": "Greenwave — DVR Review & Queries (App)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Executive app APIs for the DVR admin review (verification + query thread).\n\n**Flow**\n1. Admin raises a query from the admin panel → DVR `query_status` = `Query Raised`, employee gets an email.\n2. App shows a badge from `review_query_unread` in the DVR list.\n3. Employee opens the chat → **Get Query Thread** (clears the badge).\n4. Employee replies → **Respond to Query** → `query_status` = `Query Responded`, admins on the thread get an email.\n\nOnly an admin can start a query. Verification (`dvr_status`) is done by the admin only; the app just displays it.\n\nSet the collection variables `base_url`, `token` (the executive's auth token, sent as `Authorization: Bearer <token>`) and `dvr_id`."
+  },
+  "item": [
+    {
+      "name": "1. DVR List (now includes review fields)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/executive/v2/dvrs?month=10&year=2026",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "executive",
+            "v2",
+            "dvrs"
+          ],
+          "query": [
+            {
+              "key": "month",
+              "value": "10"
+            },
+            {
+              "key": "year",
+              "value": "2026"
+            }
+          ]
+        },
+        "description": "Existing endpoint — unchanged URL and parameters. Each DVR now also carries:\n\n| Key | Type | Meaning |\n|---|---|---|\n| `dvr_status` | string | `Pending Verification` or `Verified` (admin review). DVRs created before this release are all `Verified`. |\n| `query_status` | string \\| null | `null` = no query; `Query Raised` = admin is waiting for the employee; `Query Responded` = employee has answered. |\n| `review_query_total` | int | Messages on the admin query thread. |\n| `review_query_unread` | int | Admin messages this employee has not opened yet — use for the badge. |\n| `can_respond_query` | bool | `true` once an admin has raised a query. Show the reply box only when true. |\n\nNote: `dvr_verified_date_time` is the old customer-contact OTP check and is unrelated to `dvr_status`."
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/executive/v2/dvrs?month=10&year=2026",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "executive",
+                "v2",
+                "dvrs"
+              ],
+              "query": [
+                {
+                  "key": "month",
+                  "value": "10"
+                },
+                {
+                  "key": "year",
+                  "value": "2026"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n    \"status\": true,\n    \"code\": 200,\n    \"message\": \"DVR list fetched\",\n    \"data\": {\n        \"dvrs\": [\n            {\n                \"id\": 1042,\n                \"user_id\": 16,\n                \"customer_id\": 2,\n                \"dvr_date\": \"2026-10-21\",\n                \"visit_type\": \"Unofficial\",\n                \"...\": \"(all existing DVR fields and relations, unchanged)\",\n                \"dvr_verified_date_time\": null,\n                \"dvr_status\": \"Pending Verification\",\n                \"dvr_verified_by\": null,\n                \"dvr_verified_at\": null,\n                \"query_status\": \"Query Raised\",\n                \"review_query_total\": 1,\n                \"review_query_unread\": 1,\n                \"can_respond_query\": true\n            },\n            {\n                \"id\": 1054,\n                \"user_id\": 16,\n                \"customer_id\": 2,\n                \"dvr_date\": \"2026-10-23\",\n                \"...\": \"(all existing DVR fields and relations, unchanged)\",\n                \"dvr_verified_date_time\": null,\n                \"dvr_status\": \"Verified\",\n                \"dvr_verified_by\": null,\n                \"dvr_verified_at\": null,\n                \"query_status\": null,\n                \"review_query_total\": 0,\n                \"review_query_unread\": 0,\n                \"can_respond_query\": false\n            }\n        ]\n    }\n}"
+        }
+      ]
+    },
+    {
+      "name": "2. DVR Detail (now includes review fields)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/executive/v2/dvr/detail/{{dvr_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "executive",
+            "v2",
+            "dvr",
+            "detail",
+            "{{dvr_id}}"
+          ]
+        },
+        "description": "Existing endpoint. Same five review keys as the list are added to `data.dvr`."
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/executive/v2/dvr/detail/{{dvr_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "executive",
+                "v2",
+                "dvr",
+                "detail",
+                "{{dvr_id}}"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n    \"status\": true,\n    \"code\": 200,\n    \"message\": \"DVR detail fetched\",\n    \"data\": {\n        \"dvr\": {\n            \"id\": 1042,\n            \"user_id\": 16,\n            \"dvr_date\": \"2026-10-21\",\n            \"...\": \"(all existing DVR fields and relations, unchanged)\",\n            \"dvr_status\": \"Pending Verification\",\n            \"dvr_verified_by\": null,\n            \"dvr_verified_at\": null,\n            \"query_status\": \"Query Raised\",\n            \"review_query_total\": 1,\n            \"review_query_unread\": 1,\n            \"can_respond_query\": true\n        }\n    }\n}"
+        }
+      ]
+    },
+    {
+      "name": "3. Get Query Thread",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/executive/v2/dvr/{{dvr_id}}/queries",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "executive",
+            "v2",
+            "dvr",
+            "{{dvr_id}}",
+            "queries"
+          ]
+        },
+        "description": "**NEW.** The admin query thread on one of the logged-in employee's own DVRs, oldest message first.\n\nOpening the thread marks the admin's messages as read, so `review_query_unread` on the list drops to 0 afterwards (call this when the employee opens the chat screen).\n\n- `can_post` — `false` until an admin has raised a query. The employee **cannot start** a query; show the reply box only when this is `true`.\n- `sender_type` — `admin` or `employee`; use it to place the bubble left/right.\n- `user_read` on an admin message — whether this employee has opened it.\n- `admin_read` on an employee message — whether an admin has seen the reply.\n\nErrors: `401` bad/missing token, `404` DVR not found or not this employee's."
+      },
+      "response": [
+        {
+          "name": "Success — query raised by admin",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/executive/v2/dvr/{{dvr_id}}/queries",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "executive",
+                "v2",
+                "dvr",
+                "{{dvr_id}}",
+                "queries"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n    \"status\": true,\n    \"code\": 200,\n    \"message\": \"Fetched successfully\",\n    \"data\": {\n        \"queries\": [\n            {\n                \"id\": 7,\n                \"message\": \"Why was this an off-site visit? Please attach the trial report.\",\n                \"sender_type\": \"admin\",\n                \"sender_id\": 1,\n                \"sender_name\": \"Kamal Singhania\",\n                \"admin_read\": true,\n                \"user_read\": true,\n                \"created_at\": \"12 Nov 2026, 05:05 PM\",\n                \"created_ago\": \"2 hours ago\"\n            }\n        ],\n        \"total\": 1,\n        \"unread_admin\": 0,\n        \"unread_user\": 0,\n        \"dvr_status\": \"Pending Verification\",\n        \"query_status\": \"Query Raised\",\n        \"can_post\": true,\n        \"user_dvr_id\": 1042\n    }\n}"
+        },
+        {
+          "name": "Success — no query yet (cannot post)",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/executive/v2/dvr/{{dvr_id}}/queries",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "executive",
+                "v2",
+                "dvr",
+                "{{dvr_id}}",
+                "queries"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n    \"status\": true,\n    \"code\": 200,\n    \"message\": \"Fetched successfully\",\n    \"data\": {\n        \"queries\": [],\n        \"total\": 0,\n        \"unread_admin\": 0,\n        \"unread_user\": 0,\n        \"dvr_status\": \"Verified\",\n        \"query_status\": null,\n        \"can_post\": false,\n        \"user_dvr_id\": 1054\n    }\n}"
+        },
+        {
+          "name": "DVR not found / not own",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/executive/v2/dvr/{{dvr_id}}/queries",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "executive",
+                "v2",
+                "dvr",
+                "{{dvr_id}}",
+                "queries"
+              ]
+            }
+          },
+          "status": "Not Found",
+          "code": 404,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n    \"status\": false,\n    \"code\": 422,\n    \"redirect_to\": null,\n    \"message\": \"DVR not found\"\n}"
+        },
+        {
+          "name": "Unauthorized",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/executive/v2/dvr/{{dvr_id}}/queries",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "executive",
+                "v2",
+                "dvr",
+                "{{dvr_id}}",
+                "queries"
+              ]
+            }
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n    \"status\": false,\n    \"code\": 422,\n    \"redirect_to\": null,\n    \"message\": \"Unauthorized\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "4. Respond to Query",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "message",
+              "value": "Customer was travelling, met at their Ludhiana office. Report will be uploaded today.",
+              "type": "text",
+              "description": "Required. 1–2000 characters."
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/api/executive/v2/dvr/{{dvr_id}}/query",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "executive",
+            "v2",
+            "dvr",
+            "{{dvr_id}}",
+            "query"
+          ]
+        },
+        "description": "**NEW.** The employee answers the admin's query. Accepts form-data or JSON (`{\"message\": \"...\"}`).\n\nOnly allowed once an admin has raised a query (`can_post` / `can_respond_query` is `true`); otherwise `422`.\n\nOn success the DVR's `query_status` becomes **`Query Responded`** and every admin who has written on this thread is emailed. If an admin writes again, it goes back to `Query Raised`.\n\nErrors: `401` bad/missing token, `404` DVR not found or not this employee's, `422` empty message or no query to respond to."
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "message",
+                  "value": "Customer was travelling, met at their Ludhiana office. Report will be uploaded today.",
+                  "type": "text",
+                  "description": "Required. 1–2000 characters."
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/executive/v2/dvr/{{dvr_id}}/query",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "executive",
+                "v2",
+                "dvr",
+                "{{dvr_id}}",
+                "query"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n    \"status\": true,\n    \"code\": 200,\n    \"message\": \"Response sent successfully\",\n    \"data\": {\n        \"query\": {\n            \"id\": 15,\n            \"message\": \"Customer was travelling, met at their Ludhiana office. Report will be uploaded today.\",\n            \"sender_type\": \"employee\",\n            \"sender_id\": 16,\n            \"sender_name\": \"Exec Test\",\n            \"admin_read\": false,\n            \"user_read\": true,\n            \"created_at\": \"12 Nov 2026, 07:12 PM\",\n            \"created_ago\": \"1 second ago\"\n        },\n        \"total\": 2,\n        \"unread_user\": 0,\n        \"query_status\": \"Query Responded\"\n    }\n}"
+        },
+        {
+          "name": "No query to respond to",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "message",
+                  "value": "Customer was travelling, met at their Ludhiana office. Report will be uploaded today.",
+                  "type": "text",
+                  "description": "Required. 1–2000 characters."
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/executive/v2/dvr/{{dvr_id}}/query",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "executive",
+                "v2",
+                "dvr",
+                "{{dvr_id}}",
+                "query"
+              ]
+            }
+          },
+          "status": "Unprocessable Entity",
+          "code": 422,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n    \"status\": false,\n    \"code\": 422,\n    \"redirect_to\": null,\n    \"message\": \"There is no query on this DVR to respond to.\"\n}"
+        },
+        {
+          "name": "Empty message",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "message",
+                  "value": "Customer was travelling, met at their Ludhiana office. Report will be uploaded today.",
+                  "type": "text",
+                  "description": "Required. 1–2000 characters."
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/executive/v2/dvr/{{dvr_id}}/query",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "executive",
+                "v2",
+                "dvr",
+                "{{dvr_id}}",
+                "query"
+              ]
+            }
+          },
+          "status": "Unprocessable Entity",
+          "code": 422,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n    \"status\": false,\n    \"code\": 422,\n    \"message\": \"Please type your response before sending.\"\n}"
+        },
+        {
+          "name": "DVR not found / not own",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "message",
+                  "value": "Customer was travelling, met at their Ludhiana office. Report will be uploaded today.",
+                  "type": "text",
+                  "description": "Required. 1–2000 characters."
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/executive/v2/dvr/{{dvr_id}}/query",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "executive",
+                "v2",
+                "dvr",
+                "{{dvr_id}}",
+                "query"
+              ]
+            }
+          },
+          "status": "Not Found",
+          "code": 404,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n    \"status\": false,\n    \"code\": 422,\n    \"redirect_to\": null,\n    \"message\": \"DVR not found\"\n}"
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "token",
+      "value": "PASTE_EXECUTIVE_AUTH_TOKEN"
+    },
+    {
+      "key": "dvr_id",
+      "value": "1042"
+    }
+  ]
+}

@@ -16,6 +16,8 @@ use App\UserDvrCustomerContact;
 use App\UserDvrAttachment;
 use App\FreeSamplingStock;
 use App\UserScheduler;
+use App\UserDvrQuery;
+use App\Services\DvrReviewService;
 use Validator;
 use DB;
 use Illuminate\Support\Facades\Input;
@@ -192,6 +194,7 @@ class DvrController extends Controller
             ->orderBy('dvr_date', 'desc')
             ->get();
         $dvrs->each(function ($dvr) { $this->shapeQueryInfo($dvr); });
+        $this->attachReviewCounts($dvrs);
 
         return response()->json(
             apiSuccessResponse('DVR list fetched', ['dvrs' => $dvrs]),
@@ -224,6 +227,7 @@ class DvrController extends Controller
             return response()->json(apiErrorResponse('DVR not found'), 404);
         }
         $this->shapeQueryInfo($dvr);
+        $this->attachReviewCounts(collect([$dvr]));
 
         return response()->json(
             apiSuccessResponse('DVR detail fetched', ['dvr' => $dvr]),
@@ -1421,5 +1425,117 @@ class DvrController extends Controller
                 500
             );
         }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  ADMIN REVIEW — query thread
+    // ══════════════════════════════════════════════════════════════════
+
+    /**
+     * Adds the admin-review thread counts to each DVR in a list or detail
+     * response. dvr_status and query_status already come through as columns;
+     * these are new keys only, so older app builds simply ignore them.
+     *
+     *   review_query_total   messages on the thread
+     *   review_query_unread  admin messages this employee has not opened yet
+     *   can_respond_query    true once an admin has raised a query
+     */
+    protected function attachReviewCounts($dvrs)
+    {
+        $ids    = $dvrs->pluck('id')->all();
+        $counts = app(DvrReviewService::class)->countsFor($ids, UserDvrQuery::SENDER_EMPLOYEE);
+
+        $started = UserDvrQuery::whereIn('user_dvr_id', $ids)
+            ->where('sender_type', UserDvrQuery::SENDER_ADMIN)
+            ->distinct()
+            ->pluck('user_dvr_id')
+            ->flip();
+
+        $dvrs->each(function ($dvr) use ($counts, $started) {
+            $dvr->setAttribute('review_query_total',  (int) ($counts['total'][$dvr->id]  ?? 0));
+            $dvr->setAttribute('review_query_unread', (int) ($counts['unread'][$dvr->id] ?? 0));
+            $dvr->setAttribute('can_respond_query',   isset($started[$dvr->id]));
+        });
+    }
+
+    /**
+     * GET /api/executive/v2/dvr/{id}/queries
+     *
+     * The admin query thread on one of the employee's own DVRs. Opening it
+     * marks the admins' messages as read, which clears the app's unread badge.
+     * `can_post` is false until an admin has raised a query.
+     */
+    public function getQueries($id)
+    {
+        if (!$this->resp['status'] || !isset($this->resp['user'])) {
+            return response()->json(apiErrorResponse('Unauthorized'), 401);
+        }
+
+        $dvr = $this->ownDvr($id);
+        if (!$dvr) {
+            return response()->json(apiErrorResponse('DVR not found'), 404);
+        }
+
+        $thread = app(DvrReviewService::class)->thread($dvr, UserDvrQuery::SENDER_EMPLOYEE);
+
+        return response()->json(apiSuccessResponse('Fetched successfully', $thread + [
+            'user_dvr_id' => $dvr->id,
+        ]), 200);
+    }
+
+    /**
+     * POST /api/executive/v2/dvr/{id}/query   body: message
+     *
+     * Respond to the admin's query. Refused while no admin has raised one —
+     * the employee cannot start a query. Sets query_status to
+     * 'Query Responded' and emails every admin on the thread.
+     */
+    public function sendQuery(Request $request, $id)
+    {
+        if (!$this->resp['status'] || !isset($this->resp['user'])) {
+            return response()->json(apiErrorResponse('Unauthorized'), 401);
+        }
+
+        $dvr = $this->ownDvr($id);
+        if (!$dvr) {
+            return response()->json(apiErrorResponse('DVR not found'), 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'message' => 'required|string|min:1|max:2000',
+        ], [
+            'message.required' => 'Please type your response before sending.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(validationResponse($validator), 422);
+        }
+
+        $service = app(DvrReviewService::class);
+
+        if (!$service->hasStarted($dvr->id)) {
+            return response()->json(apiErrorResponse('There is no query on this DVR to respond to.'), 422);
+        }
+
+        $query = $service->post($dvr, UserDvrQuery::SENDER_EMPLOYEE, $this->resp['user']['id'], $request->message);
+
+        return response()->json(apiSuccessResponse('Response sent successfully', [
+            'query'        => $query->fresh('sender:id,name')->toThreadArray(),
+            'total'        => UserDvrQuery::where('user_dvr_id', $dvr->id)->count(),
+            'unread_user'  => $service->unreadForEmployee($dvr->id),
+            'query_status' => $dvr->fresh()->query_status,
+        ]), 200);
+    }
+
+    /** A DVR's thread belongs only to the employee who filed it. */
+    private function ownDvr($id)
+    {
+        if (!is_numeric($id)) {
+            return null;
+        }
+
+        return UserDvr::where('id', $id)
+            ->where('user_id', $this->resp['user']['id'])
+            ->first();
     }
 }
