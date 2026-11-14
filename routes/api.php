@@ -301,6 +301,7 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::match(['get', 'post'], '/add-sample-submission-feedback','ExecutiveController@addSampleSubsmissionFeedback');
 			Route::match(['get', 'post'], '/close-sample-submission','ExecutiveController@closeSampleSubmission');
 			Route::match(['get', 'post'], '/return-sample-submission','ExecutiveController@returnSampleSubmission');
+			Route::match(['get', 'post'], '/delete-sample-submission','ExecutiveController@deleteSampleSubmission');
 			Route::match(['get', 'post'], '/sample-stock-adjustment','ExecutiveController@sampleStockAdjustment');
 			Route::match(['get', 'post'], '/sample-stock-adjustment-logs','ExecutiveController@sampleStockAdjustmentLogs');
 			Route::match(['get', 'post'], 'market-samples','ExecutiveController@marketSamples');

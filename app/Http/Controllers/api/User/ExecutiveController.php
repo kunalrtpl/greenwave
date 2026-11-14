@@ -2431,6 +2431,56 @@ class ExecutiveController extends Controller
         }
     }
 
+    public function deleteSampleSubmission(Request $request){
+        if(!$request->isMethod('post')){
+            return response()->json(apiErrorResponse('GET not supported for this route'),422);
+        }
+        $resp = $this->resp;
+        if(!($resp['status'] && isset($resp['user']))){
+            return response()->json(apiErrorResponse('Unable to fetch user. Please try again later'),422);
+        }
+        $data = $request->all();
+        $rules = [
+            "sample_submission_id"=> "required|numeric|exists:sample_submissions,id",
+        ];
+        $validator = Validator::make($data,$rules);
+        if ($validator->fails()) {
+            return response()->json(validationResponse($validator),422);
+        }
+
+        $sample_submission = SampleSubmission::where('id',$data['sample_submission_id'])
+            ->where('user_id',$resp['user']['id'])
+            ->first();
+        if(!$sample_submission){
+            return response()->json(apiErrorResponse('Sample submission not found or access denied',403),403);
+        }
+
+        DB::beginTransaction();
+        try {
+            // Qty still out of stock = submitted qty minus whatever was already returned
+            $returnedQty = $sample_submission->is_returned ? (float) $sample_submission->return_qty : 0;
+            $qtyToRestore = (float) $sample_submission->qty - $returnedQty;
+
+            if($qtyToRestore != 0 && $sample_submission->product_id){
+                $stock = FreeSamplingStock::where('product_id',$sample_submission->product_id)
+                    ->where('user_id',$sample_submission->user_id)
+                    ->lockForUpdate()
+                    ->first();
+                if($stock){
+                    $stock->stock_in_hand = $stock->stock_in_hand + $qtyToRestore;
+                    $stock->save();
+                }
+            }
+
+            $sample_submission->delete();
+            DB::commit();
+            return response()->json(apiSuccessResponse('Sample submission deleted successfully'),200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(apiErrorResponse($e->getMessage(),500),500);
+        }
+    }
+
     public function sampleStockAdjustment(Request $request){
         if($request->isMethod('post')){
             $resp = $this->resp;
