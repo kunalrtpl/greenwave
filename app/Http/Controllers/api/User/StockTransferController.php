@@ -139,12 +139,21 @@ class StockTransferController extends Controller
             'items'              => 'required|array|min:1',
             'items.*.product_id' => 'required|integer|exists:products,id',
             'items.*.qty'        => 'required|numeric|min:0.001',
+            /*
+             | The batch the stock is from, exactly as the stock list gives it
+             | back: "<source>:<id>", e.g. "inventory:45". Mandatory, so every
+             | transfer can be traced to a batch. Whether it resolves is
+             | checked by the service, since a batch may come from any book.
+             */
+            'items.*.batch_ref'  => 'required|string|max:100|regex:/^[a-z_]+:[A-Za-z0-9_-]+$/',
         ], [
             'to_user_id.required'        => 'Please choose the employee to transfer to.',
             'items.required'             => 'Add at least one product to transfer.',
             'items.*.product_id.required' => 'Please select the product.',
             'items.*.qty.required'       => 'Please enter the qty.',
             'items.*.qty.min'            => 'Enter a transfer qty greater than zero.',
+            'items.*.batch_ref.required' => 'Please select the batch this stock is from.',
+            'items.*.batch_ref.regex'    => 'Send the batch_ref from the stock list, e.g. "inventory:45".',
         ]);
 
         if ($validator->fails()) {

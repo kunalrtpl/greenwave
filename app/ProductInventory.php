@@ -8,8 +8,16 @@ use DB;
 use App\PackingType;
 use App\Label;
 use App\Product;
+use App\ProductStock;
+use App\Services\ProductStockService;
 class ProductInventory extends Model
 {
+    /** Finished product received ready for dispatch — the RFD batches. */
+    const TYPE_RFD = 'RFDM';
+
+    /** Sale return material. */
+    const TYPE_SALE_RETURN = 'SRM';
+
     //
 	public function osp_checklists(){
 		return $this->hasMany('App\ProductChecklist','product_id','product_id')->with('checklist');
@@ -65,18 +73,31 @@ class ProductInventory extends Model
 		$createOSPinv->added_by = Auth::user()->id;
 		$createOSPinv->status   = "Incoming Material";
 		if($data['type']=="RFDM"){
-			$createOSPinv->packing_type_id = $data['final_packing_type'];
-            $createOSPinv->no_of_packs = $data['final_no_of_packs'];
-            $createOSPinv->net_fill_size = $data['final_net_fill_size'];
-            $createOSPinv->material_fill = $data['final_no_of_packs'] * $data['final_net_fill_size'];
-            $createOSPinv->packs_consumed = $data['packs_consumed'];
-            $createOSPinv->label_id = $data['label_id'];
-            $createOSPinv->labels_consumed = $data['labels_consumed'];
-            if($data['packs_consumed'] >0){
-                PackingType::where('id',$data['final_packing_type'])->decrement('stock',$data['packs_consumed']);
+            /*
+             | The packing / label section of the form is commented out for now
+             | (resources/views/admin/inventories/append-material-details.blade.php).
+             | Everything below still works exactly as before the moment those
+             | inputs come back — until then the columns are simply saved empty.
+             */
+            $packingTypeId   = isset($data['final_packing_type']) ? $data['final_packing_type'] : null;
+            $noOfPacks       = isset($data['final_no_of_packs']) ? $data['final_no_of_packs'] : 0;
+            $netFillSize     = isset($data['final_net_fill_size']) ? $data['final_net_fill_size'] : 0;
+            $packsConsumed   = isset($data['packs_consumed']) ? $data['packs_consumed'] : 0;
+            $labelId         = isset($data['label_id']) ? $data['label_id'] : 0;
+            $labelsConsumed  = isset($data['labels_consumed']) ? $data['labels_consumed'] : 0;
+
+			$createOSPinv->packing_type_id = $packingTypeId;
+            $createOSPinv->no_of_packs = $noOfPacks;
+            $createOSPinv->net_fill_size = $netFillSize;
+            $createOSPinv->material_fill = $noOfPacks * $netFillSize;
+            $createOSPinv->packs_consumed = $packsConsumed;
+            $createOSPinv->label_id = $labelId;
+            $createOSPinv->labels_consumed = $labelsConsumed;
+            if($packingTypeId && $packsConsumed >0){
+                PackingType::where('id',$packingTypeId)->decrement('stock',$packsConsumed);
             }
-            if($data['labels_consumed'] >0){
-                Label::where('id',$data['label_id'])->decrement('stock',$data['labels_consumed']);
+            if($labelId && $labelsConsumed >0){
+                Label::where('id',$labelId)->decrement('stock',$labelsConsumed);
             }
 		}
 		$createOSPinv->save();
@@ -88,7 +109,41 @@ class ProductInventory extends Model
 			ProductInventoryHistory::createHistory($historyData);
 		}else{
 			DB::table('products')->where('id',$data['product_id'])->increment('current_stock',$data['stock']);
+
+			// New ledger-backed stock. products.current_stock above is left exactly
+			// as it was; this is the table that will take over from it.
+			ProductStockService::credit($data['product_id'], $data['stock'], [
+				'bucket'       => ProductStock::BUCKET_INCOMING,
+				'source'       => ProductStockService::SOURCE_INCOMING_MATERIAL,
+				'reference'    => $createOSPinv,
+				'reference_no' => $createOSPinv->serial_no,
+				'batch_no'     => $createOSPinv->supplier_batch_no,
+				'notes'        => isset($data['remarks']) ? $data['remarks'] : null,
+			]);
 		}
 		return $ospinvid;
+    }
+
+    /* ───────────────────────── RFD batches ───────────────────────── */
+
+    public function scopeRfd($query)
+    {
+        return $query->where('type', self::TYPE_RFD);
+    }
+
+    /** Batches that still have something left in them. */
+    public function scopeWithStock($query)
+    {
+        return $query->where('remaining_stock', '>', 0);
+    }
+
+    public function getRemainingQtyAttribute()
+    {
+        return round((float) $this->remaining_stock, 3);
+    }
+
+    public static function qty($value)
+    {
+        return rtrim(rtrim(number_format((float) $value, 3, '.', ''), '0'), '.');
     }
 }

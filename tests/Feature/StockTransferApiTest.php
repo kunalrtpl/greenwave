@@ -9,6 +9,7 @@ use App\Product;
 use App\StockTransfer;
 use App\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\Concerns\MakesRfdBatches;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -22,6 +23,7 @@ use Tests\TestCase;
 class StockTransferApiTest extends TestCase
 {
     use DatabaseTransactions;
+    use MakesRfdBatches;
 
     /** @var \App\User */
     private $sender;
@@ -115,6 +117,9 @@ class StockTransferApiTest extends TestCase
     }
 
     /** Raise a transfer of $qty of the first product. @return int the id */
+    /** @var array product id => batch ref, filled on demand by postJson() */
+    private $testBatches = [];
+
     private function raise($qty = 3, array $override = [])
     {
         $payload = $override + [
@@ -126,6 +131,34 @@ class StockTransferApiTest extends TestCase
         return $this->postJson('/api/executive/stock-transfers', $payload, $this->asSender())
             ->assertStatus(200)
             ->json('data.stock_transfer.id');
+    }
+
+    /**
+     * Every row of a transfer must name the batch the stock is from. Tests
+     * that are about something else get one made for them here; the tests
+     * just below cover the requirement itself.
+     */
+    public function postJson($uri, array $data = [], array $headers = [])
+    {
+        if (strpos($uri, '/api/executive/stock-transfers') !== false && !empty($data['items'])) {
+            foreach ($data['items'] as $i => $row) {
+                if (is_array($row) && isset($row['product_id']) && !array_key_exists('batch_ref', $row)) {
+                    $data['items'][$i]['batch_ref'] = $this->aBatchFor($row['product_id']);
+                }
+            }
+        }
+
+        return parent::postJson($uri, $data, $headers);
+    }
+
+    /** One batch per product for the length of a test, reused across calls. */
+    private function aBatchFor($productId)
+    {
+        if (!isset($this->testBatches[$productId])) {
+            $this->testBatches[$productId] = $this->batchRefFor($productId, 10000);
+        }
+
+        return $this->testBatches[$productId];
     }
 
     private function sentFor($eventKey)
@@ -475,6 +508,148 @@ class StockTransferApiTest extends TestCase
         $this->assertEquals(3, $stock['blocked_qty'], 'what is already offered');
     }
 
+    /**
+     * The batches listed are the employee's own holding, so they add up to
+     * available_qty. These senders were given their stock directly, with no
+     * dispatch behind it, so nothing can be put against a batch — which is
+     * reported rather than hidden. EmployeeBatchStockTest covers the real
+     * case, where the stock arrived on a dispatch.
+     */
+    public function testStockWithNoBatchBehindItIsReportedAsUnbatched()
+    {
+        $stock = collect($this->getJson('/api/executive/stock-transfers/stock', $this->asSender())
+            ->assertStatus(200)->json('data.stock'))
+            ->firstWhere('product_id', $this->products[0]->id);
+
+        $this->assertSame([], $stock['batches']);
+        $this->assertSame(0, $stock['batch_count']);
+        $this->assertEquals($stock['available_qty'], $stock['unbatched_qty']);
+    }
+
+    /* ═══════════════════════ Batches ═══════════════════════ */
+
+    /** The batch is not optional: stock always travels with the batch it is from. */
+    public function testATransferMustNameTheBatch()
+    {
+        $this->postJson('/api/executive/stock-transfers', [
+            'to_user_id' => $this->receiver->id,
+            'items'      => [['product_id' => $this->products[0]->id, 'qty' => 2, 'batch_ref' => null]],
+        ], $this->asSender())->assertStatus(422);
+
+        $this->assertSame(0, StockTransfer::where('from_user_id', $this->sender->id)->count(),
+            'nothing is raised without a batch');
+        $this->assertEquals(10, $this->stockOf($this->sender, $this->products[0])->stock_in_hand,
+            'and no stock was blocked');
+    }
+
+    /** A batch that does not exist is refused as clearly as a missing one. */
+    public function testAnUnknownBatchIsRefused()
+    {
+        $this->postJson('/api/executive/stock-transfers', [
+            'to_user_id' => $this->receiver->id,
+            'items'      => [['product_id' => $this->products[0]->id, 'qty' => 2, 'batch_ref' => 'inventory:99999999']],
+        ], $this->asSender())->assertStatus(422);
+
+        $this->assertSame(0, StockTransfer::where('from_user_id', $this->sender->id)->count());
+    }
+
+    /** The batch has to be a batch of that product. */
+    public function testABatchOfAnotherProductIsRefused()
+    {
+        $other = $this->rfdBatch($this->products[1]->id, 50, 'OTHER-PROD-BN');
+
+        $this->postJson('/api/executive/stock-transfers', [
+            'to_user_id' => $this->receiver->id,
+            'items'      => [['product_id' => $this->products[0]->id, 'qty' => 2,
+                              'batch_ref' => 'inventory:' . $other->id]],
+        ], $this->asSender())->assertStatus(422);
+
+        $this->assertSame(0, StockTransfer::where('from_user_id', $this->sender->id)->count());
+    }
+
+    /** What was sent is kept with the transfer and read back on it. */
+    public function testTheBatchIsStoredAndReturnedOnTheTransfer()
+    {
+        $batch = $this->rfdBatch($this->products[0]->id, 50, 'TRANSFER-BN');
+
+        $id = $this->postJson('/api/executive/stock-transfers', [
+            'to_user_id' => $this->receiver->id,
+            'items'      => [['product_id' => $this->products[0]->id, 'qty' => 2,
+                              'batch_ref' => 'inventory:' . $batch->id]],
+        ], $this->asSender())->assertStatus(200)->json('data.stock_transfer.id');
+
+        $item = StockTransfer::findOrFail($id)->items->first();
+        $this->assertSame('inventory:' . $batch->id, $item->batch_ref);
+        $this->assertSame('TRANSFER-BN', $item->batch_no, 'the number is kept beside the reference');
+
+        $listed = $this->getJson('/api/executive/stock-transfers/' . $id, $this->asSender())
+            ->assertStatus(200)->json('data.stock_transfer.items.0');
+
+        $this->assertSame('TRANSFER-BN', $listed['batch_no']);
+        $this->assertSame('inventory:' . $batch->id, $listed['batch_ref']);
+    }
+
+    /** One product out of two batches is two rows, blocked once for the total. */
+    public function testOneProductMayGoOutOfTwoBatches()
+    {
+        $first  = $this->rfdBatch($this->products[0]->id, 50, 'SPLIT-A');
+        $second = $this->rfdBatch($this->products[0]->id, 50, 'SPLIT-B');
+
+        $id = $this->postJson('/api/executive/stock-transfers', [
+            'to_user_id' => $this->receiver->id,
+            'items'      => [
+                ['product_id' => $this->products[0]->id, 'qty' => 2, 'batch_ref' => 'inventory:' . $first->id],
+                ['product_id' => $this->products[0]->id, 'qty' => 3, 'batch_ref' => 'inventory:' . $second->id],
+            ],
+        ], $this->asSender())->assertStatus(200)->json('data.stock_transfer.id');
+
+        $items = StockTransfer::findOrFail($id)->items;
+
+        $this->assertCount(2, $items, 'two batches, two rows');
+        $this->assertEquals(['SPLIT-A', 'SPLIT-B'], $items->pluck('batch_no')->sort()->values()->all());
+        $this->assertEquals(5, $this->stockOf($this->sender, $this->products[0])->blocked_stock,
+            'both rows are one claim of 5 Kg on what the sender holds');
+        $this->assertEquals(5, $this->stockOf($this->sender, $this->products[0])->stock_in_hand);
+    }
+
+    /** The same product and batch twice is one row of the two qtys. */
+    public function testTheSameProductAndBatchTwiceIsAddedUp()
+    {
+        $batch = $this->rfdBatch($this->products[0]->id, 50, 'SAME-BN');
+
+        $id = $this->postJson('/api/executive/stock-transfers', [
+            'to_user_id' => $this->receiver->id,
+            'items'      => [
+                ['product_id' => $this->products[0]->id, 'qty' => 2, 'batch_ref' => 'inventory:' . $batch->id],
+                ['product_id' => $this->products[0]->id, 'qty' => 1, 'batch_ref' => 'inventory:' . $batch->id],
+            ],
+        ], $this->asSender())->assertStatus(200)->json('data.stock_transfer.id');
+
+        $items = StockTransfer::findOrFail($id)->items;
+
+        $this->assertCount(1, $items);
+        $this->assertEquals(3, $items->first()->qty);
+    }
+
+    /** Transferring does not take anything out of the batch itself. */
+    public function testTransferringDoesNotTouchTheBatchStock()
+    {
+        $batch = $this->rfdBatch($this->products[0]->id, 50, 'UNTOUCHED-BN');
+
+        $id = $this->postJson('/api/executive/stock-transfers', [
+            'to_user_id' => $this->receiver->id,
+            'items'      => [['product_id' => $this->products[0]->id, 'qty' => 2,
+                              'batch_ref' => 'inventory:' . $batch->id]],
+        ], $this->asSender())->assertStatus(200)->json('data.stock_transfer.id');
+
+        $this->postJson('/api/executive/stock-transfers/' . $id . '/approve', [], $this->asReceiver())
+            ->assertStatus(200);
+
+        // The material left the batch when it was dispatched to the employee;
+        // moving it between employees must not take it out a second time.
+        $this->assertEquals(50, $batch->fresh()->remaining_stock);
+    }
+
     public function testTheEmployeeListExcludesTheCallerAndIsMarketingOnly()
     {
         $ids = array_column($this->getJson('/api/executive/stock-transfers/employees', $this->asSender())
@@ -505,6 +680,33 @@ class StockTransferApiTest extends TestCase
             return $mail->template->event_key === 'stock_transfer_requested_employee'
                 && $mail->hasTo($receiver->email);
         });
+    }
+
+    /** The email names the batch, so the receiving employee knows what is coming. */
+    public function testTheEmailNamesTheBatch()
+    {
+        $batch = $this->rfdBatch($this->products[0]->id, 50, 'EMAIL-BN');
+
+        $this->postJson('/api/executive/stock-transfers', [
+            'to_user_id' => $this->receiver->id,
+            'items'      => [['product_id' => $this->products[0]->id, 'qty' => 2,
+                              'batch_ref' => 'inventory:' . $batch->id]],
+        ], $this->asSender())->assertStatus(200);
+
+        $seen = false;
+        Mail::assertSent(DynamicMail::class, function ($mail) use (&$seen) {
+            if ($mail->template->event_key !== 'stock_transfer_requested_employee') {
+                return false;
+            }
+            // Rendered straight from the template: Mailable::render() does not
+            // work under Mail::fake().
+            $html = view($mail->template->blade_view, $mail->mailData)->render();
+            $seen = strpos($html, 'Batch EMAIL-BN') !== false;
+
+            return true;
+        });
+
+        $this->assertTrue($seen, 'the batch number is printed beside the product');
     }
 
     /** Accepting tells the employee who offered it. */

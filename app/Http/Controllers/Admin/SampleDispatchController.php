@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Dealer;
 use App\Http\Requests\Admin\StoreSamplingDispatchRequest;
 use App\Product;
+use App\Services\ProductBatchService;
 use App\SamplingDispatch;
 use App\SamplingRequest;
 use App\Services\SamplingDispatchService;
@@ -25,6 +26,7 @@ use Session;
  *   create()        GET  /admin/sample-dispatch/create
  *   store()         POST /admin/sample-dispatch                      [AJAX]
  *   readyRequests() GET  /admin/sample-dispatch/requests             [AJAX]
+ *   batches()       GET  /admin/sample-dispatch/batches              [AJAX]
  */
 class SampleDispatchController extends Controller
 {
@@ -203,14 +205,20 @@ class SampleDispatchController extends Controller
             ->limit(200)
             ->get();
 
+        // Every line's RFD batches in one query, so the screen can build its
+        // batch dropdowns without a call per row.
+        $batches = $this->batchesFor($requests->pluck('product_id')->filter()->unique()->all());
+
         return response()->json([
             'status'   => true,
-            'requests' => $requests->map(function ($r) {
+            'requests' => $requests->map(function ($r) use ($batches) {
                 $partyType = $r->dispatch_dealer_id ? 'dealer' : ($r->dispatch_customer_id ? 'customer' : 'user');
 
                 return [
                     'id'            => $r->id,
                     'reference_no'  => $r->reference_no,
+                    'product_id'    => $r->product_id,
+                    'batches'       => isset($batches[$r->product_id]) ? $batches[$r->product_id] : [],
                     'request_date'  => $r->request_date ? $r->request_date->format('d M Y') : null,
                     'employee'      => optional($r->user)->name,
                     'customer'      => optional($r->customer)->name,
@@ -230,6 +238,38 @@ class SampleDispatchController extends Controller
                 ];
             })->values(),
         ]);
+    }
+
+    /**
+     * RFD batches a product can be dispatched from, newest stock information
+     * each time the screen asks. An empty list is an answer, not an error:
+     * the screen then refuses to dispatch that product.
+     */
+    public function batches(Request $request)
+    {
+        $productId = $request->input('product_id');
+
+        if (!$productId) {
+            return response()->json(['status' => true, 'batches' => []]);
+        }
+
+        $batches = $this->batchesFor([$productId]);
+
+        return response()->json([
+            'status'  => true,
+            'batches' => isset($batches[$productId]) ? $batches[$productId] : [],
+        ]);
+    }
+
+    /**
+     * Batch options for several products at once, keyed by product id.
+     *
+     * Asked of App\Services\ProductBatchService rather than of a table, so
+     * batches coming from another book later show up here by themselves.
+     */
+    private function batchesFor(array $productIds)
+    {
+        return app(ProductBatchService::class)->optionsFor($productIds);
     }
 
     /** The preselected select2 option for a request's "dispatch to" party. */

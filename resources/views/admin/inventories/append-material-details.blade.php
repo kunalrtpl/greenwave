@@ -127,6 +127,25 @@
             <h4 class="text-center text-danger pt-3" style="display: none;" id="Inventory-supplier_batch_no"></h4>
         </div>
     </div>
+    {{--
+       ===========================================================================
+       HIDDEN FOR NOW - DO NOT DELETE.
+       Attach COA / Attach QC Report and the whole PACKING DETAILS - PACKING
+       CONSUMPTION - LABEL CONSUMPTION table are switched off at the client's
+       request. They are kept here untouched, behind the "if (false)" below,
+       so nothing of them is rendered or queried.
+
+       The form saves without them: the server side skips the packing checks and
+       saves those columns empty while this block stays switched off (see
+       InventoryController@addIncomingMaterial and
+       ProductInventory::createOSPInventory).
+
+       TO BRING IT BACK: delete the "if (false)" blade line directly below and
+       its matching "endif" line at the end of this block (both are marked with
+       the comment "hidden block"). Nothing else has to change.
+       ===========================================================================
+    --}}
+    @if(false) {{-- hidden block: delete this line to restore --}}
     @if($data['type'] =="RFDM")
         <div class="form-group">
             <label class="col-md-3 control-label">Attach COA </label>
@@ -201,4 +220,5 @@
         <h4 class="text-center text-danger pt-3" style="display: none;" id="Inventory-final_packing_errors"></h4>
         <hr class="bold-hr">
     @endif
+    @endif {{-- hidden block: delete this line to restore --}}
 @endif

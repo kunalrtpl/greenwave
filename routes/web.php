@@ -486,6 +486,7 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 		    Route::get('/create', 'SampleDispatchController@create')->name('create');
 		    Route::post('/', 'SampleDispatchController@store')->name('store');
 		    Route::get('/requests', 'SampleDispatchController@readyRequests')->name('requests');
+		    Route::get('/batches', 'SampleDispatchController@batches')->name('batches');
 		});
 
 

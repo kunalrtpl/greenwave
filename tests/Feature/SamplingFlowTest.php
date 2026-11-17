@@ -8,6 +8,7 @@ use App\SamplingRequest;
 use App\Services\SamplingRequestService;
 use App\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\Concerns\MakesRfdBatches;
 use Tests\TestCase;
 
 /**
@@ -20,6 +21,7 @@ use Tests\TestCase;
 class SamplingFlowTest extends TestCase
 {
     use DatabaseTransactions;
+    use MakesRfdBatches;
 
     /** @var \App\User */
     private $admin;
@@ -576,7 +578,9 @@ class SamplingFlowTest extends TestCase
         $line = $this->raiseRequest()->first();
         $this->approve($line, 2);
         $this->markReady($line);
-        $this->dispatch([['sampling_request_id' => $line->id, 'dispatch_qty' => 2, 'batch_no' => 'B-9']]);
+        // The challan shows the batch's own number, not whatever was posted.
+        $batch = $this->rfdBatch($line->product_id, 100, 'B-9');
+        $this->dispatch([['sampling_request_id' => $line->id, 'dispatch_qty' => 2, 'batch_ref' => $this->batchRef($batch)]]);
 
         $this->actingAs($this->admin)->get('/admin/sample-dispatch/create')->assertStatus(200);
 
@@ -935,6 +939,46 @@ class SamplingFlowTest extends TestCase
         $this->actingAs($this->admin)
             ->postJson('/admin/sample-dispatch', $this->challan($items))
             ->assertStatus(200);
+    }
+
+    /**
+     * Material only leaves a batch that has stock in it, so every dispatch
+     * posted by these tests gets a batch made for it unless the test named one
+     * itself. Doing it here keeps the tests about what they are each testing;
+     * the refusal when there is no batch is covered in SampleDispatchBatchTest.
+     */
+    public function postJson($uri, array $data = [], array $headers = [])
+    {
+        if (strpos($uri, '/admin/sample-dispatch') !== false) {
+            $data = $this->withBatches($data);
+        }
+
+        return parent::postJson($uri, $data, $headers);
+    }
+
+    private function withBatches(array $data)
+    {
+        foreach (['items', 'voluntary_items'] as $key) {
+            if (empty($data[$key]) || !is_array($data[$key])) {
+                continue;
+            }
+
+            foreach ($data[$key] as $i => $row) {
+                if (!is_array($row) || isset($row['batch_ref'])) {
+                    continue;
+                }
+
+                $productId = isset($row['product_id'])
+                    ? $row['product_id']
+                    : optional(SamplingRequest::find(isset($row['sampling_request_id']) ? $row['sampling_request_id'] : 0))->product_id;
+
+                if ($productId) {
+                    $data[$key][$i]['batch_ref'] = $this->batchRefFor($productId, 10000);
+                }
+            }
+        }
+
+        return $data;
     }
 
     private function challan(array $items)

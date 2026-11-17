@@ -4,9 +4,14 @@ namespace App\Services;
 
 use App\FreeSamplingStock;
 use App\Product;
+use App\ProductInventory;
+use App\ProductStock;
 use App\SamplingDispatch;
 use App\SamplingRequest;
 use App\SamplingRequestLog;
+use App\Services\ProductBatchService;
+use App\Services\ProductStockService;
+use App\Support\ProductBatch;
 use App\Services\SamplingRequestService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -43,7 +48,10 @@ class SamplingDispatchService
                 : $data['items'];
 
             $requests = $this->lockRequests($items);
-            $lines    = $this->validateLines($items, $requests);
+            // Locked for the whole save: two dispatch desks may not hand out
+            // the same kilo of the same batch at the same moment.
+            $batches  = $this->lockBatches($items);
+            $lines    = $this->validateLines($items, $requests, $batches);
 
             $dispatch     = $this->nextDispatchNo();
             $dispatchedBy = \Auth::check() ? \Auth::user()->id : null;
@@ -54,7 +62,7 @@ class SamplingDispatchService
                 $request = $line['request'];
                 $qty     = $line['qty'];
 
-                SamplingDispatch::create([
+                $dispatchRow = SamplingDispatch::create([
                     'dispatch_no'          => $dispatch['dispatch_no'],
                     'dispatch_ref_no'      => $dispatch['dispatch_ref_no'],
                     'financial_year'       => $dispatch['financial_year'],
@@ -62,6 +70,9 @@ class SamplingDispatchService
                     'sampling_request_id'  => $request->id,
                     'product_id'           => $request->product_id,
                     'batch_no'             => $line['batch_no'],
+                    // Which batch row it came out of, so the employee's stock
+                    // can be traced back to it afterwards.
+                    'batch_ref'            => $line['batch']->ref(),
                     'dispatch_qty'         => $qty,
                     'invoice_no'           => $data['invoice_no'],
                     'invoice_date'         => isset($data['invoice_date']) ? $data['invoice_date'] : $data['dispatch_date'],
@@ -93,6 +104,10 @@ class SamplingDispatchService
                     $closedCount++;
                 }
                 $request->save();
+
+                // The material physically leaves this batch here: its
+                // remaining stock drops and the ledger records the debit.
+                $this->consumeBatch($line['batch'], $qty, $dispatchRow, $request, $dispatch['dispatch_ref_no']);
 
                 $this->moveStockToTransit($request, $qty);
 
@@ -239,7 +254,21 @@ class SamplingDispatchService
             ->first();
 
         if (!$stock) {
-            return;
+            /*
+             | The row is normally already there, put in transit when the
+             | material was dispatched. If it is missing — material dispatched
+             | before this flow existed, or a row cleared in between — the
+             | employee still has the material in their hands, so it is opened
+             | here rather than quietly dropped.
+             */
+            $stock = new FreeSamplingStock();
+            $stock->user_id                 = $userId;
+            $stock->customer_id             = optional($request)->customer_id;
+            $stock->product_id              = $dispatch->product_id;
+            $stock->stock_in_hand           = 0;
+            $stock->in_transit              = 0;
+            $stock->pending_orders          = 0;
+            $stock->pending_customer_orders = 0;
         }
 
         $qty = (float) $dispatch->dispatch_qty;
@@ -285,6 +314,7 @@ class SamplingDispatchService
                 'sampling_request_id' => $request->id,
                 'dispatch_qty'        => $request->approved_qty,
                 'batch_no'            => isset($row['batch_no']) ? $row['batch_no'] : null,
+                'batch_ref'           => isset($row['batch_ref']) ? $row['batch_ref'] : null,
                 'dispatch_party_type' => isset($row['dispatch_party_type']) ? $row['dispatch_party_type'] : null,
                 'dispatch_dealer_id'  => $party['dispatch_dealer_id'],
                 'dispatch_customer_id' => $party['dispatch_customer_id'],
@@ -319,10 +349,27 @@ class SamplingDispatchService
             ->keyBy('id');
     }
 
-    private function validateLines(array $items, $requests)
+    /**
+     * Row-locks every RFD batch in the save. Nothing is handed out of a batch
+     * until the whole save has been checked against it.
+     */
+    private function lockBatches(array $items)
+    {
+        $refs = array_map(function ($row) {
+            return isset($row['batch_ref']) ? $row['batch_ref'] : null;
+        }, $items);
+
+        return app(ProductBatchService::class)->lock(array_filter($refs));
+    }
+
+    private function validateLines(array $items, $requests, $batches = null)
     {
         $lines  = [];
         $errors = [];
+        // Qty already spoken for by earlier rows of this same save, per batch.
+        // Adding the same product twice is allowed, so each row has to be
+        // checked against what the rows above it have already taken.
+        $claimed = [];
 
         foreach (array_values($items) as $i => $row) {
             $request = $requests->get($row['sampling_request_id']);
@@ -349,12 +396,20 @@ class SamplingDispatchService
                 continue;
             }
 
+            $batch = $this->resolveBatch($row, $request, $batches, $claimed, $i, $errors);
+            if (!$batch) {
+                continue;
+            }
+            $claimed[$batch->ref()] = (isset($claimed[$batch->ref()]) ? $claimed[$batch->ref()] : 0) + $qty;
+
             $party = $this->resolveDispatchParty($row, $request);
 
             $lines[] = [
                 'request'              => $request,
                 'qty'                  => $qty,
-                'batch_no'             => isset($row['batch_no']) ? $row['batch_no'] : null,
+                'batch'                => $batch,
+                // Kept as the batch's own number, never as whatever was typed.
+                'batch_no'             => $batch->batchNo,
                 'dispatch_to'          => $party['dispatch_to'],
                 'dispatch_dealer_id'   => $party['dispatch_dealer_id'],
                 'dispatch_customer_id' => $party['dispatch_customer_id'],
@@ -371,6 +426,72 @@ class SamplingDispatchService
         }
 
         return $lines;
+    }
+
+    /**
+     * The RFD batch a line goes out of.
+     *
+     * Material may only leave a batch that exists, belongs to this product and
+     * still holds enough — counting what the earlier rows of the same save
+     * have already claimed from it. No batch, no dispatch: a product with
+     * nothing left in stores cannot be sent out.
+     *
+     * Returns false and fills $errors when the line cannot be dispatched.
+     */
+    private function resolveBatch(array $row, SamplingRequest $request, $batches, array $claimed, $i, array &$errors)
+    {
+        $key   = "items.$i.batch_ref";
+        $ref   = isset($row['batch_ref']) ? $row['batch_ref'] : null;
+        $batch = ($ref && isset($batches[$ref])) ? $batches[$ref] : null;
+
+        if (!$batch) {
+            $errors[$key] = 'Select the batch this material is going out of. '
+                . optional($request->product)->product_name
+                . ' cannot be dispatched without one.';
+            return false;
+        }
+        if ((int) $batch->productId !== (int) $request->product_id) {
+            $errors[$key] = 'Batch ' . $batch->batchNo . ' belongs to a different product.';
+            return false;
+        }
+
+        $qty   = (float) $row['dispatch_qty'];
+        $taken = isset($claimed[$batch->ref()]) ? $claimed[$batch->ref()] : 0;
+        $left  = round($batch->remainingQty - $taken, 3);
+
+        if ($qty > $left + 0.0001) {
+            $errors[$key] = 'Batch ' . $batch->batchNo . ' has only '
+                . ProductInventory::qty($left) . ' Kg left'
+                . ($taken > 0 ? ' — ' . ProductInventory::qty($taken) . ' Kg of it is already being sent on this challan' : '')
+                . '.';
+            return false;
+        }
+
+        return $batch;
+    }
+
+    /**
+     * Takes the qty out of the batch and records the debit.
+     *
+     * The ledger is a record of material that has physically left on a
+     * challan, so the balance is written even if product_stocks has drifted
+     * below it — a wrong balance is fixed with an adjustment, not by losing
+     * the movement.
+     */
+    private function consumeBatch(ProductBatch $batch, $qty, SamplingDispatch $dispatchRow, SamplingRequest $request, $refNo)
+    {
+        $batch->consume($qty);
+
+        ProductStockService::debit($request->product_id, $qty, [
+            'bucket'         => ProductStock::BUCKET_INCOMING,
+            'source'         => ProductStockService::SOURCE_SAMPLE_DISPATCH,
+            'reference'      => $dispatchRow,
+            'reference_no'   => $refNo,
+            'batch_no'       => $batch->batchNo,
+            'reason'         => 'Sample ' . $request->reference_no,
+            'notes'          => $dispatchRow->remarks,
+            'allow_negative' => true,
+        ]);
     }
 
     /**
@@ -442,9 +563,17 @@ class SamplingDispatchService
      */
     private function moveStockToTransit(SamplingRequest $request, $qty)
     {
-        if ($request->product_id) {
-            Product::where('id', $request->product_id)->decrement('current_stock', $qty);
-        }
+        /*
+         | products.current_stock is no longer touched here. Dispatch stock now
+         | comes out of the RFD batch it was actually taken from — see
+         | consumeBatch() — and is recorded in product_stocks /
+         | product_stock_ledgers. Left in place, commented, because the old
+         | column is still being written elsewhere:
+         |
+         | if ($request->product_id) {
+         |     Product::where('id', $request->product_id)->decrement('current_stock', $qty);
+         | }
+         */
 
         if (!$request->user_id || !$request->product_id) {
             return;

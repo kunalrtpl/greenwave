@@ -11,6 +11,7 @@ use App\Services\SamplingQueryService;
 use App\Services\SamplingRequestService;
 use App\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\Concerns\MakesRfdBatches;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -25,6 +26,7 @@ use Tests\TestCase;
 class SamplingQueryTest extends TestCase
 {
     use DatabaseTransactions;
+    use MakesRfdBatches;
 
     /** @var \App\User */
     private $admin;
@@ -203,6 +205,7 @@ class SamplingQueryTest extends TestCase
             'dispatch_date' => date('Y-m-d'), 'invoice_no' => 'CH-Q1',
             'transport' => 'Courier', 'lr_no' => 'DKT-Q1',
             'items' => [['sampling_request_id' => $request->id, 'dispatch_qty' => 2,
+                         'batch_ref' => $this->batchRefFor($request->product_id, 100),
                          'dispatch_party_type' => 'user', 'dispatch_user_id' => $this->executive->id]],
         ]);
 

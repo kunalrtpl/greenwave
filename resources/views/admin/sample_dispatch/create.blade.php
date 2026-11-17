@@ -257,8 +257,14 @@ $(function () {
    var URLS = {
       store:    @json(route('admin.sample-dispatch.store')),
       requests: @json(route('admin.sample-dispatch.requests')),
+      batches:  @json(route('admin.sample-dispatch.batches')),
       parties:  @json(route('admin.sampling-parties'))
    };
+
+   /* RFD batches per product id, as the server last reported them. Filled from
+      the request list and, for voluntary rows, fetched when a product is
+      picked. A product with an empty list cannot be dispatched at all. */
+   var BATCHES = {};
 
    var PRODUCTS   = @json($products);
    var PACK_SIZES = @json(App\SamplingRequest::PACK_SIZES);
@@ -279,6 +285,127 @@ $(function () {
    function esc(v){ return $('<div>').text(v == null ? '' : v).html(); }
    function num(v){ return v == null ? '' : v; }
    function packSizesFor(form){ return PACK_SIZES[String(form || '').toLowerCase()] || PACK_SIZES['default']; }
+
+   /* ══════════════ RFD batches ══════════════
+      Material always leaves a named batch, so the batch is picked from what
+      stores actually hold rather than typed. No batch in stock means the
+      product cannot be dispatched, which is caught here and again on save. */
+
+   function batchSelectHtml(n, productId, dataClass){
+      return '<select class="sdx-in sm sd-batch ' + dataClass + '" name="' + n + '[batch_ref]"'
+           + (productId ? ' data-product="' + productId + '"' : '')
+           + (dataClass ? ' disabled' : '') + '>'
+           + batchOptionsHtml(productId)
+           + '</select>'
+           + '<input type="hidden" class="sd-batch-no ' + dataClass + '" name="' + n + '[batch_no]"'
+           + (dataClass ? ' disabled' : '') + '>';
+   }
+
+   function batchOptionsHtml(productId){
+      if (!productId) { return '<option value="">— Select Product First —</option>'; }
+
+      var list = BATCHES[productId] || [];
+      if (!list.length) { return '<option value="">No batch in stock</option>'; }
+
+      var html = '<option value="">— Select Batch —</option>';
+      $.each(list, function(_, b){
+         html += '<option value="' + esc(b.ref) + '" data-batch="' + esc(b.batch_no) + '" data-left="' + b.remaining_qty + '">'
+              + esc(b.label) + '</option>';
+      });
+      return html;
+   }
+
+   /** Loads a product's batches, from cache when they are already known. */
+   function loadBatches(productId, done){
+      if (!productId) { done([]); return; }
+      if (BATCHES[productId]) { done(BATCHES[productId]); return; }
+
+      $.get(URLS.batches, { product_id: productId }, function(res){
+         BATCHES[productId] = res.batches || [];
+         done(BATCHES[productId]);
+      }).fail(function(){ done([]); });
+   }
+
+   function fillBatchSelect($row, productId){
+      var $sel = $row.find('.sd-batch');
+      $sel.attr('data-product', productId || '').html(batchOptionsHtml(productId));
+      $row.find('.sd-batch-no').val('');
+      recheckBatches();
+   }
+
+   /** Every row that is actually going to be saved. */
+   function batchRows(){
+      return mode() === 'voluntary'
+         ? $('#sdVolTable tbody tr')
+         : $('tr.sd-detail').filter(function(){ return open[$(this).attr('data-detail')]; });
+   }
+
+   function rowQty($row){
+      var $typed = $row.find('input[name$="[dispatch_qty]"]');
+      if ($typed.length) { return parseFloat($typed.val()) || 0; }
+      return parseFloat($row.find('.vol-qty').text()) || 0;   // voluntary: pack size x packs
+   }
+
+   /**
+      Adding the same product twice is allowed, so a batch's stock is checked
+      against the total of every row drawing on it, not row by row.
+   */
+   function recheckBatches(){
+      var claimed = {};
+      batchRows().each(function(){
+         var id = $(this).find('.sd-batch').val();
+         if (id) { claimed[id] = (claimed[id] || 0) + rowQty($(this)); }
+      });
+
+      batchRows().each(function(){
+         var $row  = $(this);
+         var $sel  = $row.find('.sd-batch');
+         var $opt  = $sel.find('option:selected');
+         var $hint = $row.find('.sd-batch-left');
+         var $err  = $row.find('[data-err$="batch_ref"]');
+
+         // Keep the readable batch number with the row for the challan.
+         $row.find('.sd-batch-no').val($sel.val() ? ($opt.data('batch') || '') : '');
+
+         if (!$sel.val()) {
+            var none = $sel.find('option').length === 1 && !$sel.find('option').first().val();
+            $hint.text('');
+            $sel.toggleClass('has-err', none);
+            if (none && $sel.attr('data-product')) {
+               $err.text('No batch left in stock for this product — it cannot be dispatched.').show();
+            }
+            return;
+         }
+
+         var left  = parseFloat($opt.data('left')) || 0;
+         var taken = claimed[$sel.val()] || 0;
+         var over  = taken > left + 0.0001;
+
+         $hint.html(over
+            ? '<span style="color:#c62828">' + taken + ' Kg asked for, only ' + left + ' Kg left in this batch</span>'
+            : 'Left in batch: ' + left + ' Kg' + (taken > rowQty($row) ? ' (' + taken + ' Kg on this challan)' : ''));
+         $sel.toggleClass('has-err', over);
+         if (over) {
+            $err.text('Batch ' + ($opt.data('batch') || '') + ' has only ' + left + ' Kg left.').show();
+         } else {
+            $err.hide().text('');
+         }
+      });
+   }
+
+   /** Rows that cannot be saved: no batch chosen, or more asked for than is left. */
+   function batchProblems(){
+      var problems = 0;
+      recheckBatches();
+      batchRows().each(function(){
+         var $sel = $(this).find('.sd-batch');
+         if (!$sel.val() || $sel.hasClass('has-err')) { problems++; }
+      });
+      return problems;
+   }
+
+   $(document).on('change', '.sd-batch', recheckBatches);
+   $(document).on('input change', 'input[name$="[dispatch_qty]"]', recheckBatches);
 
    /* ── Segmented controls ─────────────────────────────── */
    $(document).on('change', '.sdx-seg input[type=radio]', function(){
@@ -365,6 +492,7 @@ $(function () {
       $.get(URLS.requests, { user_id: $('#sdUser').val(), keyword: $('#sdKeyword').val() }, function(res){
          $('.loadingDiv').hide();
          rows = res.requests;
+         $.each(rows, function(_, r){ if (r.product_id) { BATCHES[r.product_id] = r.batches || []; } });
          render();
       }).fail(function(){
          $('.loadingDiv').hide();
@@ -429,6 +557,7 @@ $(function () {
       });
       reconcileRequestParties();
       pushPartyToRows();
+      recheckBatches();
       updateCount();
    }
 
@@ -455,9 +584,10 @@ $(function () {
          + '      <div class="sdx-hint">Pending: ' + num(r.pending_qty) + ' Kg</div>'
          + '      <div class="sdx-err" data-err="' + e + 'dispatch_qty"></div></div>'
 
-         + '    <div class="sdx-f"><label>Batch No</label>'
-         + '      <input type="text" class="sdx-in sm data" name="' + n + '[batch_no]" placeholder="Optional" disabled>'
-         + '      <div class="sdx-err" data-err="' + e + 'batch_no"></div></div>'
+         + '    <div class="sdx-f"><label>Batch No <span class="rq">*</span></label>'
+         + batchSelectHtml(n, r.product_id, 'data')
+         + '      <div class="sdx-hint sd-batch-left"></div>'
+         + '      <div class="sdx-err" data-err="' + e + 'batch_ref"></div></div>'
 
          // Read-only: what the field user asked for on this request, carried
          // through approval. Where it actually goes is chosen once below.
@@ -550,6 +680,7 @@ $(function () {
 
       reconcileRequestParties();
       pushPartyToRows();
+      recheckBatches();
       updateCount();
    });
 
@@ -578,8 +709,9 @@ $(function () {
          + '<td><input type="number" min="1" step="1" value="1" class="sdx-in sm data vol-packs" name="' + n + '[approved_no_of_packs]">'
          + '  <div class="sdx-err" data-err="' + e + 'approved_no_of_packs"></div></td>'
          + '<td class="num"><b class="vol-qty">0</b> Kg<div class="sdx-hint">auto</div></td>'
-         + '<td><input type="text" class="sdx-in sm data" name="' + n + '[batch_no]" placeholder="Optional">'
-         + '  <div class="sdx-err" data-err="' + e + 'batch_no"></div></td>'
+         + '<td>' + batchSelectHtml(n, null, '')
+         + '  <div class="sdx-hint sd-batch-left"></div>'
+         + '  <div class="sdx-err" data-err="' + e + 'batch_ref"></div></td>'
          + '<td><button type="button" class="sdx-btn icon vol-remove" title="Remove"><i class="fa fa-trash"></i></button>'
          + '  <input type="hidden" class="sd-party-type" name="' + n + '[dispatch_party_type]">'
          + '  <input type="hidden" class="sd-dealer" name="' + n + '[dispatch_dealer_id]">'
@@ -593,6 +725,7 @@ $(function () {
       setVolPackSizes($row);
       calcVolRow($row);
       pushPartyToRows();
+      recheckBatches();
    }
 
    $('#sdVolAdd').on('click', addVolRow);
@@ -619,18 +752,25 @@ $(function () {
    }
 
    $(document).on('change', '.vol-product', function(){
-      var $row = $(this).closest('tr');
+      var $row      = $(this).closest('tr');
+      var productId = $(this).val();
       setVolPackSizes($row);
       calcVolRow($row);
+
+      // Batches belong to the product, so they are reloaded with it.
+      $row.find('.sd-batch').html('<option value="">Loading…</option>');
+      loadBatches(productId, function(){ fillBatchSelect($row, productId); });
    });
 
    $(document).on('input change', '.vol-pack, .vol-packs', function(){
       calcVolRow($(this).closest('tr'));
+      recheckBatches();
    });
 
    $(document).on('click', '.vol-remove', function(){
       if ($('#sdVolTable tbody tr').length === 1) { alert('At least one product is required.'); return; }
       $(this).closest('tr').remove();
+      recheckBatches();
    });
 
    $('#sdVolUser').on('change', function(){
@@ -773,6 +913,14 @@ $(function () {
       if (!chosenPartyId()) {
          $('#sdAlert').text('Choose where this dispatch is going under "Dispatch To".').show();
          $('html,body').animate({ scrollTop: $('#sdAlert').offset().top - 150 }, 400);
+         return;
+      }
+
+      // No batch, no dispatch — stock has to come out of something.
+      if (batchProblems()) {
+         $('#sdAlert').text('Every product must go out of a batch that has enough stock left. Please check the batch column.').show();
+         var $firstErr = $('#sdPage .sdx-err:visible').first();
+         $('html,body').animate({ scrollTop: ($firstErr.length ? $firstErr : $('#sdAlert')).offset().top - 150 }, 400);
          return;
       }
 

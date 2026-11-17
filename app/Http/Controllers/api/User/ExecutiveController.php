@@ -2254,6 +2254,14 @@ class ExecutiveController extends Controller
     }
 
 
+    /**
+     | A sample handed to a customer. The qty leaves the employee's stock out
+     | of the batch they name, which is mandatory so every sample can be
+     | traced back to the material it came from.
+     |
+     | All of the stock work lives in App\Services\SampleSubmissionService, so
+     | submitting, editing and deleting can never move stock differently.
+     */
     public function sampleSubmission(Request $request){
         if($request->isMethod('post')){
             $resp = $this->resp;
@@ -2261,61 +2269,26 @@ class ExecutiveController extends Controller
                 $data = $request->all();
                 $rules = [
                     "submission_date"=> "required|date_format:Y-m-d",
-                    //"customer_id"=> "required",
+                    "product_id"=> "required|exists:products,id",
+                    "qty"=> "required|numeric|min:0.001",
+                    // "<source>:<id>" from the stock list, e.g. "inventory:45".
+                    "batch_ref"=> "required|string|max:100|regex:/^[a-z_]+:[A-Za-z0-9_-]+$/",
                 ];
-                $customMessages = [];
+                $customMessages = [
+                    "batch_ref.required" => "Please select the batch this sample is from.",
+                    "batch_ref.regex"    => 'Send the batch_ref from the stock list, e.g. "inventory:45".',
+                ];
                 $validator = Validator::make($data,$rules,$customMessages);
                 if ($validator->fails()) {
-                    return response()->json(validationResponse($validator),422); 
+                    return response()->json(validationResponse($validator),422);
                 }
-                $old_qty = 0;
-                if(isset($data['sample_submission_id']) && !empty($data['sample_submission_id'])){
-                    $sample_submission = SampleSubmission::find($data['sample_submission_id']);
-                    $old_qty = $sample_submission->qty;
-                }else{
-                    $sample_submission = new SampleSubmission;
-                }
-                $sample_submission->user_id = $resp['user']['id']; 
 
-                if(isset($data['customer_id']) && !empty($data['customer_id'])){
-                    $sample_submission->customer_id = $data['customer_id'];
+                try {
+                    app(\App\Services\SampleSubmissionService::class)->submit($data, $resp['user']['id']);
+                } catch (\Illuminate\Validation\ValidationException $e) {
+                    return response()->json(validationResponse($e->validator),422);
                 }
-                if(isset($data['customer_register_request_id']) && !empty($data['customer_register_request_id'])){
-                    $sample_submission->customer_register_request_id = $data['customer_register_request_id'];
-                }
-                $sample_submission->submission_date = $data['submission_date']; 
-                $sample_submission->purpose = $data['purpose']; 
-                $sample_submission->submission_type = $data['submission_type']; 
-                $sample_submission->complaint_id = $data['complaint_id']; 
-                $sample_submission->product_id = $data['product_id']; 
-                $sample_submission->qty = $data['qty']; 
-                $sample_submission->from = $data['from']; 
-                $sample_submission->sample_value = $data['sample_value']; 
-                $sample_submission->remarks = $data['remarks']; 
-                if(isset($data['from_dvr'])) { 
-                    $sample_submission->from_dvr = $data['from_dvr'];
-                }
-                $sample_submission->save();
-                $freeSamplingStock = DB::table('free_sampling_stocks')->where(['product_id'=>$data['product_id']])->where('user_id',$resp['user']['id'])->first();
-                if(is_object($freeSamplingStock)){
-                    $update_sample_stock = FreeSamplingStock::find($freeSamplingStock->id);
-                    $update_sample_stock->stock_in_hand = $update_sample_stock->stock_in_hand + $old_qty - $data['qty'];
-                    $update_sample_stock->save();
-                }else{
-                    $free_sample_stock = new FreeSamplingStock;
-                    $free_sample_stock->user_id = $resp['user']['id'];
-                    $free_sample_stock->product_id = $data['product_id'];
-                    if(isset($data['customer_id']) && !empty($data['customer_id'])){
-                        $free_sample_stock->customer_id = $data['customer_id'];
-                    }
-                    if(isset($data['customer_register_request_id']) && !empty($data['customer_register_request_id'])){
-                        $free_sample_stock->customer_register_request_id = $data['customer_register_request_id'];
-                    }
-                    $free_sample_stock->user_id = $resp['user']['id'];
-                    $free_sample_stock->stock_in_hand = 0 - $data['qty'];
-                    $free_sample_stock->save();
-                }
-                
+
                 $message = 'Request has been submitted successfully';
                 return response()->json(apiSuccessResponse($message),200);
             }
@@ -2455,32 +2428,25 @@ class ExecutiveController extends Controller
             return response()->json(apiErrorResponse('Sample submission not found or access denied',403),403);
         }
 
-        DB::beginTransaction();
         try {
-            // Qty still out of stock = submitted qty minus whatever was already returned
-            $returnedQty = $sample_submission->is_returned ? (float) $sample_submission->return_qty : 0;
-            $qtyToRestore = (float) $sample_submission->qty - $returnedQty;
+            // Whatever of it is still out comes back to the employee's stock.
+            // The service owns that, so it is the same arithmetic the
+            // submission used on the way out.
+            app(\App\Services\SampleSubmissionService::class)->delete($sample_submission);
 
-            if($qtyToRestore != 0 && $sample_submission->product_id){
-                $stock = FreeSamplingStock::where('product_id',$sample_submission->product_id)
-                    ->where('user_id',$sample_submission->user_id)
-                    ->lockForUpdate()
-                    ->first();
-                if($stock){
-                    $stock->stock_in_hand = $stock->stock_in_hand + $qtyToRestore;
-                    $stock->save();
-                }
-            }
-
-            $sample_submission->delete();
-            DB::commit();
             return response()->json(apiSuccessResponse('Sample submission deleted successfully'),200);
         } catch (\Exception $e) {
-            DB::rollBack();
             return response()->json(apiErrorResponse($e->getMessage(),500),500);
         }
     }
 
+    /**
+     | Writing stock off — expired, leaked, damaged. The qty comes off the
+     | batch the employee names, which is mandatory so a write-off is as
+     | traceable as a sample handed to a customer.
+     |
+     | The stock work lives in App\Services\SampleStockAdjustmentService.
+     */
     public function sampleStockAdjustment(Request $request){
         if($request->isMethod('post')){
             $resp = $this->resp;
@@ -2488,39 +2454,27 @@ class ExecutiveController extends Controller
                 $data = $request->all();
                 $rules = [
                     "product_id"=>"required|exists:products,id",
-                    "qty"=>"required",
+                    "qty"=>"required|numeric",
                     "amount"=>"required",
                     "adjustment_date"=>"required|date_format:Y-m-d",
+                    // "<source>:<id>" from the stock list, e.g. "inventory:45".
+                    "batch_ref"=>"required|string|max:100|regex:/^[a-z_]+:[A-Za-z0-9_-]+$/",
                 ];
-                $customMessages = [];
+                $customMessages = [
+                    "batch_ref.required" => "Please select the batch this stock is being adjusted from.",
+                    "batch_ref.regex"    => 'Send the batch_ref from the stock list, e.g. "inventory:45".',
+                ];
                 $validator = Validator::make($data,$rules,$customMessages);
                 if ($validator->fails()){
-                    return response()->json(validationResponse($validator),422); 
+                    return response()->json(validationResponse($validator),422);
                 }
-                DB::beginTransaction();
-                $execProd = DB::table('free_sampling_stocks')->where(['user_id'=>$resp['user']['id'],'product_id'=>$data['product_id']])->first();
-                if(is_object($execProd)){
-                    $updateexecProd = FreeSamplingStock::find($execProd->id);
-                    $updateexecProd->stock_in_hand = $execProd->stock_in_hand - $data['qty'];
-                    $updateexecProd->save();
-                }else{
-                    $updateexecProd = new FreeSamplingStock;
-                    $updateexecProd->user_id =  $resp['user']['id'];
-                    $updateexecProd->product_id =  $data['product_id'];
-                    $updateexecProd->stock_in_hand = 0 - $data['qty'];
-                    $updateexecProd->save();
+
+                try {
+                    app(\App\Services\SampleStockAdjustmentService::class)->adjust($data, $resp['user']['id']);
+                } catch (\Illuminate\Validation\ValidationException $e) {
+                    return response()->json(validationResponse($e->validator),422);
                 }
-                $stock_adjust = new SampleStockAdjustment;
-                $stock_adjust->product_id = $data['product_id'];
-                $stock_adjust->user_id = $resp['user']['id'];
-                $stock_adjust->amount = $data['amount'];
-                $stock_adjust->qty = $data['qty'];
-                $stock_adjust->remarks = $data['remarks'];
-                $stock_adjust->reason = $data['reason'];
-                $stock_adjust->adjustment_date = $data['adjustment_date'];
-                $stock_adjust->other = $data['other'];
-                $stock_adjust->save();
-                DB::commit();
+
                 $message = 'Sample Stock has been adjusted successfully';
                 return response()->json(apiSuccessResponse($message),200);
             }

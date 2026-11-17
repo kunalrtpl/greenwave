@@ -12,6 +12,7 @@ use App\Services\SamplingDispatchService;
 use App\Services\SamplingRequestService;
 use App\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\Concerns\MakesRfdBatches;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -30,6 +31,7 @@ use Tests\TestCase;
 class SamplingReceiptApiTest extends TestCase
 {
     use DatabaseTransactions;
+    use MakesRfdBatches;
 
     /** @var \App\User */
     private $admin;
@@ -90,7 +92,7 @@ class SamplingReceiptApiTest extends TestCase
             $service->markReady($line->fresh(), []);
 
             $dispatchItems[] = ['sampling_request_id' => $line->id, 'dispatch_qty' => $qtyEach,
-                                'batch_no' => 'B-' . $line->id,
+                                'batch_ref' => $this->batchRefFor($line->product_id, 1000),
                                 'dispatch_party_type' => 'user', 'dispatch_user_id' => $this->executive->id];
         }
 
@@ -222,6 +224,49 @@ class SamplingReceiptApiTest extends TestCase
 
     /* ─────────────────────── Confirming receipt ─────────────────────── */
 
+    /**
+     * Dispatching opens the employee's stock row and puts the qty in transit,
+     * so this is really a question about dispatch: it must always be there to
+     * be received into.
+     */
+    public function testDispatchingOpensTheEmployeesFreeSampleStock()
+    {
+        $lines    = $this->dispatchedRequests(1);
+        $dispatch = SamplingDispatch::where('sampling_request_id', $lines[0]->id)->firstOrFail();
+
+        $stock = FreeSamplingStock::where('user_id', $this->executive->id)
+            ->where('product_id', $dispatch->product_id)->first();
+
+        $this->assertNotNull($stock, 'dispatching must leave the employee a stock row');
+        $this->assertGreaterThanOrEqual(2, (float) $stock->in_transit);
+    }
+
+    /**
+     * If that row has gone missing — material dispatched before this flow, or
+     * a row cleared in between — the employee is still holding the material,
+     * so confirming receipt opens the row rather than losing the qty.
+     */
+    public function testReceivingOpensTheStockRowWhenItIsMissing()
+    {
+        $lines    = $this->dispatchedRequests(1);
+        $dispatch = SamplingDispatch::where('sampling_request_id', $lines[0]->id)->firstOrFail();
+
+        FreeSamplingStock::where('user_id', $this->executive->id)
+            ->where('product_id', $dispatch->product_id)->delete();
+
+        $this->postJson('/api/executive/sample-dispatches/mark-received',
+            ['dispatch_ids' => [$dispatch->id]], $this->headers())
+            ->assertStatus(200)
+            ->assertJson(['data' => ['received' => 1]]);
+
+        $stock = FreeSamplingStock::where('user_id', $this->executive->id)
+            ->where('product_id', $dispatch->product_id)->first();
+
+        $this->assertNotNull($stock, 'the received material has to land somewhere');
+        $this->assertEquals(2, (float) $stock->stock_in_hand);
+        $this->assertEquals(0, (float) $stock->in_transit);
+    }
+
     /** Confirming moves the material from in transit into stock in hand. */
     public function testMarkingReceivedMovesTheStockAndStampsTheLine()
     {
@@ -346,6 +391,7 @@ class SamplingReceiptApiTest extends TestCase
             'dispatch_date' => date('Y-m-d'), 'invoice_no' => 'CH-OTHER',
             'transport' => 'Courier', 'lr_no' => 'DKT-OTHER',
             'items' => [['sampling_request_id' => $line->id, 'dispatch_qty' => 1,
+                         'batch_ref' => $this->batchRefFor($line->product_id, 100),
                          'dispatch_party_type' => 'user', 'dispatch_user_id' => $other->id]],
         ]);
 

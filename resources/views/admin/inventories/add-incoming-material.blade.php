@@ -38,11 +38,15 @@
                                 <div class="form-group">
                                     <label class="col-md-3 control-label">Type<span class="asteric">*</span></label>
                                     <div class="col-md-4">
-                                        <?php $materialArr = getMaterialTypes();?>
+                                        <?php
+                                            $materialArr = getMaterialTypes();
+                                            // Opens on Finished Product (RFD), which is also the first option.
+                                            $defaultType = defaultMaterialType();
+                                        ?>
                                         <select class="form-control" name="type">
                                             <option value="">Please Select</option>
                                             @foreach($materialArr as $mkey=> $type)
-                                                <option value="{{$mkey}}">{{$type}}</option>
+                                                <option value="{{$mkey}}" {{ $mkey == $defaultType ? 'selected' : '' }}>{{$type}}</option>
                                             @endforeach
                                         </select>
                                         <h4 class="text-center text-danger pt-3" style="display: none;" id="Inventory-type"></h4>
@@ -69,6 +73,17 @@
     </div>
 </div>
 <script type="text/javascript">
+    /* The type is pre-selected, so load its section by itself, exactly as a
+       manual change would. This waits for window load, not document ready:
+       the layout installs the CSRF token on $.ajaxSetup in its own ready
+       handler, and firing before that would get the request rejected (419). */
+    $(window).on('load', function(){
+        var $type = $('[name=type]');
+        if($type.val() && $.trim($('#AppendIncomingTypeDetails').html()) === ''){
+            $type.trigger('change');
+        }
+    });
+
     $(document).on('change','[name=product_id]',function(){
         var productId = $(this).val();
         var type = $(this).find(':selected').attr('data-product_type');

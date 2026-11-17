@@ -25,6 +25,10 @@ class StockTransferItem extends Model
             'product_id'   => $this->product_id,
             'product_name' => optional($this->product)->product_name,
             'product_code' => optional($this->product)->product_code,
+            // Which batch this stock is from. batch_ref says where the batch
+            // itself lives, batch_no is the number people read.
+            'batch_ref'    => $this->batch_ref,
+            'batch_no'     => $this->batch_no,
             'qty'          => (float) $this->qty,
         ];
     }

@@ -59,7 +59,7 @@
          <tr>
             <td>
                <div class="item-name">{{ optional($item->product)->product_name ?: '—' }}</div>
-               <div class="item-code">{{ optional($item->product)->product_code }}</div>
+               <div class="item-code">{{ optional($item->product)->product_code }}@if($item->batch_no) · Batch {{ $item->batch_no }}@endif</div>
             </td>
             <td class="right" style="font-weight:700;">{{ $qty($item->qty) }}</td>
          </tr>

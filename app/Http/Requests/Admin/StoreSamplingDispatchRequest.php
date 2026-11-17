@@ -58,6 +58,14 @@ class StoreSamplingDispatchRequest extends FormRequest
         // challan can go to different parties.
         $party = function ($prefix) {
             return [
+                /*
+                 | The batch the material leaves, as "<source>:<id>" — see
+                 | App\Services\ProductBatchService. Required: a product with
+                 | no batch in stores cannot be dispatched at all. Whether the
+                 | reference resolves is checked by the dispatch service,
+                 | because a batch may come from any of several books.
+                 */
+                $prefix . '.batch_ref'            => 'required|string|max:100|regex:/^[a-z_]+:[A-Za-z0-9_-]+$/',
                 $prefix . '.batch_no'             => 'nullable|string|max:100',
                 $prefix . '.dispatch_party_type'  => 'nullable|in:dealer,customer,user',
                 $prefix . '.dispatch_dealer_id'   => 'nullable|required_if:' . $prefix . '.dispatch_party_type,dealer|exists:dealers,id',
@@ -103,6 +111,10 @@ class StoreSamplingDispatchRequest extends FormRequest
             'dealer_id.required'                   => 'Please select which dealer this sample is answerable to.',
             'items.*.sampling_request_id.distinct' => 'The same request has been added twice.',
             'items.*.dispatch_qty.required'        => 'Enter the dispatch qty.',
+            'items.*.batch_ref.required'           => 'Select the batch this material is going out of.',
+            'items.*.batch_ref.regex'              => 'That batch is not valid.',
+            'voluntary_items.*.batch_ref.required' => 'Select the batch this material is going out of.',
+            'voluntary_items.*.batch_ref.regex'    => 'That batch is not valid.',
             'items.*.dispatch_qty.min'             => 'Dispatch qty must be greater than zero.',
             'items.*.dispatch_dealer_id.required_if'   => 'Select the dealer for this request.',
             'items.*.dispatch_customer_id.required_if' => 'Select the customer for this request.',

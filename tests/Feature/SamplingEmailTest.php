@@ -9,6 +9,7 @@ use App\Services\SamplingDispatchService;
 use App\Services\SamplingRequestService;
 use App\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\Concerns\MakesRfdBatches;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -22,6 +23,7 @@ use Tests\TestCase;
 class SamplingEmailTest extends TestCase
 {
     use DatabaseTransactions;
+    use MakesRfdBatches;
 
     /** @var \App\User */
     private $admin;
@@ -174,8 +176,10 @@ class SamplingEmailTest extends TestCase
             'lr_no'           => 'DKT-1',
             'items'           => [
                 ['sampling_request_id' => $lines[0]->id, 'dispatch_qty' => 2,
+                 'batch_ref' => $this->batchRefFor($lines[0]->product_id, 100),
                  'dispatch_party_type' => 'user', 'dispatch_user_id' => $this->executive->id],
                 ['sampling_request_id' => $lines[1]->id, 'dispatch_qty' => 2,
+                 'batch_ref' => $this->batchRefFor($lines[1]->product_id, 100),
                  'dispatch_party_type' => 'user', 'dispatch_user_id' => $this->executive->id],
             ],
         ]);
@@ -197,8 +201,10 @@ class SamplingEmailTest extends TestCase
             'lr_no'           => 'LR-1',
             'voluntary_items' => [
                 ['product_id' => $this->products[0]->id, 'approved_pack_size' => 1, 'approved_no_of_packs' => 2,
+                 'batch_ref' => $this->batchRefFor($this->products[0]->id, 100),
                  'dispatch_party_type' => 'user', 'dispatch_user_id' => $this->executive->id],
                 ['product_id' => $this->products[1]->id, 'approved_pack_size' => 1, 'approved_no_of_packs' => 1,
+                 'batch_ref' => $this->batchRefFor($this->products[1]->id, 100),
                  'dispatch_party_type' => 'user', 'dispatch_user_id' => $this->executive->id],
             ],
         ]);
@@ -227,6 +233,7 @@ class SamplingEmailTest extends TestCase
             'lr_no'           => 'DKT-D1',
             'voluntary_items' => [
                 ['product_id' => $this->products[0]->id, 'approved_pack_size' => 1, 'approved_no_of_packs' => 2,
+                 'batch_ref' => $this->batchRefFor($this->products[0]->id, 100),
                  'dispatch_party_type' => 'dealer', 'dispatch_dealer_id' => $dealer->id],
             ],
         ]);

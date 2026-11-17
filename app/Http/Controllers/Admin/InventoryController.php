@@ -33,7 +33,12 @@ class InventoryController extends Controller
                         'type' => 'bail|required',
                         'stock' => 'bail|required|numeric',
                         'raw_material_id' => 'bail|required_if:type,==,RM|nullable|exists:raw_materials,id',
+                        'supplier_batch_no' => $this->batchNoRules($request->input('type')),
                         /*'raw_material_price' => 'bail|required_if:type,==,RM|nullable|regex:/^\d+(\.\d{1,2})?$/'*/
+                    ],
+                    [
+                        'supplier_batch_no.required' => 'Batch No. is required.',
+                        'supplier_batch_no.unique' => 'This Batch No. has already been added. Please use a different one.',
                     ]
                 );
                 if($validator->passes()) {
@@ -63,7 +68,13 @@ class InventoryController extends Controller
                         $redirectTo = url('/admin/entry/labels');
                         return response()->json(['status'=>true,'message'=>'ok','url'=>$redirectTo]);
                     }elseif($data['type'] =="SRM" || $data['type'] =="RFDM"){
-                        if($data['type'] =="RFDM"){
+                        /*
+                         | The packing / label section of this form is commented out for
+                         | now (see append-material-details.blade.php). These checks are
+                         | kept untouched and simply skipped while those inputs are not
+                         | posted — they start working again the day the section returns.
+                         */
+                        if($data['type'] =="RFDM" && isset($data['final_packing_type'])){
                             $packing_type_info = PackingType::find($data['final_packing_type']);
                             if($packing_type_info['stock'] <$data['packs_consumed']){
                                 return response()->json([
@@ -110,6 +121,24 @@ class InventoryController extends Controller
     		$title = "Add Incoming Material";
     		return view('admin.inventories.add-incoming-material')->with(compact('title'));
     	}
+    }
+
+    /**
+     | Batch No. may not be used twice. Finished product / sale return entries are
+     | checked against product_inventories, raw material entries against
+     | raw_material_inventories — each type against its own book.
+     */
+    private function batchNoRules($type)
+    {
+        if($type == "RM"){
+            return 'bail|required|max:191|unique:raw_material_inventories,supplier_batch_no';
+        }
+
+        if($type == "SRM" || $type == "RFDM"){
+            return 'bail|required|max:191|unique:product_inventories,supplier_batch_no';
+        }
+
+        return 'nullable';
     }
 
     public function uploadReports($ospinvid,$request){

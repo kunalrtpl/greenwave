@@ -228,8 +228,15 @@
 	    return $results;
 	}
 
+	/* Type that Add Incoming Material starts on. */
+	function defaultMaterialType(){
+		return 'RFDM';
+	}
+
 	function getMaterialTypes(){
-		$materialTypes = array('RM'=>'Raw Material','PM'=>'Packing Material','PL'=>'Packing Label','SRM'=> 'Sale Return Material','RFDM'=>'Finished Product (RFD)');
+		// Finished Product (RFD) is kept first: it is what Add Incoming Material
+		// opens on by default.
+		$materialTypes = array('RFDM'=>'Finished Product (RFD)','RM'=>'Raw Material','PM'=>'Packing Material','PL'=>'Packing Label','SRM'=> 'Sale Return Material');
 		return $materialTypes;
 	}
 

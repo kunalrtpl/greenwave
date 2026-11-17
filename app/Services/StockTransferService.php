@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\FreeSamplingStock;
+use App\Services\EmployeeBatchStockService;
+use App\Services\ProductBatchService;
 use App\StockTransfer;
 use App\StockTransferItem;
 use App\User;
@@ -66,15 +68,26 @@ class StockTransferService
                 'remarks'       => isset($data['remarks']) ? $data['remarks'] : null,
             ]);
 
-            foreach ($this->normaliseItems($data['items']) as $productId => $qty) {
-                // Blocking first: if the sender does not hold it, nothing is
-                // created at all, because the whole thing is one transaction.
-                $this->blockStock($fromUserId, $productId, $qty);
+            $rows = $this->normaliseItems($data['items']);
 
+            // They may not send more of a batch than they are holding of it.
+            $this->assertBatchStock($fromUserId, $rows);
+
+            // Blocking first, and per product rather than per row: two rows of
+            // one product out of two batches are still one claim on what the
+            // sender holds. If they do not hold it, nothing is created at all,
+            // because the whole thing is one transaction.
+            foreach ($this->totalsByProduct($rows) as $productId => $qty) {
+                $this->blockStock($fromUserId, $productId, $qty);
+            }
+
+            foreach ($rows as $row) {
                 StockTransferItem::create([
                     'stock_transfer_id' => $transfer->id,
-                    'product_id'        => $productId,
-                    'qty'               => $qty,
+                    'product_id'        => $row['product_id'],
+                    'batch_ref'         => $row['batch']->ref(),
+                    'batch_no'          => $row['batch']->batchNo,
+                    'qty'               => $row['qty'],
                 ]);
             }
 
@@ -186,23 +199,42 @@ class StockTransferService
      */
     public function transferableStock($userId)
     {
-        return FreeSamplingStock::with('productinfo')
+        $rows = FreeSamplingStock::with('productinfo')
             ->where('user_id', $userId)
             ->where(function ($q) {
                 $q->where('stock_in_hand', '>', 0)->orWhere('blocked_stock', '>', 0);
             })
-            ->get()
-            ->map(function ($row) {
-                return [
-                    'product_id'     => $row->product_id,
-                    'product_name'   => optional($row->productinfo)->product_name,
-                    'product_code'   => optional($row->productinfo)->product_code,
-                    'available_qty'  => (float) $row->stock_in_hand,
-                    'blocked_qty'    => (float) $row->blocked_stock,
-                    'in_transit_qty' => (float) $row->in_transit,
-                ];
-            })
-            ->values();
+            ->get();
+
+        /*
+         | The batches listed here are the employee's own: how much of each
+         | batch they are holding, not how much of it is left in stores. The
+         | batch quantities therefore add up to available_qty, which is the
+         | number the app shows them.
+         */
+        $holdings = app(EmployeeBatchStockService::class)
+            ->holdings($userId, $rows->pluck('product_id')->all());
+
+        return $rows->map(function ($row) use ($holdings) {
+            $held = isset($holdings[$row->product_id])
+                ? $holdings[$row->product_id]
+                : ['batches' => [], 'batched_qty' => 0, 'unbatched_qty' => (float) $row->stock_in_hand];
+
+            return [
+                'product_id'     => $row->product_id,
+                'product_name'   => optional($row->productinfo)->product_name,
+                'product_code'   => optional($row->productinfo)->product_code,
+                'available_qty'  => (float) $row->stock_in_hand,
+                'blocked_qty'    => (float) $row->blocked_stock,
+                'in_transit_qty' => (float) $row->in_transit,
+                'batch_count'    => count($held['batches']),
+                // Stock they hold that no batch can be put against — it moved
+                // before batches were recorded, or through a path that does
+                // not name one. Normally zero.
+                'unbatched_qty'  => $held['unbatched_qty'],
+                'batches'        => $held['batches'],
+            ];
+        })->values();
     }
 
     /* ═══════════════════════════════════════════════════════════════
@@ -318,16 +350,26 @@ class StockTransferService
     }
 
     /**
-     * One qty per product: the same product twice in a payload is added up
-     * rather than inserted twice, which the unique index would refuse anyway.
+     * One qty per product *and batch*. The same product may be sent out of two
+     * batches on one transfer, so those stay two rows; the same product and
+     * batch twice is added up rather than inserted twice, which the unique
+     * index would refuse anyway.
      *
-     * @return array product_id => qty
+     * Every row must name a batch that exists and belongs to that product —
+     * the batch travels with the material so it can be traced afterwards.
+     *
+     * @return array [['product_id' => int, 'qty' => float, 'batch' => ProductBatch], ...]
      */
     private function normaliseItems(array $items)
     {
+        $items   = array_values($items);
+        $batches = app(ProductBatchService::class)->lock(array_map(function ($item) {
+            return isset($item['batch_ref']) ? $item['batch_ref'] : null;
+        }, $items));
+
         $merged = [];
 
-        foreach ($items as $item) {
+        foreach ($items as $i => $item) {
             $productId = (int) $item['product_id'];
             $qty       = round((float) $item['qty'], 3);
 
@@ -337,14 +379,111 @@ class StockTransferService
                 ]);
             }
 
-            $merged[$productId] = isset($merged[$productId]) ? round($merged[$productId] + $qty, 3) : $qty;
+            $batch = $this->resolveBatch($item, $productId, $batches, $i);
+            $key   = $productId . '|' . $batch->ref();
+
+            if (isset($merged[$key])) {
+                $merged[$key]['qty'] = round($merged[$key]['qty'] + $qty, 3);
+                continue;
+            }
+
+            $merged[$key] = ['product_id' => $productId, 'qty' => $qty, 'batch' => $batch];
         }
 
         if (!$merged) {
             throw ValidationException::withMessages(['items' => 'Add at least one product to transfer.']);
         }
 
-        return $merged;
+        return array_values($merged);
+    }
+
+    /**
+     * The batch a row is being sent out of.
+     *
+     * Only the batch's identity is checked here, never its remaining stock:
+     * this material already left that batch when it was dispatched to the
+     * employee, and what limits a transfer is what the employee holds — see
+     * blockStock().
+     *
+     * @return \App\Support\ProductBatch
+     * @throws ValidationException
+     */
+    private function resolveBatch(array $item, $productId, array $batches, $i)
+    {
+        $key = "items.$i.batch_ref";
+        $ref = isset($item['batch_ref']) ? $item['batch_ref'] : null;
+
+        if (!$ref || !isset($batches[$ref])) {
+            throw ValidationException::withMessages([
+                $key => 'Select the batch this stock is from. Send the batch_ref from the stock list, e.g. "inventory:45".',
+            ]);
+        }
+
+        $batch = $batches[$ref];
+
+        if ((int) $batch->productId !== (int) $productId) {
+            throw ValidationException::withMessages([
+                $key => 'Batch ' . $batch->batchNo . ' belongs to a different product.',
+            ]);
+        }
+
+        return $batch;
+    }
+
+    /**
+     * A row may not take more out of a batch than the sender holds of it.
+     *
+     * Only enforced for products whose stock is fully accounted for by batch.
+     * Where some of their stock cannot be put against a batch — material that
+     * moved before batches were recorded — the product-level check in
+     * blockStock() is the only honest one, and this stands aside rather than
+     * refusing a transfer the employee can actually make.
+     *
+     * @throws ValidationException
+     */
+    private function assertBatchStock($userId, array $rows)
+    {
+        $holdings = app(EmployeeBatchStockService::class)
+            ->holdings($userId, array_unique(array_column($rows, 'product_id')));
+
+        foreach ($rows as $row) {
+            $held = isset($holdings[$row['product_id']]) ? $holdings[$row['product_id']] : null;
+
+            // Stands aside only when some of their stock cannot be put
+            // against a batch — not when they have simply used it all up.
+            if (!$held || $held['unbatched_qty'] > 0) {
+                continue;
+            }
+
+            $available = 0;
+            foreach ($held['batches'] as $batch) {
+                if ($batch['batch_ref'] === $row['batch']->ref()) {
+                    $available = $batch['available_qty'];
+                    break;
+                }
+            }
+
+            if ($row['qty'] > $available + 0.0001) {
+                throw ValidationException::withMessages([
+                    'items' => 'You are holding ' . $this->trim($available) . ' Kg of batch '
+                        . $row['batch']->batchNo . ' — ' . $this->trim($row['qty']) . ' Kg cannot be sent out of it.',
+                ]);
+            }
+        }
+    }
+
+    /** What each product adds up to across the rows of one transfer. */
+    private function totalsByProduct(array $rows)
+    {
+        $totals = [];
+
+        foreach ($rows as $row) {
+            $totals[$row['product_id']] = isset($totals[$row['product_id']])
+                ? round($totals[$row['product_id']] + $row['qty'], 3)
+                : $row['qty'];
+        }
+
+        return $totals;
     }
 
     /** ST-1, ST-2, … a plain running number that never resets. */
