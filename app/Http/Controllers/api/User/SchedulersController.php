@@ -49,6 +49,36 @@ class SchedulersController extends Controller
     }
 
     /**
+     * Read a filter that may name one value or several.
+     *
+     * The app sends these comma separated — status=Pending,Done — while older
+     * builds send a single value, so both shapes have to keep working. An
+     * array (status[]=Pending&status[]=Done) is read too, since that is the
+     * other shape an HTTP client can produce for the same thing.
+     *
+     * @param  mixed $value  the raw query value
+     * @return array         the named values, trimmed and de-duplicated
+     */
+    private function listParam($value): array
+    {
+        if (is_null($value)) {
+            return [];
+        }
+
+        $values = is_array($value) ? $value : explode(',', (string) $value);
+
+        $values = array_map(function ($item) {
+            return is_scalar($item) ? trim((string) $item) : '';
+        }, $values);
+
+        $values = array_filter($values, function ($item) {
+            return $item !== '';
+        });
+
+        return array_values(array_unique($values));
+    }
+
+    /**
      * Eager-load scheduler with limited relation fields.
      *
      * Relations included:
@@ -110,7 +140,11 @@ class SchedulersController extends Controller
      *   date        string  YYYY-MM-DD  — filter by date; omit to get unscheduled
      *   user_id     integer             — defaults to authenticated user
      *   related_to  string              — filter by related_to text (LIKE match not needed, exact)
-     *   status      string              — Open | Pending | Done | Cancelled
+     *   status      string              — one status, or several comma separated;
+     *                                     Open | Pending | Done | Reminder |
+     *                                     Rescheduled | Closed | Cancel
+     *                                     e.g. status=Pending,Reminder returns both.
+     *                                     status[]=Pending&status[]=Reminder works too.
      */
     public function index(Request $request)
     {
@@ -142,8 +176,11 @@ class SchedulersController extends Controller
             $query->where('related_to', $data['related_to']);
         }
 
-        if (!empty($data['status'])) {
-            $query->where('status', $data['status']);
+        // One status, or several comma separated: status=Pending,Done
+        $statuses = $this->listParam(isset($data['status']) ? $data['status'] : null);
+
+        if ($statuses) {
+            $query->whereIn('status', $statuses);
         }
 
         $schedulers = $query->orderBy('id', 'DESC')->get();
