@@ -21,6 +21,7 @@ use Illuminate\Validation\ValidationException;
  *   − stock transfers they have raised and are still waiting on (blocked)
  *   − samples they submitted to a customer, less anything returned
  *   − stock they wrote off against a batch (expired, leaked, damaged)
+ *   − product they used up running a trial
  *
  * The totals are then held to free_sampling_stocks, which stays the one
  * authority on how much an employee has: if a product has gone out through a
@@ -127,31 +128,35 @@ class EmployeeBatchStockService
      * Mandatory everywhere stock leaves an employee, so that every movement
      * can be traced to the material it came from.
      *
-     * @param  array  $data  the posted payload
+     * @param  array  $data     the posted payload, or one line of it
      * @param  int    $productId
-     * @param  string $key   which field to blame in the error
+     * @param  string $key      which field of $data holds the reference
+     * @param  string $errorKey which field to blame in the error, when that is
+     *                          not $key — a line of a list is read as
+     *                          batch_ref but blamed as products.0.batch_ref
      * @return \App\Support\ProductBatch
      * @throws ValidationException
      */
-    public function requireBatch(array $data, $productId, $key = 'batch_ref')
+    public function requireBatch(array $data, $productId, $key = 'batch_ref', $errorKey = null)
     {
-        $ref = isset($data[$key]) ? trim($data[$key]) : null;
+        $ref      = isset($data[$key]) ? trim($data[$key]) : null;
+        $errorKey = $errorKey ?: $key;
 
         if (!$ref) {
-            throw ValidationException::withMessages([$key => 'Select the batch this stock is from.']);
+            throw ValidationException::withMessages([$errorKey => 'Select the batch this stock is from.']);
         }
 
         $batches = app(ProductBatchService::class)->lock([$ref]);
 
         if (!isset($batches[$ref])) {
-            throw ValidationException::withMessages([$key => 'That batch no longer exists.']);
+            throw ValidationException::withMessages([$errorKey => 'That batch no longer exists.']);
         }
 
         $batch = $batches[$ref];
 
         if ((int) $batch->productId !== (int) $productId) {
             throw ValidationException::withMessages([
-                $key => 'Batch ' . $batch->batchNo . ' belongs to a different product.',
+                $errorKey => 'Batch ' . $batch->batchNo . ' belongs to a different product.',
             ]);
         }
 
@@ -238,6 +243,10 @@ class EmployeeBatchStockService
         foreach ($this->stockAdjustments($userId, $productIds) as $row) {
             // A write-off is a positive qty going out; a negative one is stock
             // coming back, so the sign is simply reversed.
+            $add($row->product_id, $row->batch_ref, $row->batch_no, -1 * (float) $row->qty);
+        }
+
+        foreach ($this->trialProducts($userId, $productIds) as $row) {
             $add($row->product_id, $row->batch_ref, $row->batch_no, -1 * (float) $row->qty);
         }
 
@@ -333,6 +342,30 @@ class EmployeeBatchStockService
 
         if ($productIds) {
             $query->whereIn('a.product_id', $productIds);
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * Product they used up running a trial.
+     *
+     * The line belongs to a trial rather than to a user, so the owner comes
+     * from the trial. Rows written before batches were recorded have no
+     * batch_ref and are left out, which is what surfaces them as unbatched_qty
+     * instead of being silently attributed to a batch.
+     */
+    private function trialProducts($userId, array $productIds)
+    {
+        $query = DB::table('user_dvr_products as p')
+            ->join('trials as t', 't.id', '=', 'p.trial_id')
+            ->where('t.user_id', $userId)
+            ->whereNotNull('p.batch_ref')
+            ->groupBy('p.product_id', 'p.batch_ref', 'p.batch_no')
+            ->select('p.product_id', 'p.batch_ref', 'p.batch_no', DB::raw('SUM(p.qty) as qty'));
+
+        if ($productIds) {
+            $query->whereIn('p.product_id', $productIds);
         }
 
         return $query->get();

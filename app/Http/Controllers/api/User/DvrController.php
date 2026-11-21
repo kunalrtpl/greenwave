@@ -14,10 +14,13 @@ use App\UserDvrAdditionalTrialLink;
 use App\UserDvrSampleSubmissionLink;
 use App\UserDvrCustomerContact;
 use App\UserDvrAttachment;
-use App\FreeSamplingStock;
+use App\SampleSubmission;
+use App\Services\SampleSubmissionService;
 use App\UserScheduler;
 use App\UserDvrQuery;
 use App\Services\DvrReviewService;
+use App\Services\TrialStockService;
+use Illuminate\Validation\ValidationException;
 use Validator;
 use DB;
 use Illuminate\Support\Facades\Input;
@@ -592,8 +595,12 @@ class DvrController extends Controller
      * 🔁 Normalise the products payload used by the V3 trial APIs.
      *
      * Accepts either the legacy flat list of product ids ([1, 2, 3]) or the V3
-     * shape ([['product_id' => 1, 'qty' => 2.5, 'own_stock' => 1], ...]) and
-     * always returns the V3 shape so the callers can stay simple.
+     * shape ([['product_id' => 1, 'qty' => 2.5, 'batch_ref' => 'inventory:45'],
+     * ...]) and always returns the V3 shape so the callers can stay simple.
+     *
+     * own_stock is no longer read: every V3 trial line consumes the employee's
+     * stock out of the batch it names. A build still sending the flag is not
+     * rejected for it, the value is simply ignored.
      *
      * @param  array $products
      * @return array
@@ -606,17 +613,17 @@ class DvrController extends Controller
             if (is_array($product)) {
                 $productId = isset($product['product_id']) ? $product['product_id'] : null;
                 $qty       = isset($product['qty']) ? $product['qty'] : 0;
-                $ownStock  = isset($product['own_stock']) ? $product['own_stock'] : 0;
+                $batchRef  = isset($product['batch_ref']) ? trim($product['batch_ref']) : null;
             } else {
                 $productId = $product;
                 $qty       = 0;
-                $ownStock  = 0;
+                $batchRef  = null;
             }
 
             $normalised[] = [
                 'product_id' => $productId,
                 'qty'        => (float) $qty,
-                'own_stock'  => filter_var($ownStock, FILTER_VALIDATE_BOOLEAN) ? 1 : 0,
+                'batch_ref'  => $batchRef,
             ];
         }
 
@@ -624,57 +631,25 @@ class DvrController extends Controller
     }
 
     /**
-     * 📦 Apply a delta to the user's free sampling stock for a product.
-     *
-     * A negative $delta consumes stock (trial created), a positive $delta gives
-     * it back (trial deleted). The row is created when the user does not have
-     * one yet for that product.
-     *
-     * The row is a per-user ledger keyed by user_id + product_id only — the
-     * customer columns are deliberately left untouched, since nothing looks the
-     * stock up by customer and user_dvrs holds those ids without a foreign key
-     * (copying a stale one in here breaks the FK on free_sampling_stocks).
-     *
-     * @param  int        $userId
-     * @param  int        $productId
-     * @param  float      $delta
-     * @return void
-     */
-    protected function adjustFreeSamplingStock($userId, $productId, $delta)
-    {
-        if (empty($productId) || (float) $delta == 0) {
-            return;
-        }
-
-        $freeSamplingStock = DB::table('free_sampling_stocks')
-            ->where('user_id', $userId)
-            ->where('product_id', $productId)
-            ->first();
-
-        if (is_object($freeSamplingStock)) {
-            $stock = FreeSamplingStock::find($freeSamplingStock->id);
-            $stock->stock_in_hand = $stock->stock_in_hand + $delta;
-        } else {
-            $stock = new FreeSamplingStock;
-            $stock->user_id                 = $userId;
-            $stock->product_id              = $productId;
-            $stock->stock_in_hand           = $delta;
-            $stock->in_transit              = 0;
-            $stock->pending_orders          = 0;
-            $stock->pending_customer_orders = 0;
-        }
-
-        $stock->save();
-    }
-
-    /**
-     * 4️⃣.V3 ADD SINGLE TRIAL WITH PRODUCTS (qty + own stock aware)
-     * POST /api/user/v3/dvr/trial/add
+     * 4️⃣.V3 ADD SINGLE TRIAL WITH PRODUCTS (qty + batch aware)
+     * POST /api/executive/v3/dvr/trial/add
      *
      * Same contract as addTrial(), except every entry of `products` is an
-     * object: { product_id, qty, own_stock }. When own_stock is truthy the qty
-     * is deducted from the user's free_sampling_stocks row for that product
-     * (the row is created when missing).
+     * object: { product_id, qty, batch_ref }. Each line consumes that qty of
+     * the employee's own stock out of the batch it names, so a trial is as
+     * traceable as a sample handed to a customer.
+     *
+     * batch_ref is mandatory and qty has to be greater than zero: there is no
+     * longer a line that records a product without moving stock. The own_stock
+     * flag it replaces is ignored rather than rejected.
+     *
+     * No batch, no movement: a line that cannot name a batch the employee is
+     * holding is refused and nothing is saved, so stock can never move without
+     * one. Every refusal is written to the log, tagged "[trial-stock]", since
+     * the request leaves no row behind to show that the app tried.
+     *
+     * V2 addTrial() is untouched and still takes a flat list of product ids
+     * without moving any stock, for the builds still in the field.
      */
     public function addTrialV3(Request $request)
     {
@@ -689,8 +664,12 @@ class DvrController extends Controller
             'user_dvr_id' => 'required|integer|exists:user_dvrs,id',
             'products'    => 'nullable|array',
             'products.*.product_id' => 'required|integer|exists:products,id',
-            'products.*.qty'        => 'nullable|numeric|min:0',
-            'products.*.own_stock'  => 'nullable|boolean',
+            // Every line moves stock now, so a qty of zero is not a line.
+            'products.*.qty'        => 'required|numeric|min:0.001',
+            // "<source>:<id>", e.g. inventory:45 — the batch the stock is
+            // taken from. Which batches an employee may name comes from
+            // /api/executive/stock-transfers/stock.
+            'products.*.batch_ref'  => ['required', 'string', 'regex:/^[a-z_]+:[A-Za-z0-9_-]+$/'],
             'customer_id' => 'nullable|integer|exists:customers,id',
             'customer_register_request_id' => 'nullable|integer|exists:customer_register_requests,id',
         ];
@@ -700,6 +679,15 @@ class DvrController extends Controller
             $rules
         );
         if ($validator->fails()) {
+            // Refused before any stock could move — logged here because the
+            // request saves nothing, so this is the only record of it.
+            \Log::warning(TrialStockService::LOG_TAG . ' trial refused, no stock moved: '
+                . implode(' ', $validator->errors()->all()), [
+                    'user_id'     => $this->resp['user']['id'],
+                    'user_dvr_id' => $request->input('user_dvr_id'),
+                    'products'    => $products,
+                ]);
+
             return response()->json(validationResponse($validator), 422);
         }
 
@@ -734,29 +722,105 @@ class DvrController extends Controller
                 'updated_at'  => now(),
             ]);
 
-            // 3️⃣ Attach products + consume own stock where asked for
-            foreach ($products as $product) {
-                UserDvrProduct::create([
-                    'user_dvr_id' => null,
-                    'trial_id'    => $trial->id,
-                    'product_id'  => $product['product_id'],
-                    'qty'         => $product['qty'],
-                    'own_stock'   => $product['own_stock'],
-                ]);
-
-                if ($product['own_stock']) {
-                    $this->adjustFreeSamplingStock(
-                        $userId,
-                        $product['product_id'],
-                        -1 * $product['qty']
-                    );
-                }
-            }
+            // 3️⃣ Attach products, each consuming its qty from the batch
+            // it names. TrialStockService owns that, so what a trial takes out
+            // and what deleting it gives back are the same arithmetic.
+            app(TrialStockService::class)->consume($products, $trial->id, $userId);
 
             DB::commit();
 
             return response()->json(
-                apiSuccessResponse('Trial added successfully', $trial),
+                apiSuccessResponse('Trial added successfully', $trial->fresh()),
+                200
+            );
+
+        } catch (ValidationException $e) {
+            // A batch that is missing, belongs to another product, or holds
+            // less than the line asks for.
+            DB::rollBack();
+            return response()->json(validationResponse($e->validator), 422);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(apiErrorResponse($e->getMessage()), 500);
+        }
+    }
+
+    /**
+     * 5️⃣.V3 UPDATE A TRIAL'S OWN DETAILS
+     * POST /api/executive/v3/dvr/trial/update
+     *
+     * The trial's own fields only — objective, remarks, feedback, status and
+     * the rest. The product lines are deliberately left untouched, so this
+     * endpoint moves no stock at all and cannot put a batch out of step with
+     * what the employee is holding.
+     *
+     * V2 updateTrial() replaces the product lines, which is why it is not the
+     * one to use for a V3 trial: it would drop lines that had consumed stock
+     * without giving any of it back. To change what a V3 trial used, delete the
+     * trial (the stock goes back to its batches) and add it again.
+     *
+     * A `products` key is accepted and ignored rather than rejected, so a build
+     * that posts the whole trial back still updates the details. The ignored
+     * lines are logged, tagged "[trial-stock]", so it is visible that they did
+     * not take effect.
+     *
+     * Fields the server owns — user_id, trial_number, created_by — cannot be
+     * overwritten here.
+     */
+    public function updateTrialV3(Request $request)
+    {
+        if (!$this->resp['status'] || !isset($this->resp['user'])) {
+            return response()->json(apiErrorResponse('Unauthorized'), 401);
+        }
+
+        $rules = [
+            'id'          => 'required|integer|exists:trials,id',
+            'customer_id' => 'nullable|integer|exists:customers,id',
+            'customer_register_request_id' => 'nullable|integer|exists:customer_register_requests,id',
+        ];
+
+        $validator = Validator::make($request->all(), $rules);
+        if ($validator->fails()) {
+            return response()->json(validationResponse($validator), 422);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $userId = $this->resp['user']['id'];
+
+            $trial = Trial::where('id', $request->id)
+                ->where('user_id', $userId)
+                ->first();
+
+            if (!$trial) {
+                return response()->json(apiErrorResponse('Trial not found or access denied'), 404);
+            }
+
+            if ($request->has('products')) {
+                \Log::warning(TrialStockService::LOG_TAG . ' products ignored on trial update, no stock moved', [
+                    'trial_id' => $trial->id,
+                    'user_id'  => $userId,
+                    'products' => $request->input('products'),
+                ]);
+            }
+
+            // The product lines, and so the stock, stay exactly as they are.
+            $trial->update($request->except([
+                'id',
+                'products',
+                'user_dvr_id',
+                // Set when the trial was created and not the app's to change.
+                'user_id',
+                'trial_number',
+                'created_by',
+            ]));
+
+            DB::commit();
+
+            return response()->json(
+                apiSuccessResponse('Trial updated successfully', $trial->fresh()),
                 200
             );
 
@@ -768,7 +832,14 @@ class DvrController extends Controller
 
     /**
      * 5️⃣ UPDATE TRIAL WITH PRODUCTS
-     * POST /api/user/dvr/trial/update
+     * POST /api/executive/v2/dvr/trial/update
+     *
+     * Replaces the product lines with a flat list of product ids, as it always
+     * has, for the builds still in the field.
+     *
+     * Not for a V3 trial: its lines carry a qty and a batch, and replacing them
+     * here would drop that without giving the stock back. V3 builds use
+     * updateTrialV3(), which changes the details and leaves the lines alone.
      */
     public function updateTrial(Request $request)
     {
@@ -1086,6 +1157,26 @@ class DvrController extends Controller
                 }
             }
 
+            // 🔥 Sample submissions attached to this DVR go with it, and
+            // whatever of each is still out comes back to the employee's
+            // stock. Deleting only the link row used to leave the submission
+            // behind, still holding stock the employee no longer had out.
+            // SampleSubmissionService owns that arithmetic, so this is the
+            // same restore as deleting a submission on its own.
+            $submissionService = app(SampleSubmissionService::class);
+
+            foreach ($this->dvrSampleSubmissions($dvr) as $submission) {
+                $submissionService->delete($submission);
+            }
+
+            // 🔥 Trials attached to this DVR go with it, and the stock each
+            // one consumed comes back to the employee first. Deleting only the
+            // link row used to orphan the trial and keep its stock consumed
+            // for good. A trial shared with another DVR is left alone.
+            foreach ($this->dvrTrials($dvr) as $trial) {
+                $this->removeTrial($trial);
+            }
+
             // 🧹 Manual cleanup (safe even if cascade exists)
             UserDvrProduct::where('user_dvr_id', $dvr->id)->delete();
             UserDvrTrialLink::where('user_dvr_id', $dvr->id)->delete();
@@ -1117,6 +1208,130 @@ class DvrController extends Controller
         }
     }
 
+
+    /**
+     * The sample submissions belonging to a DVR.
+     *
+     * Two places record the link: the user_dvr_sample_submission_links table,
+     * and the legacy user_dvrs.sample_submission_id column it replaced. Older
+     * DVRs only carry the legacy one, so both are read — otherwise deleting
+     * such a DVR would leave its submission behind, and the stock with it.
+     *
+     * Scoped to the DVR's own employee: a submission recorded against someone
+     * else is left alone rather than silently moving another employee's stock.
+     * Its link row is still cleaned up by the caller.
+     *
+     * @param  UserDvr $dvr
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    private function dvrSampleSubmissions(UserDvr $dvr)
+    {
+        $ids = UserDvrSampleSubmissionLink::where('user_dvr_id', $dvr->id)
+            ->pluck('sample_submission_id')
+            ->filter()
+            ->all();
+
+        if (!empty($dvr->sample_submission_id)) {
+            $ids[] = $dvr->sample_submission_id;
+        }
+
+        $ids = array_values(array_unique($ids));
+
+        if (empty($ids)) {
+            return SampleSubmission::whereRaw('1 = 0')->get();
+        }
+
+        return SampleSubmission::whereIn('id', $ids)
+            ->where('user_id', $dvr->user_id)
+            ->lockForUpdate()
+            ->get();
+    }
+
+    /**
+     * Give back the stock a trial consumed, then remove it and everything
+     * hanging off it.
+     *
+     * The stock goes back through App\Services\TrialStockService, so it is the
+     * same arithmetic the trial used on the way out — including the own_stock
+     * rows written before batches were recorded. It has to happen before the
+     * product lines are deleted, since those lines are what says how much to
+     * give back.
+     *
+     * @param  Trial $trial
+     * @return void
+     */
+    private function removeTrial(Trial $trial)
+    {
+        // Physical attachment files
+        foreach (UserDvrAttachment::where('trial_id', $trial->id)->get() as $attachment) {
+            if ($attachment->file) {
+                // Use the user_dvr_id folder structure if available, else a general path
+                $folder   = $attachment->user_dvr_id ?? 'general';
+                $filePath = public_path('DvrAttachments/' . $folder . '/' . $attachment->file);
+
+                if (file_exists($filePath)) {
+                    @unlink($filePath);
+                }
+            }
+        }
+
+        app(TrialStockService::class)->restore($trial);
+
+        // Manual cleanup of related rows (recommended even with ON DELETE CASCADE)
+        UserDvrProduct::where('trial_id', $trial->id)->delete();
+        UserDvrTrialLink::where('trial_id', $trial->id)->delete();
+        UserDvrAdditionalTrialLink::where('trial_id', $trial->id)->delete();
+        UserDvrAttachment::where('trial_id', $trial->id)->delete();
+
+        $trial->delete();
+    }
+
+    /**
+     * The trials a DVR owns — the ones that go with it when it is deleted.
+     *
+     * A trial linked to another DVR as well, as its own trial or as an
+     * additional one, is shared: deleting this DVR removes only this DVR's link
+     * to it, never the trial, since the other DVR still shows it.
+     *
+     * Scoped to the DVR's own employee, so a trial recorded against someone
+     * else is left alone rather than silently moving their stock.
+     *
+     * @param  UserDvr $dvr
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    private function dvrTrials(UserDvr $dvr)
+    {
+        $ids = UserDvrTrialLink::where('user_dvr_id', $dvr->id)
+            ->pluck('trial_id')
+            ->filter()
+            ->unique()
+            ->all();
+
+        if (empty($ids)) {
+            return Trial::whereRaw('1 = 0')->get();
+        }
+
+        $shared = UserDvrTrialLink::whereIn('trial_id', $ids)
+            ->where('user_dvr_id', '!=', $dvr->id)
+            ->pluck('trial_id')
+            ->merge(
+                UserDvrAdditionalTrialLink::whereIn('trial_id', $ids)
+                    ->where('user_dvr_id', '!=', $dvr->id)
+                    ->pluck('trial_id')
+            )
+            ->all();
+
+        $ids = array_values(array_diff($ids, $shared));
+
+        if (empty($ids)) {
+            return Trial::whereRaw('1 = 0')->get();
+        }
+
+        return Trial::whereIn('id', $ids)
+            ->where('user_id', $dvr->user_id)
+            ->lockForUpdate()
+            ->get();
+    }
 
     /**
      * 7️⃣ DELETE SINGLE ATTACHMENT
@@ -1308,43 +1523,10 @@ class DvrController extends Controller
                 return response()->json(apiErrorResponse('Trial not found or access denied'), 404);
             }
 
-            // 4. Clean up physical attachment files
-            $attachments = UserDvrAttachment::where('trial_id', $trial->id)->get();
-            foreach ($attachments as $attachment) {
-                if ($attachment->file) {
-                    // Use the user_dvr_id folder structure if available, else a general path
-                    $folder = $attachment->user_dvr_id ?? 'general';
-                    $filePath = public_path('DvrAttachments/' . $folder . '/' . $attachment->file);
-
-                    if (file_exists($filePath)) {
-                        @unlink($filePath);
-                    }
-                }
-            }
-
-            // 5. Give back the free sampling stock consumed by this trial
-            // (V3 trials only — products saved with own_stock = 1 and a qty)
-            $trialProducts = UserDvrProduct::where('trial_id', $trial->id)
-                ->where('own_stock', 1)
-                ->get();
-
-            foreach ($trialProducts as $trialProduct) {
-                $this->adjustFreeSamplingStock(
-                    $trial->user_id,
-                    $trialProduct->product_id,
-                    (float) $trialProduct->qty
-                );
-            }
-
-            // 6. Manual Cleanup of related table records
-            // (Recommended even if you have ON DELETE CASCADE)
-            UserDvrProduct::where('trial_id', $trial->id)->delete();
-            UserDvrTrialLink::where('trial_id', $trial->id)->delete();
-            UserDvrAdditionalTrialLink::where('trial_id', $trial->id)->delete();
-            UserDvrAttachment::where('trial_id', $trial->id)->delete();
-
-            // 7. Delete the Trial record itself
-            $trial->delete();
+            // 4. Give the stock back and remove the trial with everything
+            // hanging off it. Shared with deleteDvr(), so a trial deleted on
+            // its own and one that goes with its DVR behave identically.
+            $this->removeTrial($trial);
 
             DB::commit();
 

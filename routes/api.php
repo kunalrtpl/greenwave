@@ -396,9 +396,15 @@ Route::namespace('api')->middleware(['api.log'])->group(function () {
 			Route::group(['prefix' => 'v3'], function () {
 
 			    // Same payload as v2 dvr/trial/add, but every `products` entry is
-			    // an object: { product_id, qty, own_stock }. own_stock = 1 deducts
-			    // the qty from the user's free_sampling_stocks row.
+			    // an object: { product_id, qty, batch_ref }. Each line consumes
+			    // that qty of the employee's stock out of the batch it names,
+			    // and batch_ref is mandatory — no batch, no movement.
 			    Route::post('dvr/trial/add', 'DvrController@addTrialV3');
+
+			    // The trial's own details only. The product lines are left
+			    // exactly as they are, so no stock moves here; add or remove a
+			    // line by deleting the trial and adding it again.
+			    Route::post('dvr/trial/update', 'DvrController@updateTrialV3');
 
 			});
 
