@@ -9,6 +9,12 @@ use App\Support\ProductBatch;
 /**
  * RFD batches received through Add Incoming Material — product_inventories
  * rows of type RFDM that still have remaining_stock.
+ *
+ * Add Incoming Material records what each batch may be used for. batchesFor()
+ * offers only the ones marked for sampling, so an unticked batch never reaches
+ * the Sample Dispatch dropdown. find() and lock() deliberately do NOT filter:
+ * a batch already dispatched has to stay resolvable by its reference, or
+ * unticking it would break the history and the stock that came out of it.
  */
 class ProductInventoryBatchSource implements ProductBatchSource
 {
@@ -30,6 +36,8 @@ class ProductInventoryBatchSource implements ProductBatchSource
 
         return ProductInventory::rfd()->withStock()
             ->whereIn('product_id', $productIds)
+            // Only what the entry desk marked as usable for sampling.
+            ->where('used_in_sample', 1)
             // Oldest first, so the oldest batch empties before a newer one opens.
             ->orderBy('incoming_date', 'ASC')
             ->orderBy('id', 'ASC')
@@ -86,6 +94,10 @@ class ProductInventoryBatchSource implements ProductBatchSource
             'batch_no'      => $row->supplier_batch_no,
             'remaining_qty' => $row->remaining_stock,
             'received_on'   => $row->incoming_date ? date('d M Y', strtotime($row->incoming_date)) : null,
+            'allowed_for'   => [
+                'sample'         => (bool) $row->used_in_sample,
+                'dispatch_order' => (bool) $row->used_in_dispatch_order,
+            ],
         ]);
     }
 }

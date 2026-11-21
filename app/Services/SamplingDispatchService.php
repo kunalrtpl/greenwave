@@ -455,6 +455,15 @@ class SamplingDispatchService
             return false;
         }
 
+        // The dropdown only offers batches marked for sampling, but a posted
+        // reference is checked too: the mark can be cleared after a form was
+        // opened, and nothing should leave on a challan the entry desk has
+        // held back.
+        if (!$batch->allows('sample')) {
+            $errors[$key] = 'Batch ' . $batch->batchNo . ' is not marked for use in samples.';
+            return false;
+        }
+
         $qty   = (float) $row['dispatch_qty'];
         $taken = isset($claimed[$batch->ref()]) ? $claimed[$batch->ref()] : 0;
         $left  = round($batch->remainingQty - $taken, 3);

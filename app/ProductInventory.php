@@ -74,6 +74,19 @@ class ProductInventory extends Model
 		$createOSPinv->status   = "Incoming Material";
 		if($data['type']=="RFDM"){
             /*
+             | Where this batch may be used. Add Incoming Material asks only
+             | for a Finished Product entry, and posts a hidden 0 beside each
+             | box so an unticked one still arrives. Anything that does not
+             | send them at all keeps the column default, which is true.
+             */
+            if(array_key_exists('used_in_sample', $data)){
+                $createOSPinv->used_in_sample = !empty($data['used_in_sample']) ? 1 : 0;
+            }
+            if(array_key_exists('used_in_dispatch_order', $data)){
+                $createOSPinv->used_in_dispatch_order = !empty($data['used_in_dispatch_order']) ? 1 : 0;
+            }
+
+            /*
              | The packing / label section of the form is commented out for now
              | (resources/views/admin/inventories/append-material-details.blade.php).
              | Everything below still works exactly as before the moment those

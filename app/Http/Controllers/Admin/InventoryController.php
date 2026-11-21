@@ -124,9 +124,17 @@ class InventoryController extends Controller
     }
 
     /**
-     | Batch No. may not be used twice. Finished product / sale return entries are
-     | checked against product_inventories, raw material entries against
-     | raw_material_inventories — each type against its own book.
+     | Batch No. rules.
+     |
+     | Finished product (RFDM) is deliberately NOT unique: the client asked to
+     | be warned that a batch number is already on the books while still being
+     | allowed to save it, because the same supplier batch legitimately arrives
+     | more than once. The warning is shown live on the form by checkBatchNo()
+     | below; nothing here refuses it.
+     |
+     | The other types are unchanged and still refuse a repeat, each against
+     | its own book — raw material against raw_material_inventories, sale
+     | return against product_inventories.
      */
     private function batchNoRules($type)
     {
@@ -134,11 +142,64 @@ class InventoryController extends Controller
             return 'bail|required|max:191|unique:raw_material_inventories,supplier_batch_no';
         }
 
-        if($type == "SRM" || $type == "RFDM"){
+        if($type == "SRM"){
             return 'bail|required|max:191|unique:product_inventories,supplier_batch_no';
         }
 
+        if($type == "RFDM"){
+            return 'bail|required|max:191';
+        }
+
         return 'nullable';
+    }
+
+    /**
+     | Has this batch number been used before?
+     |
+     | GET /admin/inventory/check-batch-no?type=RFDM&supplier_batch_no=XYZ
+     |
+     | Answers the Add Incoming Material form so it can warn as the user types.
+     | It is only a warning: the entry saves either way, so this never decides
+     | anything on its own and the result is safe to ignore.
+     |
+     | @return \Illuminate\Http\JsonResponse
+     */
+    public function checkBatchNo(Request $request)
+    {
+        $batchNo = trim($request->input('supplier_batch_no'));
+        $type    = $request->input('type');
+
+        if($batchNo === ''){
+            return response()->json(['used' => false]);
+        }
+
+        $table = ($type == "RM") ? 'raw_material_inventories' : 'product_inventories';
+
+        $existing = DB::table($table)
+            ->where('supplier_batch_no', $batchNo)
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if(!$existing){
+            return response()->json(['used' => false]);
+        }
+
+        $count = DB::table($table)->where('supplier_batch_no', $batchNo)->count();
+
+        $when = !empty($existing->incoming_date)
+            ? date('d M Y', strtotime($existing->incoming_date))
+            : null;
+
+        $message = 'Batch No. "' . e($batchNo) . '" has already been used';
+        $message .= $count > 1 ? ' (' . $count . ' times' : '';
+        $message .= $count > 1 ? ($when ? ', last on ' . $when : '') . ')' : ($when ? ' on ' . $when : '');
+        $message .= '.';
+
+        return response()->json([
+            'used'    => true,
+            'count'   => $count,
+            'message' => $message,
+        ]);
     }
 
     public function uploadReports($ospinvid,$request){

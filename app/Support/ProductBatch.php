@@ -26,6 +26,17 @@ class ProductBatch
     public $remainingQty;
     public $receivedOn;
 
+    /**
+     * What this batch may be used for, by route: ['sample' => bool, ...].
+     *
+     * A source says so only if its book records it. Anything a source does
+     * not mention is allowed, so a source with no such notion keeps behaving
+     * as it always has and allows() stays safe to call anywhere.
+     *
+     * @var array
+     */
+    public $allowedFor = [];
+
     public function __construct(ProductBatchSource $source, $model, array $attributes)
     {
         $this->source       = $source;
@@ -35,6 +46,18 @@ class ProductBatch
         $this->batchNo      = isset($attributes['batch_no']) ? $attributes['batch_no'] : null;
         $this->remainingQty = round((float) $attributes['remaining_qty'], 3);
         $this->receivedOn   = isset($attributes['received_on']) ? $attributes['received_on'] : null;
+        $this->allowedFor   = isset($attributes['allowed_for']) ? $attributes['allowed_for'] : [];
+    }
+
+    /**
+     * May this batch go out by this route? Unknown routes are allowed.
+     *
+     * @param  string $route e.g. 'sample'
+     * @return bool
+     */
+    public function allows($route)
+    {
+        return !array_key_exists($route, $this->allowedFor) || (bool) $this->allowedFor[$route];
     }
 
     /** "inventory:45" */
@@ -50,9 +73,16 @@ class ProductBatch
         $this->remainingQty = round($this->remainingQty - $qty, 3);
     }
 
+    /**
+     * How a batch reads in a dropdown: "85 Kg (1001)".
+     *
+     * The qty leads because that is what the desk is choosing on — whether
+     * this batch holds enough — with the batch number after it to identify
+     * which one it is.
+     */
     public function label()
     {
-        return $this->batchNo . ' · ' . ProductInventory::qty($this->remainingQty) . ' Kg left';
+        return ProductInventory::qty($this->remainingQty) . ' Kg (' . $this->batchNo . ')';
     }
 
     /** One option for a batch dropdown. */

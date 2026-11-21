@@ -94,7 +94,14 @@
                     <option data-product_type="{{$product_types[$productInfo['is_trader_product']]}}" value="{{$productInfo['id']}}">{{$productInfo['product_name']}}</option>
                 @endforeach
             </select>
+            {{-- HIDDEN FOR NOW - DO NOT DELETE. This printed the product's type
+                 ("Greenwave Textile Products" / trader product) under the
+                 dropdown; the client asked for it to go. The JS that filled it
+                 is switched off in add-incoming-material.blade.php too.
+                 TO BRING IT BACK: uncomment the span here and the
+                 "#AppendProductType" block in that view's product handler.
             <span id="AppendProductType"></span>
+            --}}
             <h4 class="text-center text-danger pt-3" style="display: none;" id="Inventory-product_id"></h4>
         </div>
     </div>
@@ -123,10 +130,39 @@
     <div class="form-group">
         <label class="col-md-3 control-label">Batch No. </label>
         <div class="col-md-4">
-            <input  type="text" placeholder="Batch No." name="supplier_batch_no" style="color:gray" class="form-control" required/>
+            <input  type="text" placeholder="Batch No." name="supplier_batch_no" style="color:gray" class="form-control" autocomplete="off" required/>
+            {{-- Filled by the live duplicate check. A warning only: the entry
+                 saves either way, which is why it is not an error holder. --}}
+            <div class="batch-no-warning" id="BatchNoWarning" style="display:none;"></div>
             <h4 class="text-center text-danger pt-3" style="display: none;" id="Inventory-supplier_batch_no"></h4>
         </div>
     </div>
+    @if($data['type'] == "RFDM")
+        {{-- Where this batch may be used. Both ticked by default, so the
+             ordinary entry behaves as it always has; untick one to hold the
+             batch back from that route.
+
+             The hidden input before each box is what makes an unticked box
+             reach the server as 0 — a cleared checkbox posts nothing at all. --}}
+        <div class="form-group inv-usage">
+            <label class="col-md-3 control-label">Allowed For</label>
+            <div class="col-md-4">
+                <div class="inv-checks">
+                    <label class="inv-check">
+                        <input type="hidden" name="used_in_sample" value="0">
+                        <input type="checkbox" name="used_in_sample" value="1" checked>
+                        <span>Used in Sample</span>
+                    </label>
+                    <label class="inv-check">
+                        <input type="hidden" name="used_in_dispatch_order" value="0">
+                        <input type="checkbox" name="used_in_dispatch_order" value="1" checked>
+                        <span>Used in Dispatch Order</span>
+                    </label>
+                </div>
+                <div class="inv-hint">Only batches marked <strong>Used in Sample</strong> are offered on Sample Dispatch Entry.</div>
+            </div>
+        </div>
+    @endif
     {{--
        ===========================================================================
        HIDDEN FOR NOW - DO NOT DELETE.

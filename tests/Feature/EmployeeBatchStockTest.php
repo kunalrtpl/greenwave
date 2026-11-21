@@ -117,7 +117,7 @@ class EmployeeBatchStockTest extends TestCase
         $this->assertSame('inventory:' . $batch->id, $listed['batch_ref']);
         $this->assertSame('inventory', $listed['source']);
         $this->assertSame('Incoming Material (RFD)', $listed['source_label']);
-        $this->assertContains('10 Kg', $listed['label']);
+        $this->assertSame('10 Kg (' . $listed['batch_no'] . ')', $listed['label']);
     }
 
     /* ─────────────────────────── Transfers ─────────────────────────── */

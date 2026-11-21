@@ -81,7 +81,10 @@ class EmployeeBatchStockService
                     'received_on'   => $batch ? $batch->receivedOn : null,
                     'source'        => $batch ? $batch->source->key() : head(explode(':', $ref)),
                     'source_label'  => $batch ? $batch->source->label() : null,
-                    'label'         => $row['batch_no'] . ' · ' . $this->trim($qty) . ' Kg',
+                    // Reads the same way as the admin's batch dropdown
+                    // (App\Support\ProductBatch::label): qty first, then which
+                    // batch it is.
+                    'label'         => $this->trim($qty) . ' Kg (' . $row['batch_no'] . ')',
                 ];
 
                 $total = round($total + $qty, 3);

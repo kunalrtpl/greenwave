@@ -91,8 +91,8 @@ class SampleDispatchBatchTest extends TestCase
         $this->assertSame('BN-OPT', $option['batch_no']);
         $this->assertEquals(12.5, $option['remaining_qty']);
         $this->assertSame('inventory', $option['source']);
-        $this->assertContains('BN-OPT', $option['label']);
-        $this->assertContains('12.5 Kg left', $option['label']);
+        // Reads qty first, then which batch it is: "12.5 Kg (BN-OPT)".
+        $this->assertSame('12.5 Kg (BN-OPT)', $option['label']);
     }
 
     /** @test */
@@ -329,6 +329,81 @@ class SampleDispatchBatchTest extends TestCase
         $this->assertTrue($refs->contains('madeup:1'), 'a new source shows up with no other change');
         $this->assertTrue($refs->contains('inventory:' . $own->id), 'and the old one keeps working');
         $this->assertNotEmpty($service->lock(['madeup:1']), 'and its batches resolve by reference');
+    }
+
+    /* ────────── Batches held back from sampling ────────── */
+
+    /**
+     * Add Incoming Material records whether a batch may go out as a sample.
+     * One that is not marked for it is never offered on the dispatch screen.
+     *
+     * @test
+     */
+    public function a_batch_not_marked_for_sampling_is_not_offered()
+    {
+        $product = $this->products[0];
+
+        $offered = $this->rfdBatch($product->id, 40, 'SMP-IN-' . uniqid());
+
+        $held = $this->rfdBatch($product->id, 40, 'SMP-OUT-' . uniqid());
+        $held->used_in_sample = 0;
+        $held->save();
+
+        $refs = collect(app(ProductBatchService::class)->optionsForProduct($product->id))->pluck('ref');
+
+        $this->assertTrue($refs->contains('inventory:' . $offered->id));
+        $this->assertFalse($refs->contains('inventory:' . $held->id));
+    }
+
+    /**
+     * The dropdown is the gate, but a posted reference is checked too: the
+     * mark can be cleared while a form is open.
+     *
+     * @test
+     */
+    public function dispatching_out_of_a_held_back_batch_is_refused()
+    {
+        $product = $this->products[0];
+        $line    = $this->readyLine(5, $product->id);
+
+        $held = $this->rfdBatch($product->id, 40, 'SMP-POST-' . uniqid());
+        $held->used_in_sample = 0;
+        $held->save();
+
+        $response = $this->postDispatch([[
+            'sampling_request_id' => $line->id,
+            'dispatch_qty'        => 5,
+            'batch_ref'           => 'inventory:' . $held->id,
+        ]]);
+
+        $response->assertStatus(422);
+        $this->assertContains('not marked for use in samples', $this->errorFor($response, 'items.0.batch_ref'));
+
+        $this->assertEquals(40, (float) $held->fresh()->remaining_stock, 'nothing left the batch');
+    }
+
+    /** Clearing the mark later must not disturb what already went out. */
+    /** @test */
+    public function a_batch_already_dispatched_still_resolves_after_being_held_back()
+    {
+        $product = $this->products[0];
+        $line    = $this->readyLine(5, $product->id);
+        $batch   = $this->rfdBatch($product->id, 40, 'SMP-WAS-' . uniqid());
+
+        $this->postDispatch([[
+            'sampling_request_id' => $line->id,
+            'dispatch_qty'        => 5,
+            'batch_ref'           => 'inventory:' . $batch->id,
+        ]])->assertStatus(200);
+
+        $batch->used_in_sample = 0;
+        $batch->save();
+
+        $ref   = 'inventory:' . $batch->id;
+        $found = app(ProductBatchService::class)->find([$ref]);
+
+        $this->assertArrayHasKey($ref, $found, 'the dispatched batch is still readable');
+        $this->assertEquals(35, $found[$ref]->remainingQty);
     }
 
     /* ─────────────────────────── Helpers ─────────────────────────── */

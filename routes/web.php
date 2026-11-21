@@ -315,6 +315,9 @@ Route::prefix('/admin')->namespace('Admin')->group(function(){
 		//Inventory Management
 		Route::match(['get', 'post'], '/add-incoming-material', 'InventoryController@addIncomingMaterial');
 		Route::match(['get', 'post'], '/append-material-details', 'InventoryController@appendMaterialDetails');
+		// Soft duplicate check for Add Incoming Material: warns that a batch
+		// number is already on the books, but never blocks the entry.
+		Route::get('/inventory/check-batch-no', 'InventoryController@checkBatchNo');
 		Route::match(['get', 'post'], '/inventory/rm', 'InventoryController@rawMaterials');
 		Route::match(['get', 'post'], '/inventory/update-rm-status/{id}', 'InventoryController@updateRmStatus');
 		Route::match(['get', 'post'], '/rm-inventory-media/{id}', 'InventoryController@rmInventoryMedia');

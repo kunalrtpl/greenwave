@@ -6,6 +6,7 @@ use App\Product;
 use App\ProductInventory;
 use App\ProductStock;
 use App\ProductStockLedger;
+use App\Services\ProductBatchService;
 use App\Services\ProductStockService;
 use App\User;
 use Exception;
@@ -54,6 +55,119 @@ class ProductStockLedgerTest extends TestCase
         return [$payload, $this->actingAs($this->admin)
             ->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
             ->post('/admin/add-incoming-material', $payload)];
+    }
+
+
+    /* ──────────── What a batch is allowed to be used for ──────────── */
+
+    /** Both boxes are ticked on the form, so an ordinary entry allows both. */
+    /** @test */
+    public function a_new_batch_is_allowed_for_both_by_default()
+    {
+        $batch = 'USE-' . uniqid();
+
+        $this->submit([
+            'supplier_batch_no'      => $batch,
+            'used_in_sample'         => 1,
+            'used_in_dispatch_order' => 1,
+        ])[1]->assertJson(['status' => true]);
+
+        $row = ProductInventory::where('supplier_batch_no', $batch)->firstOrFail();
+
+        $this->assertSame(1, (int) $row->used_in_sample);
+        $this->assertSame(1, (int) $row->used_in_dispatch_order);
+    }
+
+    /** An unticked box posts its hidden 0 and is stored as false. */
+    /** @test */
+    public function unticking_a_box_is_stored()
+    {
+        $batch = 'USE2-' . uniqid();
+
+        $this->submit([
+            'supplier_batch_no'      => $batch,
+            'used_in_sample'         => 0,
+            'used_in_dispatch_order' => 1,
+        ])[1]->assertJson(['status' => true]);
+
+        $row = ProductInventory::where('supplier_batch_no', $batch)->firstOrFail();
+
+        $this->assertSame(0, (int) $row->used_in_sample);
+        $this->assertSame(1, (int) $row->used_in_dispatch_order);
+    }
+
+    /** A payload that never mentions them keeps the column default. */
+    /** @test */
+    public function a_payload_without_the_boxes_still_allows_both()
+    {
+        $batch = 'USE3-' . uniqid();
+
+        $this->submit(['supplier_batch_no' => $batch])[1]->assertJson(['status' => true]);
+
+        $row = ProductInventory::where('supplier_batch_no', $batch)->firstOrFail();
+
+        $this->assertSame(1, (int) $row->used_in_sample);
+        $this->assertSame(1, (int) $row->used_in_dispatch_order);
+    }
+
+    /** @test */
+    public function only_sample_marked_batches_are_offered_for_dispatch()
+    {
+        $allowed = 'USE-IN-' . uniqid();
+        $held    = 'USE-OUT-' . uniqid();
+
+        $this->submit(['supplier_batch_no' => $allowed, 'used_in_sample' => 1, 'used_in_dispatch_order' => 1]);
+        $this->submit(['supplier_batch_no' => $held, 'used_in_sample' => 0, 'used_in_dispatch_order' => 1]);
+
+        $offered = collect(app(ProductBatchService::class)->optionsForProduct($this->product->id))
+            ->pluck('batch_no')
+            ->all();
+
+        $this->assertContains($allowed, $offered);
+        $this->assertNotContains($held, $offered, 'a batch held back from sampling is not offered');
+    }
+
+    /**
+     * Unticking a batch must not break what already went out on it: its
+     * reference still resolves, so history and stock stay readable.
+     *
+     * @test
+     */
+    public function a_held_back_batch_can_still_be_resolved_by_reference()
+    {
+        $held = 'USE-REF-' . uniqid();
+
+        $this->submit(['supplier_batch_no' => $held, 'used_in_sample' => 0]);
+
+        $row = ProductInventory::where('supplier_batch_no', $held)->firstOrFail();
+        $ref = 'inventory:' . $row->id;
+
+        $found = app(ProductBatchService::class)->find([$ref]);
+
+        $this->assertArrayHasKey($ref, $found);
+        $this->assertFalse($found[$ref]->allows('sample'), 'but it says it is not for sampling');
+        $this->assertTrue($found[$ref]->allows('dispatch_order'));
+    }
+
+    /** A route the source says nothing about is allowed. */
+    /** @test */
+    public function an_unknown_route_is_allowed()
+    {
+        $batch = 'USE-UNK-' . uniqid();
+
+        $this->submit(['supplier_batch_no' => $batch, 'used_in_sample' => 0]);
+
+        $row = ProductInventory::where('supplier_batch_no', $batch)->firstOrFail();
+        $ref = 'inventory:' . $row->id;
+
+        $this->assertTrue(app(ProductBatchService::class)->find([$ref])[$ref]->allows('export'));
+    }
+
+    /** Asks the form's live duplicate check about a batch number. */
+    private function check($batchNo)
+    {
+        return $this->actingAs($this->admin)
+            ->getJson('/admin/inventory/check-batch-no?type=RFDM&supplier_batch_no=' . urlencode($batchNo));
     }
 
     /** @test */
@@ -163,37 +277,57 @@ class ProductStockLedgerTest extends TestCase
         $this->assertEquals($before + 60, (float) Product::find($this->product->id)->current_stock);
     }
 
-    /** @test */
-    public function the_same_batch_number_cannot_be_added_twice()
+    /**
+     * The same supplier batch legitimately arrives more than once, so a
+     * finished-product entry is warned about a repeat rather than refused.
+     * The warning is checkBatchNo()'s job; saving is not blocked.
+     *
+     * @test
+     */
+    public function the_same_batch_number_can_be_added_twice()
     {
         $batch = 'DUP-' . uniqid();
 
         $this->submit(['supplier_batch_no' => $batch])[1]->assertJson(['status' => true]);
+        $this->submit(['supplier_batch_no' => $batch])[1]->assertJson(['status' => true]);
 
-        $second = $this->submit(['supplier_batch_no' => $batch])[1];
-
-        $second->assertStatus(200)->assertJson(['status' => false]);
-        $this->assertContains(
-            'already been added',
-            $second->json('errors.supplier_batch_no.0')
-        );
-
-        $this->assertSame(1, ProductInventory::where('supplier_batch_no', $batch)->count());
+        $this->assertSame(2, ProductInventory::where('supplier_batch_no', $batch)->count());
     }
 
+    /** Both entries are real stock, so both are credited. */
     /** @test */
-    public function a_rejected_duplicate_moves_no_stock()
+    public function a_repeated_batch_number_still_moves_its_own_stock()
     {
         $batch = 'DUP2-' . uniqid();
+
         $this->submit(['supplier_batch_no' => $batch, 'stock' => 10]);
 
         $stock = (float) ProductStock::where('product_id', $this->product->id)->firstOrFail()->total_stock;
         $lines = ProductStockLedger::forProduct($this->product->id)->count();
 
-        $this->submit(['supplier_batch_no' => $batch, 'stock' => 999])[1]->assertJson(['status' => false]);
+        $this->submit(['supplier_batch_no' => $batch, 'stock' => 15])[1]->assertJson(['status' => true]);
 
-        $this->assertEquals($stock, (float) ProductStock::where('product_id', $this->product->id)->firstOrFail()->total_stock);
-        $this->assertSame($lines, ProductStockLedger::forProduct($this->product->id)->count());
+        $this->assertEquals(
+            $stock + 15,
+            (float) ProductStock::where('product_id', $this->product->id)->firstOrFail()->total_stock
+        );
+        $this->assertSame($lines + 1, ProductStockLedger::forProduct($this->product->id)->count());
+    }
+
+    /** The form is told about the repeat, which is what replaces refusing it. */
+    /** @test */
+    public function a_repeated_batch_number_is_reported_by_the_check()
+    {
+        $batch = 'DUP3-' . uniqid();
+
+        $this->check($batch)->assertStatus(200)->assertJson(['used' => false]);
+
+        $this->submit(['supplier_batch_no' => $batch]);
+
+        $res = $this->check($batch)->assertStatus(200);
+
+        $this->assertTrue($res->json('used'));
+        $this->assertContains('has already been used', $res->json('message'));
     }
 
     /** @test */
