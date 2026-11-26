@@ -613,7 +613,13 @@ class DvrController extends Controller
             if (is_array($product)) {
                 $productId = isset($product['product_id']) ? $product['product_id'] : null;
                 $qty       = isset($product['qty']) ? $product['qty'] : 0;
-                $batchRef  = isset($product['batch_ref']) ? trim($product['batch_ref']) : null;
+                $batchRef  = isset($product['batch_ref']) ? trim((string) $product['batch_ref']) : null;
+
+                // "" and "   " mean the app had no batch to name, same as
+                // leaving the key out, so both arrive here as null.
+                if ($batchRef === '') {
+                    $batchRef = null;
+                }
             } else {
                 $productId = $product;
                 $qty       = 0;
@@ -639,14 +645,20 @@ class DvrController extends Controller
      * the employee's own stock out of the batch it names, so a trial is as
      * traceable as a sample handed to a customer.
      *
-     * batch_ref is mandatory and qty has to be greater than zero: there is no
-     * longer a line that records a product without moving stock. The own_stock
-     * flag it replaces is ignored rather than rejected.
+     * Only product_id is required. qty and batch_ref may both be left out, or
+     * qty sent as 0, for a product the employee is out of stock of: that line
+     * is recorded against the trial and no stock moves. The own_stock flag
+     * batch_ref replaces is ignored rather than rejected.
      *
-     * No batch, no movement: a line that cannot name a batch the employee is
-     * holding is refused and nothing is saved, so stock can never move without
-     * one. Every refusal is written to the log, tagged "[trial-stock]", since
-     * the request leaves no row behind to show that the app tried.
+     * batch_ref is what decides whether stock moves at all. Sent, the qty is
+     * taken out of that batch, so it has to be a batch the employee is holding
+     * and the qty has to be above zero — otherwise the whole request is
+     * refused and nothing is saved, so stock can never move out of a batch
+     * that cannot cover it. Not sent, nothing moves.
+     *
+     * Either way it is written to the log, tagged "[trial-stock]": a refusal
+     * leaves no row behind at all, and a line that recorded a qty without
+     * moving stock is worth being able to find later.
      *
      * V2 addTrial() is untouched and still takes a flat list of product ids
      * without moving any stock, for the builds still in the field.
@@ -664,12 +676,15 @@ class DvrController extends Controller
             'user_dvr_id' => 'required|integer|exists:user_dvrs,id',
             'products'    => 'nullable|array',
             'products.*.product_id' => 'required|integer|exists:products,id',
-            // Every line moves stock now, so a qty of zero is not a line.
-            'products.*.qty'        => 'required|numeric|min:0.001',
+            // A product the employee had no stock of is still part of the
+            // trial, so qty may be left out or sent as 0 and is stored as 0.
+            'products.*.qty'        => ['nullable', 'numeric', 'min:0'],
             // "<source>:<id>", e.g. inventory:45 — the batch the stock is
             // taken from. Which batches an employee may name comes from
-            // /api/executive/stock-transfers/stock.
-            'products.*.batch_ref'  => ['required', 'string', 'regex:/^[a-z_]+:[A-Za-z0-9_-]+$/'],
+            // /api/executive/stock-transfers/stock. Left out means no batch,
+            // so the line moves no stock; sent, it has to be a real one the
+            // employee is holding and the qty has to be above zero.
+            'products.*.batch_ref'  => ['nullable', 'string', 'regex:/^[a-z_]+:[A-Za-z0-9_-]+$/'],
             'customer_id' => 'nullable|integer|exists:customers,id',
             'customer_register_request_id' => 'nullable|integer|exists:customer_register_requests,id',
         ];

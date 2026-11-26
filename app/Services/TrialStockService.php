@@ -27,13 +27,20 @@ use Illuminate\Validation\ValidationException;
  * per-batch holding (App\Services\EmployeeBatchStockService) adding up to their
  * stock. The batch has to be one they are actually holding.
  *
- * No batch, no movement. A line that cannot name a batch it is holding moves
- * no stock at all and the whole request is refused, so nothing is half saved.
- * Every one of those is written to the log with the trial, employee, product,
- * qty and reason: the request itself leaves no row behind, so the log is the
- * only record that the app tried. Logging is outside the transaction that gets
- * rolled back, which is exactly why it belongs there. Grep the daily log for
- * "[trial-stock]".
+ * The batch is what decides whether stock moves. A line that names one has
+ * its qty taken out of it; a line that names none is recorded against the
+ * trial and moves nothing, which is how a product the employee is out of
+ * stock of still gets reported. Those lines are written with own_stock = 0 and
+ * no batch_ref, so restore() knows not to give back a qty that never left.
+ *
+ * No batch, no movement — but a batch that is named has to hold the qty. That
+ * line is refused and the whole request with it, so nothing is half saved.
+ * Every refusal is written to the log with the trial, employee, product, qty
+ * and reason: the request itself leaves no row behind, so the log is the only
+ * record that the app tried. Logging is outside the transaction that gets
+ * rolled back, which is exactly why it belongs there. A line that recorded a
+ * qty without a batch is logged too, since no stock moved for it either.
+ * Grep the daily log for "[trial-stock]".
  */
 class TrialStockService
 {
@@ -48,6 +55,10 @@ class TrialStockService
      * against what is left after the first line — not against the opening
      * holding twice over.
      *
+     * A line with no batch_ref is stored as it came, qty and all, and skipped
+     * for every stock check: nothing is taken out, so there is nothing to
+     * check it against.
+     *
      * @param  array $products the normalised product lines
      * @param  int   $trialId
      * @param  int   $userId   the employee running the trial
@@ -61,8 +72,13 @@ class TrialStockService
 
         foreach ($products as $index => $product) {
             $productId = (int) $product['product_id'];
-            $qty       = round((float) $product['qty'], 3);
+            $qty       = round((float) (isset($product['qty']) ? $product['qty'] : 0), 3);
+            $batchRef  = isset($product['batch_ref']) ? trim((string) $product['batch_ref']) : '';
             $key       = 'products.' . $index . '.batch_ref';
+
+            if ($qty < 0) {
+                $qty = 0;
+            }
 
             $context = [
                 'line'       => $index,
@@ -70,10 +86,46 @@ class TrialStockService
                 'user_id'    => $userId,
                 'product_id' => $productId,
                 'qty'        => $qty,
-                'batch_ref'  => isset($product['batch_ref']) ? $product['batch_ref'] : null,
+                'batch_ref'  => $batchRef !== '' ? $batchRef : null,
             ];
 
+            // No batch named: the product is part of the trial but none of the
+            // employee's stock went into it — typically because they had none
+            // left. The row records that, with own_stock = 0 so deleting the
+            // trial gives nothing back for it.
+            if ($batchRef === '') {
+                $rows[] = UserDvrProduct::create([
+                    'user_dvr_id' => null,
+                    'trial_id'    => $trialId,
+                    'product_id'  => $productId,
+                    'batch_ref'   => null,
+                    'batch_no'    => null,
+                    'qty'         => $qty,
+                    'own_stock'   => 0,
+                ]);
+
+                if ($qty > 0) {
+                    // A qty was reported without a batch to take it out of, so
+                    // it is on the trial but not out of their stock. Worth
+                    // finding later, hence a warning rather than a note.
+                    Log::warning(
+                        self::LOG_TAG . ' recorded ' . $this->trim($qty)
+                            . ' with no batch named, no stock moved',
+                        $context
+                    );
+                } else {
+                    Log::info(
+                        self::LOG_TAG . ' recorded with no qty and no batch, no stock moved',
+                        $context
+                    );
+                }
+
+                continue;
+            }
+
             if ($qty <= 0) {
+                // A batch was named, so this line is asking for stock to move,
+                // and nothing can come out of a batch at a qty of zero.
                 $this->logRefusal('qty is not greater than zero', $context);
 
                 throw ValidationException::withMessages([
@@ -121,6 +173,10 @@ class TrialStockService
      * Covers the rows written before batches were recorded as well: those are
      * the own_stock = 1 lines the old API wrote, and they are restored exactly
      * as they were — logged as such, since there is no batch to credit them to.
+     *
+     * Lines that moved no stock in the first place — no batch_ref and
+     * own_stock = 0 — are left alone, so nothing is credited back that never
+     * left the employee's stock.
      *
      * @param  Trial $trial
      * @return float the qty given back in total

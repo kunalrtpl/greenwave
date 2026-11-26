@@ -23,8 +23,10 @@ use Tests\TestCase;
  * POST /api/executive/v3/dvr/trial/add — product used in a trial comes out of
  * a named batch.
  *
- * Every V3 trial line now consumes the employee's stock, so batch_ref is
- * mandatory and the old own_stock flag decides nothing. All movement goes
+ * batch_ref is what decides whether a line consumes stock: named, the qty
+ * comes out of that batch; left out, the product is recorded against the trial
+ * and nothing moves, which is how a product the employee has run out of is
+ * still reported. The old own_stock flag decides nothing. All movement goes
  * through App\Services\TrialStockService, so what a trial takes out and what
  * deleting it gives back are the same arithmetic, and the employee's per-batch
  * holding keeps adding up to their stock.
@@ -81,20 +83,90 @@ class TrialBatchTest extends TestCase
         $this->assertEquals(24, $this->qtyInBatch($batch), 'and left that batch');
     }
 
-    /** @test */
-    public function a_line_without_a_batch_is_refused()
+    /**
+     * The app sends the product with neither qty nor batch when the employee
+     * has run out of it: the trial still reports that it was used.
+     *
+     * @test
+     */
+    public function a_line_with_neither_qty_nor_batch_is_recorded_and_moves_nothing()
     {
         $this->hold(30, 'TR-NONE');
 
-        $this->addTrial([['product_id' => $this->product->id, 'qty' => 6]])
-            ->assertStatus(422);
+        $res = $this->addTrial([['product_id' => $this->product->id]]);
+
+        $res->assertStatus(200)->assertJson(['status' => true]);
+
+        $line = UserDvrProduct::where('trial_id', $res->json('data.id'))->firstOrFail();
+
+        $this->assertSame((int) $this->product->id, (int) $line->product_id);
+        $this->assertEquals(0, $line->qty, 'a missing qty is stored as zero');
+        $this->assertNull($line->batch_ref);
+        $this->assertNull($line->batch_no);
+        $this->assertSame(0, (int) $line->own_stock, 'so deleting the trial gives nothing back');
 
         $this->assertEquals(30, $this->inHand(), 'no stock moved');
-        $this->assertSame(0, Trial::where('user_id', $this->employee->id)
-            ->whereHas('dvrs', function ($q) { $q->where('user_dvrs.id', $this->dvr->id); })
-            ->count(), 'and no trial was left behind');
     }
 
+    /** An explicit zero reads the same as leaving the key out. */
+    /** @test */
+    public function an_explicit_zero_qty_with_no_batch_is_allowed()
+    {
+        $this->hold(30, 'TR-ZERO-OK');
+
+        $res = $this->addTrial([
+            ['product_id' => $this->product->id, 'qty' => 0, 'batch_ref' => ''],
+        ]);
+
+        $res->assertStatus(200);
+
+        $this->assertEquals(0, UserDvrProduct::where('trial_id', $res->json('data.id'))->value('qty'));
+        $this->assertEquals(30, $this->inHand());
+    }
+
+    /**
+     * A qty with no batch is still recorded, because the batch is the only
+     * thing that moves stock — but nothing comes out of their hands for it.
+     *
+     * @test
+     */
+    public function a_qty_with_no_batch_is_recorded_without_moving_stock()
+    {
+        $this->hold(30, 'TR-QTY-ONLY');
+
+        $res = $this->addTrial([['product_id' => $this->product->id, 'qty' => 6]]);
+
+        $res->assertStatus(200);
+
+        $line = UserDvrProduct::where('trial_id', $res->json('data.id'))->firstOrFail();
+
+        $this->assertEquals(6, $line->qty, 'the qty is kept as reported');
+        $this->assertNull($line->batch_ref);
+        $this->assertEquals(30, $this->inHand(), 'but none of it left their stock');
+    }
+
+    /** One line names a batch, the other does not; only the first moves. */
+    /** @test */
+    public function only_the_line_that_names_a_batch_moves_stock()
+    {
+        $batch = $this->hold(30, 'TR-MIXED');
+        $other = Product::where('status', 1)->where('id', '!=', $this->product->id)->firstOrFail();
+
+        $res = $this->addTrial([
+            ['product_id' => $this->product->id, 'qty' => 4, 'batch_ref' => $this->ref($batch)],
+            ['product_id' => $other->id, 'qty' => 9],
+        ]);
+
+        $res->assertStatus(200);
+
+        $lines = UserDvrProduct::where('trial_id', $res->json('data.id'))->get();
+
+        $this->assertCount(2, $lines, 'both products are on the trial');
+        $this->assertEquals(26, $this->inHand(), 'only the batched line came out of stock');
+        $this->assertEquals(26, $this->qtyInBatch($batch));
+    }
+
+    /** Naming a batch is asking for stock to move, and zero cannot. */
     /** @test */
     public function a_line_with_no_qty_is_refused()
     {
@@ -225,6 +297,29 @@ class TrialBatchTest extends TestCase
         $this->assertEquals(30, $this->qtyInBatch($batch), 'and back in the batch it came out of');
     }
 
+    /**
+     * A line that never took stock out gives nothing back, or deleting the
+     * trial would credit the employee with stock they never spent.
+     *
+     * @test
+     */
+    public function deleting_a_trial_gives_nothing_back_for_a_batchless_line()
+    {
+        $this->hold(30, 'TR-DEL-NONE');
+
+        $trialId = $this->addTrial([
+            ['product_id' => $this->product->id, 'qty' => 9],
+        ])->assertStatus(200)->json('data.id');
+
+        $this->assertEquals(30, $this->inHand(), 'nothing left their stock');
+
+        $this->postJson('/api/executive/v2/dvr/trial/delete', ['id' => $trialId], $this->headers())
+            ->assertStatus(200);
+
+        $this->assertNull(Trial::find($trialId));
+        $this->assertEquals(30, $this->inHand(), 'and nothing came back');
+    }
+
     /** Rows written before batches were recorded still come back on delete. */
     /** @test */
     public function a_legacy_own_stock_line_is_still_restored()
@@ -288,12 +383,12 @@ class TrialBatchTest extends TestCase
     /* ──────────────── Refusals are logged, not silent ──────────────── */
 
     /**
-     * A line with no batch moves nothing and saves nothing, so the log is the
-     * only record that the app tried it.
+     * A qty reported with no batch is saved on the trial but comes out of
+     * nobody's stock, so it is worth being able to find later.
      *
      * @test
      */
-    public function a_line_with_no_batch_is_written_to_the_log()
+    public function a_qty_with_no_batch_is_written_to_the_log()
     {
         $this->hold(30, 'TR-LOG-1');
 
@@ -301,14 +396,31 @@ class TrialBatchTest extends TestCase
         Log::shouldReceive('warning')
             ->once()
             ->with(
-                \Mockery::pattern('/\[trial-stock\].*no stock moved/'),
+                \Mockery::pattern('/\[trial-stock\] recorded 6 Kg with no batch named, no stock moved/'),
                 \Mockery::type('array')
             );
 
         $this->addTrial([['product_id' => $this->product->id, 'qty' => 6]])
-            ->assertStatus(422);
+            ->assertStatus(200);
 
         $this->assertEquals(30, $this->inHand(), 'no stock moved');
+    }
+
+    /** A line with nothing to move at all is a note, not a warning. */
+    /** @test */
+    public function a_line_with_no_qty_and_no_batch_is_only_noted()
+    {
+        $this->hold(30, 'TR-LOG-0');
+
+        Log::shouldReceive('warning')->never();
+        Log::shouldReceive('info')
+            ->once()
+            ->with(
+                \Mockery::pattern('/\[trial-stock\] recorded with no qty and no batch, no stock moved/'),
+                \Mockery::type('array')
+            );
+
+        $this->addTrial([['product_id' => $this->product->id]])->assertStatus(200);
     }
 
     /** @test */
